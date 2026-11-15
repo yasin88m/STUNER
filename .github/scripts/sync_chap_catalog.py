@@ -240,6 +240,19 @@ def fetch_term(term, year_id):
         unique[(book["id"], book["code"], book["title"])] = book
     return {**term, "books": list(unique.values())}
 
+
+def fetch_full_title(book):
+    try:
+        page = fetch(book["url"], attempts=2)
+        match = re.search(r'<h1[^>]*id="page-title"[^>]*>(.*?)</h1>', page, re.S | re.I)
+        if match:
+            title = re.sub(r"\\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", match.group(1)))).strip()
+            if title:
+                return book["id"], title
+    except Exception:
+        pass
+    return book["id"], book["title"]
+
 def main():
     target_year = "1405-1406"
     home = fetch(BASE + "/")
@@ -260,6 +273,24 @@ def main():
             except Exception as exc:
                 errors.append((term["termId"], term["path"], str(exc)))
     results.sort(key=lambda x: (x["educationLevel"], x["grade"], x["track"], x["fieldGroup"], x["major"], int(x["termId"])))
+    # Search result cards visually truncate long titles. Read the official
+    # detail page for every truncated title so the app stores the full title.
+    unique_books = {}
+    for category in results:
+        for book in category["books"]:
+            unique_books[book["id"]] = book
+    truncated = [b for b in unique_books.values() if "..." in b["title"] or "…" in b["title"]]
+    full_titles = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
+        futures = [pool.submit(fetch_full_title, book) for book in truncated]
+        for future in concurrent.futures.as_completed(futures):
+            book_id, title = future.result()
+            full_titles[book_id] = title
+    for category in results:
+        for book in category["books"]:
+            if book["id"] in full_titles:
+                book["title"] = full_titles[book["id"]]
+    print(f"Full official titles resolved: {sum(1 for b in full_titles.values() if b)} / {len(truncated)} truncated titles")
     book_count = sum(len(x["books"]) for x in results)
     empty_count = sum(1 for x in results if not x["books"])
     print(f"Categories processed: {len(results)}; book associations: {book_count}; empty categories: {empty_count}; request errors: {len(errors)}")
