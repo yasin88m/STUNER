@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -25,66 +25,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Validate application JavaScript
         run: node --check app.js && node --check curriculum.js && node --check sw.js
-      - name: Check official catalog branch taxonomy
-        continue-on-error: true
-        run: |
-          python - <<'PY'
-          import urllib.request
-          from html.parser import HTMLParser
-          class P(HTMLParser):
-            def __init__(self):super().__init__();self.sel=False;self.opt=None;self.rows=[]
-            def handle_starttag(self,t,a):
-              a=dict(a)
-              if t=="select" and a.get("name")=="tid":self.sel=True
-              elif t=="option" and self.sel:self.opt={"value":a.get("value"),"text":""}
-            def handle_data(self,d):
-              if self.opt is not None:self.opt["text"]+=d
-            def handle_endtag(self,t):
-              if t=="option" and self.opt is not None:self.rows.append(self.opt);self.opt=None
-              elif t=="select" and self.sel:self.sel=False
-          d=urllib.request.urlopen(urllib.request.Request("http://chap.sch.ir/",headers={"User-Agent":"Mozilla/5.0"}),timeout=40).read().decode("utf-8","replace")
-          p=P();p.feed(d)
-          for o in p.rows:
-            t=o["text"].strip()
-            if any(x in t for x in ["کاردانش","کار دانش","مهارتی","فنی حرفه","شاخه","پایه دهم","پایه یازدهم","پایه دوازدهم"]):
-              print("TAXONOMY",o["value"],repr(t))
-          PY
-      - name: Inspect official textbook detail page title
-        continue-on-error: true
-        run: |
-          python - <<'PY'
-          import urllib.request,re,html
-          for bid in ["15024","14391","14408"]:
-            u="http://chap.sch.ir/books/"+bid
-            d=urllib.request.urlopen(urllib.request.Request(u,headers={"User-Agent":"Mozilla/5.0"}),timeout=40).read().decode("utf-8","replace")
-            print("\\nBOOK",bid,"BYTES",len(d))
-            for pat in [r'<h1[^>]*id="page-title"[^>]*>(.*?)</h1>',r'<title>(.*?)</title>',r'<meta[^>]+property="og:title"[^>]+content="([^"]+)"']:
-              m=re.search(pat,d,re.S|re.I)
-              if m: print("META",html.unescape(re.sub(r"<[^>]+>"," ",m.group(1))).strip())
-            p=d.find('id="page-title"');print("SNIP",d[p:p+1800] if p>=0 else d[:1500])
-          PY
-      - name: Inspect textbook search result markup
-        continue-on-error: true
-        run: |
-          python - <<'PY'
-          import urllib.request
-          u="http://chap.sch.ir/advanced_search?tid=8&field_year_tid=1402"
-          d=urllib.request.urlopen(urllib.request.Request(u,headers={"User-Agent":"Mozilla/5.0"}),timeout=40).read().decode("utf-8","replace")
-          for needle in ['/books/14142','/books/15093','views-exposed-form-book-search-page-1']:
-            p=d.find(needle);print("\\nNEEDLE",needle,"AT",p);print(d[max(0,p-1200):p+1800] if p>=0 else "")
-          print("TABLES",d.count("<table"),"TRS",d.count("<tr"),"VIEWS_ROWS",d.count("views-row"))
-          PY
-      - name: Import official textbook catalog from chap.sch.ir
-        if: ${{ !contains(github.event.head_commit.message, '[chap-catalog-sync]') }}
-        run: |
-          python .github/scripts/sync_chap_catalog.py
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add chap-catalog.js
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: [chap-catalog-sync] refresh official textbook catalog"
-            git push origin HEAD:main
-          fi
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
