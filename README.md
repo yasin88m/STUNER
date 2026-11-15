@@ -76,7 +76,7 @@ python -m http.server 8080
 
 **محدوده داده‌ها:** بانک درسی فعلی نسخه آغازین است. دروس عمومی پایه‌های ابتدایی و متوسطه و شاخه‌های نظری در آن تعریف شده‌اند. اطلاعات تخصصی کتاب‌ها در حال تکمیل و تطبیق با نسخه رسمی سال ۱۴۰۵–۱۴۰۶ است؛ در حال حاضر کتاب‌های تخصصی معماری داخلی به‌صورت نمونه ساختاری ثبت شده‌اند. برای جلوگیری از نمایش نسخه اشتباه، فایل PDF کتاب‌ها از پایگاه رسمی باز می‌شود و در مخزن برنامه کپی نشده است.
 
-مرجع رسمی کتاب‌های درسی: https://chap.sch.ir/
+مرجع رسمی جایگزین برای مشاهده و دریافت کتاب‌ها: https://chap.oerp.ir/ (نشانی رسمی دیگر: https://chap.sch.ir/)
 
 
 ## فهرست تخصصی رشته‌های هنرستان
@@ -116,9 +116,9 @@ python -m http.server 8080
 - تفاوت رشته‌ها و جداول انتخابی باید پیش از ادعای پوشش صددرصدی هر رشته، با جدول همان رشته تطبیق داده شود.
 
 
-## Official textbook catalogue (chap.sch.ir)
+## Official textbook catalogue (chap.sch.ir / chap.oerp.ir)
 
-- The student subject selector and textbook library use the official textbook catalogue at http://chap.sch.ir.
+- The catalogue importer reads the official chap.sch.ir catalogue; student-facing book and PDF links are normalized to the official alternative address https://chap.oerp.ir to avoid browser security warnings on the primary host.
 - The catalogue import selects the current school year (1405-1406) from the site's own year filter, then queries the site's taxonomy filter by exact grade/specialty term IDs.
 - Grade, track, field group, specialty, official book title, book code, official book page and PDF link are imported from the public catalogue.
 - The import excludes teacher-guidance and special-education taxonomy branches from the standard student selector; it retains student workbooks and official supplementary student books associated with the selected grade.
