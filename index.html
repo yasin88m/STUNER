@@ -78,13 +78,35 @@
           <label class="field"><span>نام</span><input name="firstName" autocomplete="given-name" placeholder="مثلاً علی" required maxlength="32"></label>
           <label class="field"><span>نام خانوادگی</span><input name="lastName" autocomplete="family-name" placeholder="مثلاً رضایی" required maxlength="40"></label>
         </div>
+        <label class="field"><span>دوره تحصیلی</span>
+          <select name="educationLevel" id="educationLevel" required>
+            <option value="" disabled selected>دوره تحصیلی‌ات رو انتخاب کن</option>
+            <option value="elementary">ابتدایی</option>
+            <option value="middle">متوسطه اول</option>
+            <option value="secondary">متوسطه دوم</option>
+          </select>
+        </label>
         <label class="field"><span>پایه تحصیلی</span>
-          <select name="grade" required>
-            <option value="" disabled selected>پایه تحصیلی‌ات رو انتخاب کن</option>
-            <optgroup label="دوره ابتدایی"><option>اول ابتدایی</option><option>دوم ابتدایی</option><option>سوم ابتدایی</option><option>چهارم ابتدایی</option><option>پنجم ابتدایی</option><option>ششم ابتدایی</option></optgroup>
-            <optgroup label="دوره متوسطه اول"><option>هفتم</option><option>هشتم</option><option>نهم</option></optgroup>
-            <optgroup label="دوره متوسطه دوم"><option>دهم</option><option>یازدهم</option><option>دوازدهم</option></optgroup>
-            <option>دانشجو</option>
+          <select name="grade" id="gradeSelect" required disabled>
+            <option value="" disabled selected>ابتدا دوره را انتخاب کن</option>
+          </select>
+        </label>
+        <label class="field" id="trackField" hidden><span>شاخه تحصیلی</span>
+          <select name="track" id="trackSelect">
+            <option value="" disabled selected>شاخه را انتخاب کن</option>
+            <option value="نظری">نظری</option>
+            <option value="فنی‌وحرفه‌ای">فنی‌وحرفه‌ای</option>
+            <option value="کاردانش">کاردانش</option>
+          </select>
+        </label>
+        <label class="field" id="fieldGroupField" hidden><span>زمینه تحصیلی</span>
+          <select name="fieldGroup" id="fieldGroupSelect">
+            <option value="" disabled selected>زمینه را انتخاب کن</option>
+          </select>
+        </label>
+        <label class="field" id="majorField" hidden><span>رشته تحصیلی</span>
+          <select name="major" id="majorSelect">
+            <option value="" disabled selected>رشته را انتخاب کن</option>
           </select>
         </label>
         <label class="field"><span>سن</span><div class="input-suffix"><input name="age" type="number" inputmode="numeric" min="6" max="30" placeholder="مثلاً ۱۵" required><span>سال</span></div></label>
@@ -97,6 +119,6 @@
 
   <div id="modalRoot"></div>
   <div id="toastRoot" class="toast-root" aria-live="polite"></div>
-  <script src="./app.js" defer></script>
+  <script src="./curriculum.js" defer></script>\n  <script src="./app.js" defer></script>
 </body>
 </html>
