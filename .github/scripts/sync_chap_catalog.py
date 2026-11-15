@@ -77,7 +77,7 @@ class ResultsParser(HTMLParser):
         self.card = None
         self.capture_title = False
         self.in_code_container = False
-        self.capture_code = False
+        self.code_depth = 0
         self.rows = []
         self.pages = set()
     def handle_starttag(self, tag, attrs):
@@ -85,44 +85,47 @@ class ResultsParser(HTMLParser):
         cls = attrs.get("class", "")
         if tag == "table" and "views-view-grid" in cls:
             self.in_search_grid = True
-        elif tag == "td" and self.in_search_grid and re.search(r"\\bcol-\\d+\\b", cls):
+        elif tag == "td" and self.in_search_grid and re.search(r"\bcol-\d+\b", cls):
             self.card = {"id": "", "title": "", "code": ""}
         elif self.card is not None and tag == "div" and "views-field-title" in cls:
             self.capture_title = True
         elif self.card is not None and tag == "span" and "views-field-field-book-code" in cls:
             self.in_code_container = True
-        elif self.card is not None and tag == "span" and "field-content" in cls and self.in_code_container:
-            self.capture_code = True
+            self.code_depth = 1
+        elif self.in_code_container and tag == "span":
+            self.code_depth += 1
         elif self.card is not None and tag == "a" and self.capture_title:
-            match = re.search(r"/books/(\\d+)", attrs.get("href", ""))
+            match = re.search(r"/books/(\d+)", attrs.get("href", ""))
             if match:
                 self.card["id"] = match.group(1)
         if tag == "a":
-            match = re.search(r"(?:\\?|&)page=(\\d+)", attrs.get("href", ""))
+            match = re.search(r"(?:\?|&)page=(\d+)", attrs.get("href", ""))
             if match:
                 self.pages.add(int(match.group(1)))
     def handle_data(self, data):
         if self.card is not None:
             if self.capture_title:
                 self.card["title"] += data
-            if self.capture_code:
+            if self.in_code_container:
                 self.card["code"] += data
     def handle_endtag(self, tag):
-        if tag == "span" and self.capture_code:
-            self.capture_code = False
-        elif tag == "span" and self.in_code_container:
-            self.in_code_container = False
+        if tag == "span" and self.in_code_container:
+            self.code_depth -= 1
+            if self.code_depth <= 0:
+                self.in_code_container = False
+                self.code_depth = 0
         elif tag == "div" and self.capture_title:
             self.capture_title = False
         elif tag == "td" and self.card is not None:
-            self.card["title"] = re.sub(r"\\s+", " ", html.unescape(self.card["title"])).strip()
-            self.card["code"] = re.sub(r"\\s+", " ", html.unescape(self.card["code"])).strip()
+            self.card["title"] = re.sub(r"\s+", " ", html.unescape(self.card["title"])).strip()
+            code_matches = re.findall(r"\d+", self.card["code"])
+            self.card["code"] = code_matches[-1] if code_matches else ""
             if self.card["id"] and self.card["title"]:
                 self.rows.append(self.card)
             self.card = None
             self.capture_title = False
             self.in_code_container = False
-            self.capture_code = False
+            self.code_depth = 0
         elif tag == "table" and self.in_search_grid:
             self.in_search_grid = False
 
