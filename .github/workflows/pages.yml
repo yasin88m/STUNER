@@ -25,6 +25,17 @@ jobs:
         uses: actions/checkout@v4
       - name: Validate application JavaScript
         run: node --check app.js && node --check curriculum.js && node --check sw.js
+      - name: Inspect textbook search result markup
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import urllib.request
+          u="http://chap.sch.ir/advanced_search?tid=8&field_year_tid=1402"
+          d=urllib.request.urlopen(urllib.request.Request(u,headers={"User-Agent":"Mozilla/5.0"}),timeout=40).read().decode("utf-8","replace")
+          for needle in ['/books/14142','/books/15093','views-exposed-form-book-search-page-1']:
+            p=d.find(needle);print("\\nNEEDLE",needle,"AT",p);print(d[max(0,p-1200):p+1800] if p>=0 else "")
+          print("TABLES",d.count("<table"),"TRS",d.count("<tr"),"VIEWS_ROWS",d.count("views-row"))
+          PY
       - name: Import official textbook catalog from chap.sch.ir
         if: ${{ !contains(github.event.head_commit.message, '[chap-catalog-sync]') }}
         run: |
