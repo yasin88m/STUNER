@@ -38,7 +38,7 @@ function uid(){return crypto.randomUUID?crypto.randomUUID():String(Date.now())+M
 function name(){return state.student?.firstName||"دانش‌آموز"}
 function initials(){return state.student?.firstName?.[0]||"؟"}
 function totalMins(){return state.sessions.reduce((a,s)=>a+(+s.minutes||0),0)}
-function average(){return state.grades.length?state.grades.reduce((a,g)=>a+(+g.score),0)/state.grades.length:null}
+function average(){let rows=state.grades.filter(g=>activeSubject(g.subject));return rows.length?rows.reduce((a,g)=>a+(+g.score),0)/rows.length:null}
 
 const CURRICULUM=window.STUNER_CURRICULUM;
 let editingStudent=false;
@@ -126,8 +126,8 @@ function renderHome(){
  <section class="card panel" style="margin-top:17px"><div class="section-title" style="margin-top:0"><div><h2>زمان مطالعه درس‌ها</h2><p>مجموع زمان‌های ثبت‌شده برای هر درس</p></div><button class="text-button" data-page="stats">گزارش کامل ←</button></div><div class="subject-list">${subjects}</div></section>`;
 }
 function timerTarget(){
- if(state.timer.activity==="task")return state.tasks.find(x=>x.id===state.timer.activityId&&!x.done)||null;
- if(state.timer.activity==="exam")return state.exams.find(x=>x.id===state.timer.activityId)||null;
+ if(state.timer.activity==="task")return state.tasks.find(x=>x.id===state.timer.activityId&&!x.done&&activeSubject(x.subject))||null;
+ if(state.timer.activity==="exam")return state.exams.find(x=>x.id===state.timer.activityId&&activeSubject(x.subject))||null;
  return null;
 }
 function timerTargetSelect(){
@@ -212,7 +212,7 @@ function renderCalendar(){
  for(let i=0;i<offset;i++)cells.push("<span></span>");
  for(let d=new Date(start);d<=end;d.setUTCDate(d.getUTCDate()+1)){
   let x=new Date(d),s=isoFromDate(x),n=jalali(x).d;
-  cells.push('<button class="calendar-day '+(s===isoToday()?"today ":"")+(s===calSelected?"selected ":"")+([...state.tasks.map(t=>t.due),...state.exams.map(e=>e.date)].includes(s)?"has-event":"")+'" data-calendar-date="'+s+'">'+fa(n)+'</button>');
+  cells.push('<button class="calendar-day '+(s===isoToday()?"today ":"")+(s===calSelected?"selected ":"")+([...state.tasks.filter(t=>activeSubject(t.subject)).map(t=>t.due),...state.exams.filter(e=>activeSubject(e.subject)).map(e=>e.date)].includes(s)?"has-event":"")+'" data-calendar-date="'+s+'">'+fa(n)+'</button>');
  }
  while(cells.length%7)cells.push("<span></span>");
  let events=[...state.tasks.filter(t=>activeSubject(t.subject)&&t.due===calSelected).map(t=>({title:t.title,sub:t.subject,kind:"تکلیف",done:t.done})),...state.exams.filter(e=>activeSubject(e.subject)&&e.date===calSelected).map(e=>({title:e.title,sub:e.subject,kind:"امتحان"}))];
@@ -251,7 +251,7 @@ function go(p){page=p;render();window.scrollTo({top:0,behavior:"smooth"})}
 function remove(key,id){state[key]=state[key].filter(x=>x.id!==id);save();render();toast("مورد انتخاب‌شده حذف شد.")}
 function notify(title,body){if(!("Notification"in window)||Notification.permission!=="granted")return;try{if("serviceWorker"in navigator&&navigator.serviceWorker.controller)navigator.serviceWorker.ready.then(r=>r.showNotification(title,{body,icon:"./icon.svg",dir:"rtl",lang:"fa"})).catch(()=>new Notification(title,{body,dir:"rtl"}));else new Notification(title,{body,dir:"rtl",lang:"fa"})}catch{}}
 async function enableNotifications(){if(!("Notification"in window)){toast("این مرورگر از اعلان گوشی پشتیبانی نمی‌کند.");return}let p=await Notification.requestPermission();toast(p==="granted"?"اعلان‌ها فعال شدند.":"اجازه اعلان‌ها داده نشد.");if(p==="granted")notify("استیونر آماده است","یادآوری‌های درسی‌ات فعال شدند.")}
-function reminderCheck(){if(!("Notification"in window)||Notification.permission!=="granted")return;let clock=iranClock();if(state.preferences.notifyTasks&&clock>=(state.preferences.taskReminderTime||"08:00")){let key="stuner.remind.tasks."+isoToday();if(!sessionStorage.getItem(key)){let today=state.tasks.filter(x=>x.due===isoToday()&&!x.done),tomorrow=state.tasks.filter(x=>x.due===isoAdd(1)&&!x.done);if(today.length||tomorrow.length){notify("یادآوری تکالیف استیونر",`${fa(today.length)} تکلیف برای امروز و ${fa(tomorrow.length)} تکلیف برای فردا داری.`);sessionStorage.setItem(key,"1")}}}if(state.preferences.notifyStudy&&clock>=(state.preferences.studyReminderTime||"16:00")){let key="stuner.remind.study."+isoToday();if(!sessionStorage.getItem(key)){notify("وقت مطالعه در استیونر", "زمان پیشنهادی مطالعه‌ات رسیده؛ یک جلسه ۲۵ دقیقه‌ای شروع کن.");sessionStorage.setItem(key,"1")}}}
+function reminderCheck(){if(!("Notification"in window)||Notification.permission!=="granted")return;let clock=iranClock();if(state.preferences.notifyTasks&&clock>=(state.preferences.taskReminderTime||"08:00")){let key="stuner.remind.tasks."+isoToday();if(!sessionStorage.getItem(key)){let today=state.tasks.filter(x=>activeSubject(x.subject)&&x.due===isoToday()&&!x.done),tomorrow=state.tasks.filter(x=>activeSubject(x.subject)&&x.due===isoAdd(1)&&!x.done);if(today.length||tomorrow.length){notify("یادآوری تکالیف استیونر",`${fa(today.length)} تکلیف برای امروز و ${fa(tomorrow.length)} تکلیف برای فردا داری.`);sessionStorage.setItem(key,"1")}}}if(state.preferences.notifyStudy&&clock>=(state.preferences.studyReminderTime||"16:00")){let key="stuner.remind.study."+isoToday();if(!sessionStorage.getItem(key)){notify("وقت مطالعه در استیونر", "زمان پیشنهادی مطالعه‌ات رسیده؛ یک جلسه ۲۵ دقیقه‌ای شروع کن.");sessionStorage.setItem(key,"1")}}}
 function duration(){return state.timer.mode==="study"?1500:300}
 function paintTimer(){if(page!=="timer")return;let d=duration(),r=state.timer.remaining,ring=$(".timer-ring"),digits=$("#timerDigits");if(ring)ring.style.setProperty("--timer-progress",`${Math.max(0,r/d*100)}%`);if(digits)digits.textContent=fa(String(Math.floor(r/60)).padStart(2,"0")+":"+String(r%60).padStart(2,"0"))}
 function tickerStart(){if(ticker)clearInterval(ticker);if(!state.timer.running)return;if(!deadline)deadline=Date.now()+state.timer.remaining*1000;ticker=setInterval(()=>{state.timer.remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));paintTimer();if(state.timer.remaining<=0)timerComplete()},250)}
