@@ -73,44 +73,58 @@ class SelectParser(HTMLParser):
 class ResultsParser(HTMLParser):
     def __init__(self):
         super().__init__()
-        self.row = None
-        self.cell = None
-        self.in_title_link = False
+        self.in_search_grid = False
+        self.card = None
+        self.capture_title = False
+        self.in_code_container = False
+        self.capture_code = False
         self.rows = []
         self.pages = set()
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
-        if tag == "tr":
-            self.row = {"id": "", "title": "", "code": ""}
-        elif tag == "td" and self.row is not None:
-            cls = attrs.get("class", "")
-            if "views-field-title" in cls:
-                self.cell = "title"
-            elif "views-field-field-book-code" in cls:
-                self.cell = "code"
-        elif tag == "a":
-            href = attrs.get("href", "")
-            if self.row is not None and self.cell == "title":
-                match = re.search(r"/books/(\d+)", href)
-                if match:
-                    self.row["id"] = match.group(1)
+        cls = attrs.get("class", "")
+        if tag == "table" and "views-view-grid" in cls:
+            self.in_search_grid = True
+        elif tag == "td" and self.in_search_grid and re.search(r"\\bcol-\\d+\\b", cls):
+            self.card = {"id": "", "title": "", "code": ""}
+        elif self.card is not None and tag == "div" and "views-field-title" in cls:
+            self.capture_title = True
+        elif self.card is not None and tag == "span" and "views-field-field-book-code" in cls:
+            self.in_code_container = True
+        elif self.card is not None and tag == "span" and "field-content" in cls and self.in_code_container:
+            self.capture_code = True
+        elif self.card is not None and tag == "a" and self.capture_title:
+            match = re.search(r"/books/(\\d+)", attrs.get("href", ""))
+            if match:
+                self.card["id"] = match.group(1)
         if tag == "a":
-            href = attrs.get("href", "")
-            match = re.search(r"(?:\?|&)page=(\d+)", href)
+            match = re.search(r"(?:\\?|&)page=(\\d+)", attrs.get("href", ""))
             if match:
                 self.pages.add(int(match.group(1)))
     def handle_data(self, data):
-        if self.row is not None and self.cell:
-            self.row[self.cell] += data
+        if self.card is not None:
+            if self.capture_title:
+                self.card["title"] += data
+            if self.capture_code:
+                self.card["code"] += data
     def handle_endtag(self, tag):
-        if tag == "td":
-            self.cell = None
-        elif tag == "tr" and self.row is not None:
-            self.row["title"] = re.sub(r"\s+", " ", html.unescape(self.row["title"])).strip()
-            self.row["code"] = re.sub(r"\s+", " ", html.unescape(self.row["code"])).strip()
-            if self.row["id"] and self.row["title"]:
-                self.rows.append(self.row)
-            self.row = None
+        if tag == "span" and self.capture_code:
+            self.capture_code = False
+        elif tag == "span" and self.in_code_container:
+            self.in_code_container = False
+        elif tag == "div" and self.capture_title:
+            self.capture_title = False
+        elif tag == "td" and self.card is not None:
+            self.card["title"] = re.sub(r"\\s+", " ", html.unescape(self.card["title"])).strip()
+            self.card["code"] = re.sub(r"\\s+", " ", html.unescape(self.card["code"])).strip()
+            if self.card["id"] and self.card["title"]:
+                self.rows.append(self.card)
+            self.card = None
+            self.capture_title = False
+            self.in_code_container = False
+            self.capture_code = False
+        elif tag == "table" and self.in_search_grid:
+            self.in_search_grid = False
 
 def get_year_id(home_html, target_year):
     parser = SelectParser()
