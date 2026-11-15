@@ -114,3 +114,13 @@ python -m http.server 8080
 - در بانک هنرستان، عناوین عمومی و شایستگی‌های غیرفنی در کنار عناوین تخصصی رشته قرار می‌گیرند.
 - مبنای بازبینی جدول هنرستان: «مجموعه جداول دروس رشته‌های شاخه فنی‌وحرفه‌ای و کاردانش، ثبت‌نام پایه دهم سال تحصیلی ۱۴۰۴–۱۴۰۵»، شورای عالی آموزش و پرورش.
 - تفاوت رشته‌ها و جداول انتخابی باید پیش از ادعای پوشش صددرصدی هر رشته، با جدول همان رشته تطبیق داده شود.
+
+
+## Official textbook catalogue (chap.sch.ir)
+
+- The student subject selector and textbook library use the official textbook catalogue at http://chap.sch.ir.
+- The catalogue import selects the current school year (1405-1406) from the site's own year filter, then queries the site's taxonomy filter by exact grade/specialty term IDs.
+- Grade, track, field group, specialty, official book title, book code, official book page and PDF link are imported from the public catalogue.
+- The import excludes teacher-guidance and special-education taxonomy branches from the standard student selector; it retains student workbooks and official supplementary student books associated with the selected grade.
+- Shared technical/vocational and Kardanesh books are merged into the selected specialty's book list.
+- The catalogue is generated during deployment and cached by the service worker for offline access. Do not manually edit chap-catalog.js.
