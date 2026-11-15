@@ -249,7 +249,7 @@ def fetch_category(category, year_id):
     unique = {}
     for book in books:
         unique[book["id"]] = book
-    return {**category, "bookIds": list(unique.keys())}
+    return {**category, "bookIds": list(unique.keys()), "bookRecords": list(unique.values())}
 
 def enrich_book(book):
     detail = fetch(book["url"])
@@ -286,7 +286,11 @@ def main():
             except Exception as exc:
                 errors.append((item["termId"], item["path"], repr(exc)))
     results.sort(key=lambda x: (x["educationLevel"], x["grade"], x["track"], x["fieldGroup"], x["major"], int(x["termId"])))
-    book_ids = sorted({book_id for category in results for book_id in category["bookIds"]}, key=lambda x: int(x))
+    book_cards = {}
+    for category in results:
+        for book in category.get("bookRecords", []):
+            book_cards[book["id"]] = book
+    book_ids = sorted(book_cards, key=lambda x: int(x))
     print("CATEGORY_RESULTS", len(results), "CATEGORIES_WITH_BOOKS", sum(bool(x["bookIds"]) for x in results))
     print("UNIQUE_BOOKS", len(book_ids), "BOOK_ASSOCIATIONS", sum(len(x["bookIds"]) for x in results))
     print("CATEGORY_FETCH_ERRORS", len(errors))
@@ -298,12 +302,7 @@ def main():
     # Fetch full title and the official PDF URL from each book's own detail page.
     books_by_id = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=18) as pool:
-        futures = {pool.submit(enrich_book, {
-            "id": book_id,
-            "title": book_id,
-            "code": "",
-            "url": BASE + "/books/" + book_id,
-        }): book_id for book_id in book_ids}
+        futures = {pool.submit(enrich_book, book_cards[book_id]): book_id for book_id in book_ids}
         for future in concurrent.futures.as_completed(futures):
             book_id = futures[future]
             try:
@@ -311,19 +310,9 @@ def main():
             except Exception as exc:
                 # Keep a record from the category card if detail metadata is temporarily unavailable.
                 books_by_id[book_id] = {
-                    "id": book_id, "title": "کتاب " + book_id, "code": "",
-                    "url": BASE + "/books/" + book_id, "pdfUrl": "", "pdfUrls": [],
+                    **book_cards[book_id], "pdfUrl": "", "pdfUrls": [],
                     "sourceYear": TARGET_YEAR, "detailFetchError": str(exc),
                 }
-
-    # Restore card titles/codes when the detail page does not provide them.
-    card_index = {}
-    for category in results:
-        # Re-fetching is unnecessary: category requests have already reduced to IDs.
-        # The official detail page supplies the full title and download link.
-        pass
-    # Recover official code from the detail page if it was not supplied by the search card.
-    # Book IDs remain authoritative unique identifiers; missing codes are explicitly blank.
 
     ready_categories = []
     for category in results:
