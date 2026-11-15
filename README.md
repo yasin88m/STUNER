@@ -35,7 +35,7 @@ python -m http.server 8080
 
 ## انتشار با GitHub Pages
 
-فایل گردش‌کار `.github/workflows/pages.yml` برای انتشار خودکار آماده شده است. در مخزن GitHub به مسیر **Settings → Pages → Build and deployment** برو و گزینه **GitHub Actions** را به‌عنوان Source انتخاب کن. پس از آن، هر بار که به شاخه `main` تغییر ارسال شود، سایت منتشر خواهد شد.
+فایل گردش‌کار `.github/workflows/pages.yml` برای انتشار خودکار آماده شده است. در مخزن GitHub، در مسیر **Settings → Pages → Build and deployment** گزینه **GitHub Actions** را به‌عنوان Source انتخاب کن. با هر تغییر در شاخه `main`، سایت به‌صورت خودکار منتشر می‌شود.
 
 ## ذخیره‌سازی و حریم خصوصی
 
