@@ -67,7 +67,7 @@ function timerTargetSelect(){
   return '<label class="timer-subject"><span>تکلیف مورد نظر</span><select id="timerActivityTarget" '+(study?"":"disabled")+'><option value="">'+(items.length?"انتخاب تکلیف":"هنوز تکلیفی ثبت نشده")+'</option>'+items.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===state.timer.activityId?"selected":"")+'>'+esc(x.title)+(x.subject?" · "+esc(x.subject):"")+'</option>').join("")+'</select></label>';
  }
  if(activity==="exam"){
-  const items=state.exams.filter(x=>x.date>=isoToday()).sort((a,b)=>a.date.localeCompare(b.date));
+  const items=state.exams.slice().sort((a,b)=>a.date.localeCompare(b.date));
   return '<label class="timer-subject"><span>امتحان مورد نظر</span><select id="timerActivityTarget" '+(study?"":"disabled")+'><option value="">'+(items.length?"انتخاب امتحان":"هنوز امتحانی ثبت نشده")+'</option>'+items.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===state.timer.activityId?"selected":"")+'>'+esc(x.title)+(x.subject?" · "+esc(x.subject):"")+'</option>').join("")+'</select></label>';
  }
  return "";
@@ -230,7 +230,7 @@ document.addEventListener("change",e=>{
  if(e.target.id==="timerActivity"){
   let activity=e.target.value;if(state.timer.running)timerPause();
   state.timer.activity=activity;
-  let items=activity==="task"?state.tasks.filter(x=>!x.done):activity==="exam"?state.exams.filter(x=>x.date>=isoToday()).sort((a,b)=>a.date.localeCompare(b.date)):[];
+  let items=activity==="task"?state.tasks.filter(x=>!x.done):activity==="exam"?state.exams.slice().sort((a,b)=>a.date.localeCompare(b.date)):[];
   state.timer.activityId=items[0]?.id||"";
   let target=activity==="task"?state.tasks.find(x=>x.id===state.timer.activityId):activity==="exam"?state.exams.find(x=>x.id===state.timer.activityId):null;
   if(target?.subject)state.timer.subject=target.subject;
