@@ -25,26 +25,25 @@ jobs:
         uses: actions/checkout@v4
       - name: Validate application JavaScript
         run: node --check app.js && node --check curriculum.js && node --check sw.js
-      - name: Read official textbook publication-year options
+      - name: Inspect 1405-1406 official book results
         continue-on-error: true
         run: |
           python - <<'PY'
-          import urllib.request
+          import urllib.request,re,html
           from html.parser import HTMLParser
-          class P(HTMLParser):
-            def __init__(self): super().__init__(); self.sel=None; self.opt=None; self.data={}
-            def handle_starttag(self,t,attrs):
-              a=dict(attrs)
-              if t=="select": self.sel={"name":a.get("name"),"options":[]}
-              elif t=="option" and self.sel is not None: self.opt={"value":a.get("value",""),"text":""}
-            def handle_data(self,d):
-              if self.opt is not None:self.opt["text"]+=d
-            def handle_endtag(self,t):
-              if t=="option" and self.sel is not None and self.opt is not None:self.sel["options"].append(self.opt);self.opt=None
-              elif t=="select" and self.sel is not None:self.data[self.sel["name"]]=self.sel["options"];self.sel=None
-          html=urllib.request.urlopen(urllib.request.Request("http://chap.sch.ir/",headers={"User-Agent":"Mozilla/5.0"}),timeout=40).read().decode("utf-8","replace")
-          p=P();p.feed(html)
-          for o in p.data.get("field_year_tid",[]):print("YEAR",o["value"],repr(o["text"].strip()))
+          u="http://chap.sch.ir/advanced_search?field_year_tid=1402"
+          req=urllib.request.Request(u,headers={"User-Agent":"Mozilla/5.0"})
+          data=urllib.request.urlopen(req,timeout=45).read().decode("utf-8","replace")
+          print("URL",u,"BYTES",len(data),"TITLE",re.search(r"<title>(.*?)</title>",data,re.S).group(1) if re.search(r"<title>(.*?)</title>",data,re.S) else "")
+          links=re.findall(r'href=["\\']([^"\\']*/books/\\d+[^"\\']*)["\\'][^>]*>(.*?)</a>',data,re.S)
+          clean=lambda x:re.sub(r"\\s+"," ",html.unescape(re.sub(r"<[^>]+>"," ",x))).strip()
+          print("BOOK_LINK_COUNT",len(links))
+          for h,t in links[:100]:print("BOOK",h,clean(t))
+          print("PAGER",re.findall(r'href=["\\']([^"\\']*(?:page=|pager)[^"\\']*)["\\']',data)[:40])
+          for key in ["views-row","view-empty","pager","result"]: 
+            print("MARKER",key,data.find(key))
+          p=data.find("views-row")
+          print("ROW_SNIP",data[p:p+4000] if p>=0 else data[10000:14000])
           PY
       - name: Configure Pages
         uses: actions/configure-pages@v5
