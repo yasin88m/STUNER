@@ -25,46 +25,26 @@ jobs:
         uses: actions/checkout@v4
       - name: Validate application JavaScript
         run: node --check app.js && node --check curriculum.js && node --check sw.js
-      - name: Inspect official textbook catalog structure
+      - name: Probe official textbook catalog endpoints
         continue-on-error: true
         run: |
           python - <<'PY'
           import urllib.request, ssl
-          from html.parser import HTMLParser
-          ssl_context=ssl._create_unverified_context()
-          class Inspect(HTMLParser):
-              def __init__(self):
-                  super().__init__(); self.title=False; self.in_title=False; self.forms=[]; self.form=None; self.select=None; self.options=[]; self.scripts=[]
-              def handle_starttag(self,tag,attrs):
-                  a=dict(attrs)
-                  if tag=="title": self.in_title=True
-                  if tag=="form":
-                      self.form={"attrs":a,"fields":[]}; self.forms.append(self.form)
-                  if tag in ("input","select","button") and self.form is not None:
-                      self.form["fields"].append((tag,a))
-                  if tag=="select": self.select={"name":a.get("name"),"options":[]}
-                  if tag=="option" and self.select is not None: self.select["options"].append(a.get("value",""))
-                  if tag=="script" and a.get("src"): self.scripts.append(a["src"])
-              def handle_endtag(self,tag):
-                  if tag=="title": self.in_title=False
-                  if tag=="form": self.form=None
-                  if tag=="select" and self.select is not None: self.options.append(self.select); self.select=None
-              def handle_data(self,data):
-                  if self.in_title: self.title+=data.strip()
-          for url in ("https://chap.sch.ir/","https://chap.oerp.ir/"):
-              print("\n=== FETCH",url,"===")
-              try:
-                  req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0 (compatible; STUNER-catalog-research/1.0)"})
-                  with urllib.request.urlopen(req,timeout=50,context=ssl_context) as res:
-                      html=res.read().decode("utf-8","replace")
-                      print("STATUS",res.status,"FINAL_URL",res.url,"BYTES",len(html),"CONTENT_TYPE",res.headers.get("Content-Type"))
-                  p=Inspect(); p.feed(html)
-                  print("TITLE",p.title)
-                  print("FORMS",p.forms[:8])
-                  print("SELECT_OPTIONS",p.options[:12])
-                  print("SCRIPTS",p.scripts[:30])
-                  print("HTML_HEAD",html[:2500].replace("\n"," ")[:2500])
-              except Exception as e: print("FETCH_ERROR",type(e).__name__,str(e))
+          ctx=ssl._create_unverified_context()
+          urls=[
+            "https://chap.sch.ir/","http://chap.sch.ir/","https://www.chap.sch.ir/",
+            "https://chap.sch.ir/robots.txt","https://chap.sch.ir/sitemap.xml",
+            "https://chap.sch.ir/books","https://chap.oerp.ir/"
+          ]
+          for url in urls:
+            print("\\nURL",url)
+            try:
+              req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0","Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"})
+              with urllib.request.urlopen(req,timeout=30,context=ctx) as r:
+                data=r.read(12000)
+                print("STATUS",r.status,"FINAL",r.url,"HEADERS",dict(r.headers))
+                print("BODY",repr(data[:1200]))
+            except Exception as e: print("ERROR",repr(e))
           PY
       - name: Configure Pages
         uses: actions/configure-pages@v5
