@@ -381,7 +381,7 @@ const roshdCommon={
  },
  "مدیریت و خدمات":{
   "دهم":["ارتباط مؤثر","الزامات محیط کار"],
-  "یازدهم":["شیمی","ریاضی (۲)","انسان و محیط‌زیست","انگلیسی (۲)","عربی، زبان قرآن (۲)","تاریخ معاصر ایران","تفکر و سواد رسانه‌ای","کاربرد فناوری‌های نوین"],
+  "یازدهم":[],
   "دوازدهم":["اخلاق حرفه‌ای"]
  }
 };
@@ -518,12 +518,12 @@ const roshdOfficialCatalog={
  },
  "تربیت کودک":{
   "دهم":["دانش فنی پایه تربیت کودک","همراه هنرجو تربیت کودک","مراقبت از سلامت کودک","کنترل بهداشت و ایمنی محیط مراکز پیش از دبستان"],
-  "یازدهم":["پرورش مهارت‌های کلامی کودک","پرورش مهارت‌های ارتباطی و مشارکتی","همراه هنرجو"],
+  "یازدهم":["شیمی","همراه هنرجو","پرورش مهارت‌های کلامی کودک","پرورش مهارت‌های ارتباطی و مشارکتی","کاربرد فناوری‌های نوین","تاریخ معاصر ایران","ریاضی (۲)","انسان و محیط‌زیست","انگلیسی (۲)","عربی، زبان قرآن (۲)","تفکر و سواد رسانه‌ای"],
   "دوازدهم":["دانش فنی تخصصی تربیت کودک","همراه هنرجو تربیت کودک","پرورش مهارت‌های شناختی و خلاق کودک","پرورش مهارت‌های عاطفی-اجتماعی کودک"]
  },
  "حسابداری":{
   "دهم":["دانش فنی پایه حسابداری","همراه هنرجو حسابداری","حسابداری خرید و فروش","حسابداری وجوه نقد و تحریر دفاتر قانونی"],
-  "یازدهم":["حسابداری حقوق و دستمزد","حسابداری اموال و انبار"],
+  "یازدهم":[] ,
   "دوازدهم":["دانش فنی تخصصی حسابداری","همراه هنرجو حسابداری","حسابداری بهای تمام‌شده و مالیاتی","حسابداری تهیه و تنظیم صورت‌های مالی"]
  },
  "تربیت بدنی":{
@@ -563,6 +563,9 @@ function roshdSpecialtyFor(major,grade,track){
 }
 function roshdSourceFor(student){
  if(!student)return "https://www.roshd.ir/fanavari";
+ if(student.track==="کاردانش")return "https://www.roshd.ir/fanavari";
+ if(student.major==="تربیت کودک"&&student.grade==="یازدهم")return roshdSources.childCare11;
+ if(student.major==="حمل و نقل"&&student.grade==="یازدهم")return "https://www.roshd.ir/11/فنون-تصدی‌گری-حمل-و-نقل";
  if(student.fieldGroup==="صنعت")return roshdSources["industry"+({دهم:"10",یازدهم:"11",دوازدهم:"12"}[student.grade]||"10")];
  if(student.fieldGroup==="هنر")return roshdSources["art"+({دهم:"10",یازدهم:"11",دوازدهم:"12"}[student.grade]||"10")];
  if(student.fieldGroup==="مدیریت و خدمات")return roshdSources["services"+({دهم:"10",یازدهم:"11",دوازدهم:"12"}[student.grade]||"10")]||roshdSources.services10;
@@ -585,7 +588,8 @@ window.STUNER_CURRICULUM={
   if(student.educationLevel==="elementary")return primary[student.grade]||[];
   if(student.educationLevel==="middle")return middle[student.grade]||[];
   if(student.track==="نظری")return academic[student.major]?.[student.grade]||[];
-  if(student.track==="فنی‌وحرفه‌ای"||student.track==="کاردانش"){
+  if(student.track==="کاردانش")return [];
+  if(student.track==="فنی‌وحرفه‌ای"){
    let common=roshdCommon[student.fieldGroup]?.[student.grade]||[];
    let specialist=roshdSpecialtyFor(student.major,student.grade,student.track);
    return [...new Set([...common,...specialist])];
