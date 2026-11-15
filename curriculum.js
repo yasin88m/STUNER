@@ -589,37 +589,65 @@ function roshdSourceFor(student){
  return "https://www.roshd.ir/fanavari";
 }
 
-const bookSources={official:"https://chap.sch.ir/",distribution:"https://www.irtextbook.ir/"};
-window.STUNER_CURRICULUM={
- academicYear:"۱۴۰۵–۱۴۰۶",grades,primary,middle,academic,vocationalCommon,fanni,kardanesh,architectureBooks,specialtySubjects,specialtyFor,roshdOfficialCatalog,roshdSources,roshdSpecialtyFor,roshdSourceFor,bookSources,
- tracks:["نظری","فنی‌وحرفه‌ای","کاردانش"],
- theoreticalMajors:Object.keys(academic),
- fieldGroups:{fanni:Object.keys(fanni),kardanesh:Object.keys(kardanesh)},
- majors:{fanni,kardanesh},
- getBooks(student){
-  if(!student)return[];
-  return roshdSpecialtyFor(student.major,student.grade,student.track).map(title=>({title,grade:student.grade,category:"عنوان رسمی رشد",source:roshdSourceFor(student),verified:true}));
- },
- getSubjects(student){
-  if(!student)return[];
-  if(student.educationLevel==="elementary")return primary[student.grade]||[];
-  if(student.educationLevel==="middle")return middle[student.grade]||[];
-  if(student.track==="نظری"){
-   const base=academic[student.major]?.[student.grade]||[];
-   const shared={
-    "دهم":["تربیت بدنی ۱","جغرافیای عمومی و استان‌شناسی","هنر / تفکر و سواد رسانه‌ای / کارگاه کارآفرینی و تولید"],
-    "یازدهم":["تربیت بدنی ۲","تاریخ معاصر ایران","انسان و محیط زیست","هنر / تفکر و سواد رسانه‌ای / کارگاه کارآفرینی و تولید"],
-    "دوازدهم":["تربیت بدنی ۳","علوم اجتماعی","سلامت و بهداشت","مدیریت خانواده و سبک زندگی"]
-   };
-   return [...new Set([...base,...(shared[student.grade]||[])])];
-  }
-  if(student.track==="کاردانش")return [];
-  if(student.track==="فنی‌وحرفه‌ای"){
-   let common=vocationalCommon[student.fieldGroup]?.[student.grade]||[];
-   let specialist=roshdSpecialtyFor(student.major,student.grade,student.track);
-   return [...new Set([...common,...specialist])];
-  }
-  return[];
+const bookSources={official:"http://chap.sch.ir/",distribution:"https://www.irtextbook.ir/"};
+const chapCatalog=window.STUNER_CHAP_CATALOG||null;
+const chapCategories=Array.isArray(chapCatalog?.categories)?chapCatalog.categories:[];
+const chapBooks=chapCatalog?.books||{};
+function chapNormalize(v){return String(v||"").replace(/[\u200c\u200f]/g,"").replace(/[يى]/g,"ی").replace(/ك/g,"ک").replace(/[\s‌ـ\-–_]+/g,"").toLowerCase()}
+function chapSame(a,b){return chapNormalize(a)===chapNormalize(b)}
+function chapGetFieldGroups(track,grade){
+ return [...new Set(chapCategories.filter(c=>c.track===track&&c.major!=="__common__"&&(!grade||c.grade===grade)&&c.fieldGroup).map(c=>c.fieldGroup))].sort((a,b)=>a.localeCompare(b,"fa"));
+}
+function chapGetMajors(track,group,grade){
+ return [...new Set(chapCategories.filter(c=>c.track===track&&c.major!=="__common__"&&(!grade||c.grade===grade)&&(track==="نظری"||chapSame(c.fieldGroup,group))).map(c=>c.major).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"fa"));
+}
+function chapCategoriesFor(student){
+ if(!student)return[];
+ const matches=chapCategories.filter(c=>c.educationLevel===student.educationLevel&&c.grade===student.grade);
+ if(student.educationLevel!=="secondary")return matches.filter(c=>!c.track);
+ if(!student.track)return[];
+ if(student.track==="نظری")return matches.filter(c=>c.track==="نظری"&&chapSame(c.major,student.major));
+ return matches.filter(c=>c.track===student.track&&(c.major==="__common__"||chapSame(c.fieldGroup,student.fieldGroup)&&chapSame(c.major,student.major)));
+}
+function chapGetBooks(student){
+ const categories=chapCategoriesFor(student);
+ const ids=[];
+ for(const category of categories.sort((a,b)=>(a.major==="__common__"?-1:0)-(b.major==="__common__"?-1:0))){
+  for(const id of category.bookIds||[])if(!ids.includes(String(id)))ids.push(String(id));
  }
+ return ids.map(id=>{
+  const book=chapBooks[id];
+  if(!book)return null;
+  const category=categories.find(c=>(c.bookIds||[]).map(String).includes(id));
+  return {...book,grade:student.grade,category:category?.major==="__common__"?"دروس مشترک":(category?.major||category?.fieldGroup||"کتاب درسی"),source:book.url,verified:true};
+ }).filter(Boolean).sort((a,b)=>String(a.code||"").localeCompare(String(b.code||""),"en",{numeric:true}));
+}
+function chapGetSubjects(student){
+ return [...new Set(chapGetBooks(student).map(book=>book.title).filter(Boolean))];
+}
+const theoreticalChapMajors=chapGetMajors("نظری","",null);
+const fanniChapGroups=chapGetFieldGroups("فنی‌وحرفه‌ای");
+const kardaneshChapGroups=chapGetFieldGroups("کاردانش");
+const fanniChapMajors=Object.fromEntries(fanniChapGroups.map(group=>[group,chapGetMajors("فنی‌وحرفه‌ای",group,null)]));
+const kardaneshChapMajors=Object.fromEntries(kardaneshChapGroups.map(group=>[group,chapGetMajors("کاردانش",group,null)]));
+window.STUNER_CURRICULUM={
+ academicYear:chapCatalog?.academicYear||"۱۴۰۵–۱۴۰۶",
+ grades,primary,middle,academic,vocationalCommon,fanni,kardanesh,architectureBooks,specialtySubjects,specialtyFor,roshdOfficialCatalog,roshdSources,roshdSpecialtyFor,roshdSourceFor,bookSources,
+ catalogReady:!!chapCatalog&&chapCategories.length>0,
+ catalogSource:chapCatalog?.source||bookSources.official,
+ tracks:["نظری","فنی‌وحرفه‌ای","کاردانش"],
+ theoreticalMajors:theoreticalChapMajors.length?theoreticalChapMajors:Object.keys(academic),
+ fieldGroups:{
+  fanni:fanniChapGroups.length?fanniChapGroups:Object.keys(fanni),
+  kardanesh:kardaneshChapGroups.length?kardaneshChapGroups:Object.keys(kardanesh)
+ },
+ majors:{
+  fanni:Object.keys(fanniChapMajors).length?fanniChapMajors:fanni,
+  kardanesh:Object.keys(kardaneshChapMajors).length?kardaneshChapMajors:kardanesh
+ },
+ getFieldGroups(track,grade){return chapGetFieldGroups(track,grade)},
+ getMajors(track,group,grade){return chapGetMajors(track,group,grade)},
+ getBooks(student){return chapGetBooks(student)},
+ getSubjects(student){return chapGetSubjects(student)}
 };
 })();
