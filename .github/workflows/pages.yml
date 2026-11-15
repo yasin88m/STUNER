@@ -87,34 +87,25 @@ jobs:
               relevant=[i for i,o in enumerate(opts) if any(k in o["text"] for k in ["پایه دهم","پایه یازدهم","پایه دوازدهم","متوسطه نظری","فنی و حرفه","کاردانش","دوره آموزش ابتدایی","دوره اول آموزش متوسطه"])]
               print("RELEVANT_OPTION_INDICES",[(i,opts[i]["value"],opts[i]["text"].strip()) for i in relevant[:220]])
           PY
-      - name: Verify catalog search filters
+      - name: Inspect filtered book cards
         run: |
           python - <<'PY'
           import urllib.request,urllib.parse,re,html
-          from html.parser import HTMLParser
-          class P(HTMLParser):
-            def __init__(self):super().__init__();self.links=[];self.inlink=False;self.link=None;self.title="";self.intitle=False
-            def handle_starttag(self,t,attrs):
-              a=dict(attrs)
-              if t=="title":self.intitle=True
-              if t=="a" and "/books/" in a.get("href",""):self.link={"href":a["href"],"text":""}
-            def handle_data(self,d):
-              if self.inlink and self.link:self.link["text"]+=d
-              if self.intitle:self.title+=d
-            def handle_endtag(self,t):
-              if t=="title":self.intitle=False
-              if t=="a" and self.link:self.links.append(self.link);self.link=None
-          for tid in ["29","30","711","40","157","629","553","8"]:
-            q=urllib.parse.urlencode({"tid":tid,"field_year_tid":"1402"})
-            u="http://chap.sch.ir/advanced_search?"+q
+          for tid in ["29","30","711","157","629","553","8"]:
+            u="http://chap.sch.ir/advanced_search?"+urllib.parse.urlencode({"tid":tid,"field_year_tid":"1402"})
             req=urllib.request.Request(u,headers={"User-Agent":"Mozilla/5.0"})
             data=urllib.request.urlopen(req,timeout=45).read().decode("utf-8","replace")
-            p=P();p.feed(data)
-            clean=lambda x:re.sub(r"\\s+"," ",html.unescape(re.sub(r"<[^>]+>"," ",x))).strip()
-            print("QUERY",tid,"TITLE",clean(p.title),"BYTES",len(data),"BOOK_LINKS",[(x["href"],clean(x["text"])) for x in p.links[:30]])
-            for marker in ["views-row","view-content","views-field-title","view-empty","هیچ نتیجه"]:
-              i=data.find(marker)
-              if i>=0:print("SNIP",tid,marker,re.sub(r"\\s+"," ",data[max(0,i-180):i+700])[:900])
+            m=re.search(r'<table class="views-view-grid">(.*?)</table>',data,re.S)
+            grid=m.group(1) if m else ""
+            cells=re.findall(r'<td class="col-[^"]+"[^>]*>(.*?)</td>',grid,re.S)
+            books=[]
+            for c in cells:
+              link=re.search(r'<div class="views-field views-field-title".*?<a href="([^"]*/books/\d+)">(.*?)</a>',c,re.S)
+              code=re.search(r'<span class="views-field views-field-field-book-code".*?<span class="field-content">\s*(.*?)\s*</span>',c,re.S)
+              if link:
+                books.append((link.group(1),re.sub(r"\s+"," ",html.unescape(re.sub(r"<[^>]+>"," ",link.group(2)))).strip(),re.sub(r"\s+"," ",html.unescape(re.sub(r"<[^>]+>"," ",code.group(1)))).strip() if code else ""))
+            pager=re.findall(r'href="([^"]*(?:page=\d+)[^"]*)"',data)
+            print("GRID",tid,"found",len(books),"pager",pager[:20],"books",books[:40])
           PY
       - name: Configure Pages
         uses: actions/configure-pages@v5
