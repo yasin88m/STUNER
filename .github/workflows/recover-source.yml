@@ -1,0 +1,30 @@
+name: Temporary source recovery
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover bundled source
+        run: |
+          python - <<'PY'
+          import base64, gzip
+          from pathlib import Path
+          data = base64.b64decode(Path("app.bundle.b64").read_text().strip())
+          Path("app.source.js").write_bytes(gzip.decompress(data))
+          PY
+      - name: Save recovered source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.source.js
+          git commit -m "Temporary recovery of original STUNER source [skip ci]" || exit 0
+          git push
