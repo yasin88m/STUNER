@@ -110,6 +110,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .search-box input,.field input,.field select,.field textarea,.inline-input{width:100%;border:1px solid #e4ece6;background:#fbfdfb;border-radius:13px;padding:11px 13px;color:var(--ink);outline:none;transition:.2s}
 .search-box input:focus,.field input:focus,.field select:focus,.field textarea:focus,.inline-input:focus{border-color:#85c9a1;background:#fff;box-shadow:0 0 0 3px rgba(53,183,126,.1)}
 .field{display:grid;gap:7px;font-size:11px;font-weight:800;color:#53675d}
+.field[hidden]{display:none!important}
 .field input,.field select{font-size:12px;font-weight:500;min-height:45px}
 .field input::placeholder{color:#b1bdb6}
 .field textarea{resize:vertical;min-height:80px;font-size:12px}

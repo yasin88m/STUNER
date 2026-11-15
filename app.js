@@ -53,22 +53,36 @@ function fillSelect(el,items,placeholder,selected=""){
  el.value=items.includes(selected)?selected:"";
 }
 function updateMajorFields(preserve=true){
- const track=$("#trackSelect")?.value||"",group=$("#fieldGroupSelect")?.value||"",grade=$("#gradeSelect")?.value||"";
+ const level=$("#educationLevel")?.value||"",track=level==="secondary"?($("#trackSelect")?.value||""):"",group=$("#fieldGroupSelect")?.value||"",grade=$("#gradeSelect")?.value||"";
  const groupField=$("#fieldGroupField"),majorField=$("#majorField"),groupSelect=$("#fieldGroupSelect"),majorSelect=$("#majorSelect");
  const isVocational=track==="فنی‌وحرفه‌ای"||track==="کاردانش";
+ if(level!=="secondary"){
+  if(groupField)groupField.hidden=true;
+  if(groupSelect){groupSelect.required=false;groupSelect.disabled=true;fillSelect(groupSelect,[],"ابتدا شاخه را انتخاب کن");}
+  if(majorField)majorField.hidden=true;
+  if(majorSelect){majorSelect.required=false;majorSelect.disabled=true;fillSelect(majorSelect,[],"ابتدا شاخه را انتخاب کن");}
+  return;
+ }
  if(!isVocational){
-  if(groupField)groupField.hidden=true;if(groupSelect)groupSelect.required=false;
-  if(majorField)majorField.hidden=track!=="نظری";if(majorSelect)majorSelect.required=track==="نظری";
+  if(groupField)groupField.hidden=true;
+  if(groupSelect){groupSelect.required=false;groupSelect.disabled=true;fillSelect(groupSelect,[],"ابتدا شاخه را انتخاب کن");}
+  const showMajor=track==="نظری";
+  if(majorField)majorField.hidden=!showMajor;
+  if(majorSelect){majorSelect.required=showMajor;majorSelect.disabled=!showMajor;}
   const majors=CURRICULUM.catalogReady?CURRICULUM.getMajors("نظری","",grade):CURRICULUM.theoreticalMajors;
-  if(track==="نظری")fillSelect(majorSelect,majors,"رشته نظری را انتخاب کن",preserve?majorSelect.value:"");
+  if(showMajor)fillSelect(majorSelect,majors,"رشته نظری را انتخاب کن",preserve?majorSelect.value:"");
   else if(majorSelect)fillSelect(majorSelect,[],"ابتدا شاخه را انتخاب کن");
   return;
  }
- if(groupField)groupField.hidden=false;if(groupSelect)groupSelect.required=true;
+ if(groupField)groupField.hidden=false;
+ if(groupSelect){groupSelect.required=true;groupSelect.disabled=false;}
  const groups=CURRICULUM.catalogReady?CURRICULUM.getFieldGroups(track,grade):(CURRICULUM.fieldGroups[track==="فنی‌وحرفه‌ای"?"fanni":"kardanesh"]||[]);
  fillSelect(groupSelect,groups,"زمینه تحصیلی را انتخاب کن",preserve?group:"");
- const majors=CURRICULUM.catalogReady?CURRICULUM.getMajors(track,groupSelect.value,grade):((CURRICULUM.majors[track==="فنی‌وحرفه‌ای"?"fanni":"kardanesh"]||{})[groupSelect.value]||[]);
- if(majorField)majorField.hidden=false;if(majorSelect)majorSelect.required=true;
+ const selectedGroup=groupSelect?.value||"";
+ const majors=CURRICULUM.catalogReady?CURRICULUM.getMajors(track,selectedGroup,grade):((CURRICULUM.majors[track==="فنی‌وحرفه‌ای"?"fanni":"kardanesh"]||{})[selectedGroup]||[]);
+ const showMajor=!!selectedGroup;
+ if(majorField)majorField.hidden=!showMajor;
+ if(majorSelect){majorSelect.required=showMajor;majorSelect.disabled=!showMajor;}
  fillSelect(majorSelect,majors,"رشته تحصیلی را انتخاب کن",preserve?majorSelect.value:"");
 }
 function updateEducationFields(preserve=true){
@@ -77,7 +91,7 @@ function updateEducationFields(preserve=true){
  if(gradeSelect)gradeSelect.disabled=!level;
  const secondary=level==="secondary";
  if(trackField)trackField.hidden=!secondary;
- if(trackSelect){trackSelect.required=secondary;if(!secondary)trackSelect.value="";else if(!preserve)trackSelect.value="";}
+ if(trackSelect){trackSelect.required=secondary;trackSelect.disabled=!secondary;if(!secondary||!preserve)trackSelect.value="";}
  updateMajorFields(preserve);
 }
 function populateStudentForm(){
@@ -234,7 +248,13 @@ function renderBooks(){
  const trackLine=student.educationLevel==="secondary"?(student.track+" · "+(student.fieldGroup?student.fieldGroup+" · ":"")+student.major):student.grade;
  return heading("کتابخانه درسی","کتاب‌های رسمی متناسب با پایه و رشته خودت.")+'<section class="card panel" style="margin-bottom:15px"><strong>'+esc(trackLine)+'</strong><p class="book-meta">سال تحصیلی '+esc(CURRICULUM.academicYear)+' · منبع: پایگاه رسمی کتاب‌های درسی</p></section><div class="section-title"><div><h2>کتاب‌های ثبت‌شده در chap.sch.ir</h2><p>'+fa(books.length)+' کتاب رسمی برای این پایه و رشته</p></div></div><div class="dashboard-grid">'+cards+'</div>';
 }
-function renderProfile(){let s=state.student,trackLine=s.track?(s.track+" · "+(s.fieldGroup?s.fieldGroup+" · ":"")+s.major):"دوره عمومی";return `${heading("پروفایل دانش‌آموز","مشخصاتت رو ببین و تنظیمات برنامه رو مدیریت کن.",'<button class="secondary-button small-button" data-action="edit-profile">ویرایش مشخصات</button>')}<section class="profile-hero"><div class="profile-avatar">${esc(initials())}</div><div><h2>${esc(s.firstName+" "+s.lastName)}</h2><p>${esc(s.grade)} · ${fa(s.age)} ساله</p><span class="pill" style="margin-top:9px">${esc(trackLine)}</span></div></section><div class="profile-data"><div class="data-box"><small>نام</small><strong>${esc(s.firstName)}</strong></div><div class="data-box"><small>نام خانوادگی</small><strong>${esc(s.lastName)}</strong></div><div class="data-box"><small>پایه تحصیلی</small><strong>${esc(s.grade)}</strong></div><div class="data-box"><small>سن</small><strong>${fa(s.age)} سال</strong></div><div class="data-box"><small>شاخه</small><strong>${esc(s.track||"—")}</strong></div><div class="data-box"><small>رشته</small><strong>${esc(s.major||"—")}</strong></div></div><section class="card panel" style="margin-top:15px"><div class="section-title" style="margin-top:0"><div><h2>تنظیمات</h2><p>شخصی‌سازی تجربه استیونر</p></div></div><div class="settings-row"><div><strong>یادآوری تکالیف</strong><small>اعلان مهلت تکالیف روزانه</small></div><input class="switch" type="checkbox" data-pref="notifyTasks" ${state.preferences.notifyTasks?"checked":""}></div><div class="settings-row"><div><strong>یادآوری مطالعه</strong><small>اعلان پایان چرخه‌های پومودورو</small></div><input class="switch" type="checkbox" data-pref="notifyStudy" ${state.preferences.notifyStudy?"checked":""}></div><div class="settings-row"><div><strong>یادآوری استراحت</strong><small>اعلان شروع و پایان استراحت</small></div><input class="switch" type="checkbox" data-pref="notifyBreak" ${state.preferences.notifyBreak?"checked":""}></div><div class="settings-row"><div><strong>زمان یادآوری تکالیف</strong><small>یادآوری تکالیف امروز و فردا</small></div><input class="inline-input" style="width:112px;text-align:center" type="text" inputmode="numeric" dir="ltr" maxlength="5" placeholder="۰۸:۰۰" data-pref-time="taskReminderTime" value="${fa(state.preferences.taskReminderTime||"08:00")}"></div><div class="settings-row"><div><strong>زمان پیشنهادی مطالعه</strong><small>یادآوری روزانه برای شروع مطالعه</small></div><input class="inline-input" style="width:112px;text-align:center" type="text" inputmode="numeric" dir="ltr" maxlength="5" placeholder="۱۶:۰۰" data-pref-time="studyReminderTime" value="${fa(state.preferences.studyReminderTime||"16:00")}"></div><button class="secondary-button small-button" style="margin-top:15px" data-action="enable-notifications">فعال‌سازی اعلان‌های گوشی</button></section><p style="text-align:center;color:#a1ada5;font-size:10px;margin-top:22px">STUNER · نسخه آزمایشی ۰.۲</p>`}
+function renderProfile(){
+ let s=state.student,level=s.educationLevel||inferEducationLevel(s.grade||""),isSecondary=level==="secondary";
+ let levelLabel=level==="elementary"?"ابتدایی":level==="middle"?"متوسطه اول":"متوسطه دوم";
+ let trackLine=isSecondary?[s.track,s.fieldGroup,s.major].filter(Boolean).join(" · "):levelLabel;
+ let academicFields=isSecondary?'<div class="data-box"><small>شاخه</small><strong>'+esc(s.track||"—")+'</strong></div>'+(s.fieldGroup?'<div class="data-box"><small>زمینه</small><strong>'+esc(s.fieldGroup)+'</strong></div>':'')+'<div class="data-box"><small>رشته</small><strong>'+esc(s.major||"—")+'</strong></div>':"";
+ return `${heading("پروفایل دانش‌آموز","مشخصاتت رو ببین و تنظیمات برنامه رو مدیریت کن.",'<button class="secondary-button small-button" data-action="edit-profile">ویرایش مشخصات</button>')}<section class="profile-hero"><div class="profile-avatar">${esc(initials())}</div><div><h2>${esc(s.firstName+" "+s.lastName)}</h2><p>${esc(s.grade)} · ${fa(s.age)} ساله</p><span class="pill" style="margin-top:9px">${esc(trackLine)}</span></div></section><div class="profile-data"><div class="data-box"><small>نام</small><strong>${esc(s.firstName)}</strong></div><div class="data-box"><small>نام خانوادگی</small><strong>${esc(s.lastName)}</strong></div><div class="data-box"><small>پایه تحصیلی</small><strong>${esc(s.grade)}</strong></div><div class="data-box"><small>سن</small><strong>${fa(s.age)} سال</strong></div>${academicFields}</div><section class="card panel" style="margin-top:15px"><div class="section-title" style="margin-top:0"><div><h2>تنظیمات</h2><p>شخصی‌سازی تجربه استیونر</p></div></div><div class="settings-row"><div><strong>یادآوری تکالیف</strong><small>اعلان مهلت تکالیف روزانه</small></div><input class="switch" type="checkbox" data-pref="notifyTasks" ${state.preferences.notifyTasks?"checked":""}></div><div class="settings-row"><div><strong>یادآوری مطالعه</strong><small>اعلان پایان چرخه‌های پومودورو</small></div><input class="switch" type="checkbox" data-pref="notifyStudy" ${state.preferences.notifyStudy?"checked":""}></div><div class="settings-row"><div><strong>یادآوری استراحت</strong><small>اعلان شروع و پایان استراحت</small></div><input class="switch" type="checkbox" data-pref="notifyBreak" ${state.preferences.notifyBreak?"checked":""}></div><div class="settings-row"><div><strong>زمان یادآوری تکالیف</strong><small>یادآوری تکالیف امروز و فردا</small></div><input class="inline-input" style="width:112px;text-align:center" type="text" inputmode="numeric" dir="ltr" maxlength="5" placeholder="۰۸:۰۰" data-pref-time="taskReminderTime" value="${fa(state.preferences.taskReminderTime||"08:00")}"></div><div class="settings-row"><div><strong>زمان پیشنهادی مطالعه</strong><small>یادآوری روزانه برای شروع مطالعه</small></div><input class="inline-input" style="width:112px;text-align:center" type="text" inputmode="numeric" dir="ltr" maxlength="5" placeholder="۱۶:۰۰" data-pref-time="studyReminderTime" value="${fa(state.preferences.studyReminderTime||"16:00")}"></div><button class="secondary-button small-button" style="margin-top:15px" data-action="enable-notifications">فعال‌سازی اعلان‌های گوشی</button></section><p style="text-align:center;color:#a1ada5;font-size:10px;margin-top:22px">STUNER · نسخه آزمایشی ۰.۲</p>`;
+}
 function render(){
  let app=$("#app"),on=$("#onboarding");
  if(!profileIsReady(state.student)||editingStudent){app.style.display="none";on.hidden=false;populateStudentForm();return}
