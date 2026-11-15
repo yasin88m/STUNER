@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -23,112 +23,33 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Import official textbook catalogue
+        if: ${{ !contains(github.event.head_commit.message, '[chap-catalog-sync]') }}
+        run: |
+          python -m py_compile .github/scripts/sync_chap_catalog.py
+          python .github/scripts/sync_chap_catalog.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add chap-catalog.js
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: [chap-catalog-sync] refresh official textbook catalogue"
+            git push origin HEAD:main
+          fi
+
       - name: Validate application JavaScript
-        run: node --check app.js && node --check curriculum.js && node --check sw.js
-      - name: Inspect chap.sch.ir search form
-        continue-on-error: true
-        run: |
-          python - <<'PY'
-          import urllib.request,re
-          from html.parser import HTMLParser
-          class P(HTMLParser):
-            def __init__(self): super().__init__(); self.form=None; self.forms=[]; self.sel=None; self.opt=None; self.selects=[]; self.title=False
-            def handle_starttag(self,t,attrs):
-              a=dict(attrs)
-              if t=="form": self.form={"attrs":a,"controls":[]}; self.forms.append(self.form)
-              if self.form is not None and t in ("input","select","button"): self.form["controls"].append((t,a))
-              if t=="select": self.sel={"attrs":a,"options":[]}
-              if t=="option" and self.sel is not None:self.opt={"value":a.get("value"),"text":""}
-            def handle_data(self,d):
-              if self.opt is not None:self.opt["text"]+=d
-            def handle_endtag(self,t):
-              if t=="option" and self.opt is not None and self.sel is not None:self.sel["options"].append(self.opt);self.opt=None
-              elif t=="select" and self.sel is not None:self.selects.append(self.sel);self.sel=None
-              elif t=="form":self.form=None
-          req=urllib.request.Request("http://chap.sch.ir/",headers={"User-Agent":"Mozilla/5.0"})
-          data=urllib.request.urlopen(req,timeout=45).read().decode("utf-8","replace")
-          p=P();p.feed(data)
-          print("FORMS",p.forms[:20])
-          for s in p.selects:
-            print("SELECT",s["attrs"],"COUNT",len(s["options"]))
-            for o in s["options"][:30]:print("OPT",o["value"],repr(o["text"].strip()))
-          print("SEARCH_FORM_MARKERS",[(x,data.find(x)) for x in ["views-exposed-form","advanced_search","field_year_tid","field_book_code","views-field-title","name=tid","name=field"]])
-          for m in re.finditer(r'<form[^>]*>',data,re.I): print("FORM_TAG",m.group(0))
-          PY
-      - name: Inspect taxonomy hierarchy
-        run: |
-          python - <<'PY'
-          import urllib.request,re,json
-          from html.parser import HTMLParser
-          class P(HTMLParser):
-            def __init__(self):super().__init__();self.sel=None;self.opt=None;self.options=[]
-            def handle_starttag(self,t,attrs):
-              a=dict(attrs)
-              if t=="select" and a.get("name")=="tid":self.sel=True
-              elif t=="option" and self.sel:self.opt={"value":a.get("value"),"text":""}
-            def handle_data(self,d):
-              if self.opt is not None:self.opt["text"]+=d
-            def handle_endtag(self,t):
-              if t=="option" and self.opt is not None:self.options.append(self.opt);self.opt=None
-              elif t=="select":self.sel=None
-          req=urllib.request.Request("http://chap.sch.ir/",headers={"User-Agent":"Mozilla/5.0"})
-          h=urllib.request.urlopen(req,timeout=45).read().decode("utf-8","replace")
-          p=P();p.feed(h)
-          stack=[]
-          for i,o in enumerate(p.options):
-            raw=o["text"].strip()
-            if not o["value"] or o["value"]=="All" or not raw:continue
-            depth=len(raw)-len(raw.lstrip("-"))
-            label=raw[depth:].strip()
-            stack=stack[:depth]
-            stack.append(label)
-            if re.fullmatch(r"پایه\s*(?:اول|دوم|سوم|چهارم|پنجم|ششم|هفتم|هشتم|نهم|دهم|یازدهم|دوازدهم)",label):
-              print("GRADE_TERM",o["value"],"DEPTH",depth,"PATH",json.dumps(stack,ensure_ascii=False))
-          PY
-      - name: Inspect filtered book cards
-        run: |
-          python - <<'PY'
-          import urllib.request,urllib.parse,re,html
-          for tid in ["29","30","711","157","629","553","8"]:
-            u="http://chap.sch.ir/advanced_search?"+urllib.parse.urlencode({"tid":tid,"field_year_tid":"1402"})
-            req=urllib.request.Request(u,headers={"User-Agent":"Mozilla/5.0"})
-            data=urllib.request.urlopen(req,timeout=45).read().decode("utf-8","replace")
-            m=re.search(r'<table class="views-view-grid">(.*?)</table>',data,re.S)
-            grid=m.group(1) if m else ""
-            cells=re.findall(r'<td class="col-[^"]+"[^>]*>(.*?)</td>',grid,re.S)
-            books=[]
-            for c in cells:
-              link=re.search(r'<div class="views-field views-field-title".*?<a href="([^"]*/books/\d+)">(.*?)</a>',c,re.S)
-              code=re.search(r'<span class="views-field views-field-field-book-code".*?<span class="field-content">\s*(.*?)\s*</span>',c,re.S)
-              if link:
-                books.append((link.group(1),re.sub(r"\s+"," ",html.unescape(re.sub(r"<[^>]+>"," ",link.group(2)))).strip(),re.sub(r"\s+"," ",html.unescape(re.sub(r"<[^>]+>"," ",code.group(1)))).strip() if code else ""))
-            pager=re.findall(r'href="([^"]*(?:page=\d+)[^"]*)"',data)
-            print("GRID",tid,"found",len(books),"pager",pager[:20],"books",books[:40])
-          PY
-      - name: Inspect book detail metadata and pagination
-        run: |
-          python - <<'PY'
-          import urllib.request,re,html,urllib.parse
-          for url in ["http://chap.sch.ir/books/14261","http://chap.sch.ir/advanced_search?tid=29&field_year_tid=1402&page=0,0,0,0,0,0,0,0,0,0,0,0,0,1"]:
-            req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0"})
-            data=urllib.request.urlopen(req,timeout=45).read().decode("utf-8","replace")
-            print("URL",url,"BYTES",len(data))
-            for pattern in [r"<title>(.*?)</title>",r'<h1[^>]*>(.*?)</h1>',r'<a[^>]+href="([^"]+\.pdf[^"]*)"[^>]*>(.*?)</a>',r'<a[^>]+title="([^"]+)"[^>]*href="[^"]*/books/']:
-              found=re.findall(pattern,data,re.S|re.I)
-              print("MATCH",pattern,[(re.sub(r"\s+"," ",html.unescape(re.sub(r"<[^>]+>"," ",str(x)))).strip()) for x in found[:20]])
-            if "14261" in url: print("DETAIL_SNIP",re.sub(r"\s+"," ",data[6000:16000])[:7000])
-            else:
-              m=re.search(r'<table class="views-view-grid">(.*?)</table>',data,re.S)
-              print("PAGE1_GRID",bool(m),"BOOKIDS",re.findall(r'href="[^"]*/books/(\d+)"',m.group(1) if m else "")[:40])
-          PY
+        run: node --check app.js && node --check curriculum.js && node --check sw.js && node --check chap-catalog.js
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
           enablement: true
+
       - name: Upload site
         uses: actions/upload-pages-artifact@v4
         with:
           path: .
+
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
