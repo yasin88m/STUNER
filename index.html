@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d4937">
+  <meta name="description" content="استیونر؛ دستیار هوشمند برنامه‌ریزی درسی، مدیریت تکالیف و پیگیری پیشرفت تحصیلی">
+  <title>استیونر | برنامه‌ریز درسی</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="استیونر، صفحه خانه" data-page-link="home">
+        <span class="brand-mark"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M4 16.5 24 7l20 9.5L24 26 4 16.5Z" fill="currentColor"/><path d="M12 21v9.5c6.7 5.3 17.3 5.3 24 0V21l-12 5.8L12 21Z" fill="currentColor" opacity=".72"/><path d="M43 18v13" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="43" cy="34" r="2.5" fill="currentColor"/></svg></span>
+        <span class="brand-copy"><strong>استیونر</strong><small>Dream · Plan · Achieve</small></span>
+      </a>
+      <div class="topbar-actions">
+        <button class="icon-button notification-button" id="notificationButton" aria-label="اعلان‌ها" title="اعلان‌ها">
+          <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+          <i class="notification-dot"></i>
+        </button>
+        <button class="avatar-button" id="topAvatar" aria-label="پروفایل دانش‌آموز">؟</button>
+      </div>
+    </header>
+
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div class="sidebar-label">فضای دانش‌آموز</div>
+        <nav class="side-nav" aria-label="ناوبری اصلی">
+          <button class="nav-item active" data-page="home"><span class="nav-icon">⌂</span>خانه</button>
+          <button class="nav-item" data-page="plan"><span class="nav-icon">▦</span>برنامه‌ریز درسی</button>
+          <button class="nav-item" data-page="tasks"><span class="nav-icon">☑</span>تکالیف</button>
+          <button class="nav-item" data-page="exams"><span class="nav-icon">♜</span>امتحانات</button>
+          <button class="nav-item" data-page="calendar"><span class="nav-icon">▣</span>تقویم</button>
+          <button class="nav-item" data-page="stats"><span class="nav-icon">▥</span>آمار و نمرات</button>
+          <button class="nav-item" data-page="profile"><span class="nav-icon">◉</span>پروفایل</button>
+        </nav>
+        <div class="sidebar-tip">
+          <span class="tip-icon">✦</span>
+          <strong>قدم‌های کوچک، نتیجه‌های بزرگ</strong>
+          <p>هر روز کمی بهتر از دیروز باش.</p>
+        </div>
+        <div class="sidebar-footer">نسخه آزمایشی · STUNER</div>
+      </aside>
+
+      <main id="mainContent" class="main-content" tabindex="-1"></main>
+    </div>
+
+    <nav class="bottom-nav" aria-label="ناوبری موبایل">
+      <button class="bottom-item active" data-page="home"><span>⌂</span><small>خانه</small></button>
+      <button class="bottom-item" data-page="plan"><span>▦</span><small>برنامه</small></button>
+      <button class="bottom-item" data-page="tasks"><span>☑</span><small>تکالیف</small></button>
+      <button class="bottom-item" data-page="stats"><span>▥</span><small>آمار</small></button>
+      <button class="bottom-item" data-page="more"><span>•••</span><small>بیشتر</small></button>
+    </nav>
+  </div>
+
+  <section id="onboarding" class="onboarding" hidden>
+    <div class="onboarding-decoration decoration-one"></div>
+    <div class="onboarding-decoration decoration-two"></div>
+    <div class="onboarding-card">
+      <div class="onboarding-brand">
+        <span class="brand-mark large"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M4 16.5 24 7l20 9.5L24 26 4 16.5Z" fill="currentColor"/><path d="M12 21v9.5c6.7 5.3 17.3 5.3 24 0V21l-12 5.8L12 21Z" fill="currentColor" opacity=".72"/><path d="M43 18v13" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="43" cy="34" r="2.5" fill="currentColor"/></svg></span>
+        <span><strong>استیونر</strong><small>شروع یک مسیر تازه</small></span>
+      </div>
+      <div class="onboarding-progress"><span></span></div>
+      <p class="eyebrow">خوش آمدی به استیونر</p>
+      <h1>اول با هم آشنا بشیم!</h1>
+      <p class="onboarding-subtitle">چندتا اطلاعات کوتاه بهمون بده تا برنامه‌ریز درسی‌ات رو برای خودت آماده کنیم.</p>
+      <form id="onboardingForm" class="profile-form">
+        <div class="field-row">
+          <label class="field"><span>نام</span><input name="firstName" autocomplete="given-name" placeholder="مثلاً علی" required maxlength="32"></label>
+          <label class="field"><span>نام خانوادگی</span><input name="lastName" autocomplete="family-name" placeholder="مثلاً رضایی" required maxlength="40"></label>
+        </div>
+        <label class="field"><span>پایه تحصیلی</span>
+          <select name="grade" required>
+            <option value="" disabled selected>پایه تحصیلی‌ات رو انتخاب کن</option>
+            <optgroup label="دوره ابتدایی"><option>اول ابتدایی</option><option>دوم ابتدایی</option><option>سوم ابتدایی</option><option>چهارم ابتدایی</option><option>پنجم ابتدایی</option><option>ششم ابتدایی</option></optgroup>
+            <optgroup label="دوره متوسطه اول"><option>هفتم</option><option>هشتم</option><option>نهم</option></optgroup>
+            <optgroup label="دوره متوسطه دوم"><option>دهم</option><option>یازدهم</option><option>دوازدهم</option></optgroup>
+            <option>دانشجو</option>
+          </select>
+        </label>
+        <label class="field"><span>سن</span><div class="input-suffix"><input name="age" type="number" inputmode="numeric" min="6" max="30" placeholder="مثلاً ۱۵" required><span>سال</span></div></label>
+        <p class="form-error" id="onboardingError" aria-live="polite"></p>
+        <button class="primary-button full-button" type="submit">بزن بریم <span>←</span></button>
+        <p class="privacy-note">اطلاعاتت فقط برای شخصی‌سازی برنامه روی همین دستگاه ذخیره می‌شه.</p>
+      </form>
+    </div>
+  </section>
+
+  <div id="modalRoot"></div>
+  <div id="toastRoot" class="toast-root" aria-live="polite"></div>
+  <script src="./app.js" defer></script>
+</body>
+</html>
