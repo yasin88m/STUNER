@@ -55,10 +55,10 @@ jobs:
           print("SEARCH_FORM_MARKERS",[(x,data.find(x)) for x in ["views-exposed-form","advanced_search","field_year_tid","field_book_code","views-field-title","name=tid","name=field"]])
           for m in re.finditer(r'<form[^>]*>',data,re.I): print("FORM_TAG",m.group(0))
           PY
-      - name: Capture catalog form diagnostics
+      - name: Print catalog form structure
         run: |
           python - <<'PY'
-          import urllib.request,json,re
+          import urllib.request,json
           from html.parser import HTMLParser
           class P(HTMLParser):
             def __init__(self): super().__init__(); self.forms=[]; self.form=None; self.sel=None; self.opt=None; self.selects=[]
@@ -77,17 +77,16 @@ jobs:
           req=urllib.request.Request("http://chap.sch.ir/",headers={"User-Agent":"Mozilla/5.0"})
           html=urllib.request.urlopen(req,timeout=45).read().decode("utf-8","replace")
           p=P();p.feed(html)
-          out={"forms":p.forms,"selects":[{"attrs":s["attrs"],"options":s["options"][:1200]} for s in p.selects],"html_snippets":{}}
-          for marker in ["views-exposed-form","advanced_search","field_year_tid","field_book_code","name=tid"]:
-            i=html.find(marker);out["html_snippets"][marker]=html[max(0,i-700):i+1300] if i>=0 else None
-          with open("chap-form-debug.json","w",encoding="utf-8") as f:json.dump(out,f,ensure_ascii=False,indent=2)
-          print("Captured",len(p.forms),"forms",len(p.selects),"selects")
+          print("FORMS_JSON",json.dumps(p.forms,ensure_ascii=False))
+          for s in p.selects:
+            print("SELECT_NAME",s["attrs"].get("name"),"ID",s["attrs"].get("id"),"COUNT",len(s["options"]))
+            if len(s["options"])<200:
+              print("OPTIONS",json.dumps(s["options"],ensure_ascii=False))
+            else:
+              opts=s["options"]
+              relevant=[i for i,o in enumerate(opts) if any(k in o["text"] for k in ["پایه دهم","پایه یازدهم","پایه دوازدهم","متوسطه نظری","فنی و حرفه","کاردانش","دوره آموزش ابتدایی","دوره اول آموزش متوسطه"])]
+              print("RELEVANT_OPTION_INDICES",[(i,opts[i]["value"],opts[i]["text"].strip()) for i in relevant[:220]])
           PY
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add chap-form-debug.json
-          git commit -m "chore: [chap-debug] capture official catalog form"
-          git push origin HEAD:main
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
