@@ -25,6 +25,36 @@ jobs:
         uses: actions/checkout@v4
       - name: Validate application JavaScript
         run: node --check app.js && node --check curriculum.js && node --check sw.js
+      - name: Inspect chap.sch.ir search form
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import urllib.request,re
+          from html.parser import HTMLParser
+          class P(HTMLParser):
+            def __init__(self): super().__init__(); self.form=None; self.forms=[]; self.sel=None; self.opt=None; self.selects=[]; self.title=False
+            def handle_starttag(self,t,attrs):
+              a=dict(attrs)
+              if t=="form": self.form={"attrs":a,"controls":[]}; self.forms.append(self.form)
+              if self.form is not None and t in ("input","select","button"): self.form["controls"].append((t,a))
+              if t=="select": self.sel={"attrs":a,"options":[]}
+              if t=="option" and self.sel is not None:self.opt={"value":a.get("value"),"text":""}
+            def handle_data(self,d):
+              if self.opt is not None:self.opt["text"]+=d
+            def handle_endtag(self,t):
+              if t=="option" and self.opt is not None and self.sel is not None:self.sel["options"].append(self.opt);self.opt=None
+              elif t=="select" and self.sel is not None:self.selects.append(self.sel);self.sel=None
+              elif t=="form":self.form=None
+          req=urllib.request.Request("http://chap.sch.ir/",headers={"User-Agent":"Mozilla/5.0"})
+          data=urllib.request.urlopen(req,timeout=45).read().decode("utf-8","replace")
+          p=P();p.feed(data)
+          print("FORMS",p.forms[:20])
+          for s in p.selects:
+            print("SELECT",s["attrs"],"COUNT",len(s["options"]))
+            for o in s["options"][:30]:print("OPT",o["value"],repr(o["text"].strip()))
+          print("SEARCH_FORM_MARKERS",[(x,data.find(x)) for x in ["views-exposed-form","advanced_search","field_year_tid","field_book_code","views-field-title","name=tid","name=field"]])
+          for m in re.finditer(r'<form[^>]*>',data,re.I): print("FORM_TAG",m.group(0))
+          PY
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
