@@ -55,37 +55,35 @@ jobs:
           print("SEARCH_FORM_MARKERS",[(x,data.find(x)) for x in ["views-exposed-form","advanced_search","field_year_tid","field_book_code","views-field-title","name=tid","name=field"]])
           for m in re.finditer(r'<form[^>]*>',data,re.I): print("FORM_TAG",m.group(0))
           PY
-      - name: Print catalog form structure
+      - name: Inspect taxonomy hierarchy
         run: |
           python - <<'PY'
-          import urllib.request,json
+          import urllib.request,re,json
           from html.parser import HTMLParser
           class P(HTMLParser):
-            def __init__(self): super().__init__(); self.forms=[]; self.form=None; self.sel=None; self.opt=None; self.selects=[]
+            def __init__(self):super().__init__();self.sel=None;self.opt=None;self.options=[]
             def handle_starttag(self,t,attrs):
               a=dict(attrs)
-              if t=="form": self.form={"attrs":a,"controls":[]}; self.forms.append(self.form)
-              if self.form is not None and t in ("input","select","button"): self.form["controls"].append({"tag":t,"attrs":a})
-              if t=="select": self.sel={"attrs":a,"options":[]}
-              if t=="option" and self.sel is not None:self.opt={"value":a.get("value"),"text":""}
+              if t=="select" and a.get("name")=="tid":self.sel=True
+              elif t=="option" and self.sel:self.opt={"value":a.get("value"),"text":""}
             def handle_data(self,d):
               if self.opt is not None:self.opt["text"]+=d
             def handle_endtag(self,t):
-              if t=="option" and self.opt is not None and self.sel is not None:self.sel["options"].append(self.opt);self.opt=None
-              elif t=="select" and self.sel is not None:self.selects.append(self.sel);self.sel=None
-              elif t=="form":self.form=None
+              if t=="option" and self.opt is not None:self.options.append(self.opt);self.opt=None
+              elif t=="select":self.sel=None
           req=urllib.request.Request("http://chap.sch.ir/",headers={"User-Agent":"Mozilla/5.0"})
-          html=urllib.request.urlopen(req,timeout=45).read().decode("utf-8","replace")
-          p=P();p.feed(html)
-          print("FORMS_JSON",json.dumps(p.forms,ensure_ascii=False))
-          for s in p.selects:
-            print("SELECT_NAME",s["attrs"].get("name"),"ID",s["attrs"].get("id"),"COUNT",len(s["options"]))
-            if len(s["options"])<200:
-              print("OPTIONS",json.dumps(s["options"],ensure_ascii=False))
-            else:
-              opts=s["options"]
-              relevant=[i for i,o in enumerate(opts) if any(k in o["text"] for k in ["پایه دهم","پایه یازدهم","پایه دوازدهم","متوسطه نظری","فنی و حرفه","کاردانش","دوره آموزش ابتدایی","دوره اول آموزش متوسطه"])]
-              print("RELEVANT_OPTION_INDICES",[(i,opts[i]["value"],opts[i]["text"].strip()) for i in relevant[:220]])
+          h=urllib.request.urlopen(req,timeout=45).read().decode("utf-8","replace")
+          p=P();p.feed(h)
+          stack=[]
+          for i,o in enumerate(p.options):
+            raw=o["text"].strip()
+            if not o["value"] or o["value"]=="All" or not raw:continue
+            depth=len(raw)-len(raw.lstrip("-"))
+            label=raw[depth:].strip()
+            stack=stack[:depth]
+            stack.append(label)
+            if re.fullmatch(r"پایه\s*(?:اول|دوم|سوم|چهارم|پنجم|ششم|هفتم|هشتم|نهم|دهم|یازدهم|دوازدهم)",label):
+              print("GRADE_TERM",o["value"],"DEPTH",depth,"PATH",json.dumps(stack,ensure_ascii=False))
           PY
       - name: Inspect filtered book cards
         run: |
