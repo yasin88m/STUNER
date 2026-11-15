@@ -1,0 +1,38 @@
+name: Extract editable STUNER source
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Decompress application source
+        run: |
+          python - <<'PY'
+          import base64
+          import gzip
+          from pathlib import Path
+          packed = Path("app.bundle.b64").read_text(encoding="utf-8").strip()
+          source = gzip.decompress(base64.b64decode(packed)).decode("utf-8")
+          Path("app.source.js").write_text(source, encoding="utf-8")
+          print(f"Extracted {len(source)} characters into app.source.js")
+          PY
+      - name: Commit editable source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.source.js
+          if git diff --cached --quiet; then
+            echo "Source is already up to date."
+            exit 0
+          fi
+          git commit -m "Extract editable STUNER application source [skip ci]"
+          git push
