@@ -11,7 +11,7 @@ import urllib.request
 from html.parser import HTMLParser
 from pathlib import Path
 
-BASE = "http://chap.sch.ir"
+BASE = "https://chap.sch.ir"
 TARGET_YEAR = "1405-1406"
 UA = "Mozilla/5.0 (compatible; STUNER-Curriculum-Sync/1.0)"
 GRADE_WORDS = {
