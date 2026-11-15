@@ -309,7 +309,7 @@ document.addEventListener("change",e=>{
  if(e.target.id==="educationLevel"){updateEducationFields(false);return}
  if(e.target.id==="gradeSelect"){updateMajorFields(false);return}
  if(e.target.id==="trackSelect"){updateMajorFields(false);return}
- if(e.target.id==="fieldGroupSelect"){updateMajorFields(false);return}
+ if(e.target.id==="fieldGroupSelect"){updateMajorFields(true);return}
  if(e.target.id==="timerSubject"){state.timer.subject=e.target.value;save();render();return}
  if(e.target.id==="timerActivity"){
   let activity=e.target.value;if(state.timer.running)timerPause();
