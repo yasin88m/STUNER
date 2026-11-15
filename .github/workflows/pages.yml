@@ -105,6 +105,22 @@ jobs:
             pager=re.findall(r'href="([^"]*(?:page=\d+)[^"]*)"',data)
             print("GRID",tid,"found",len(books),"pager",pager[:20],"books",books[:40])
           PY
+      - name: Inspect book detail metadata and pagination
+        run: |
+          python - <<'PY'
+          import urllib.request,re,html,urllib.parse
+          for url in ["http://chap.sch.ir/books/14261","http://chap.sch.ir/advanced_search?tid=29&field_year_tid=1402&page=0,0,0,0,0,0,0,0,0,0,0,0,0,1"]:
+            req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0"})
+            data=urllib.request.urlopen(req,timeout=45).read().decode("utf-8","replace")
+            print("URL",url,"BYTES",len(data))
+            for pattern in [r"<title>(.*?)</title>",r'<h1[^>]*>(.*?)</h1>',r'<a[^>]+href="([^"]+\.pdf[^"]*)"[^>]*>(.*?)</a>',r'<a[^>]+title="([^"]+)"[^>]*href="[^"]*/books/']:
+              found=re.findall(pattern,data,re.S|re.I)
+              print("MATCH",pattern,[(re.sub(r"\s+"," ",html.unescape(re.sub(r"<[^>]+>"," ",str(x)))).strip()) for x in found[:20]])
+            if "14261" in url: print("DETAIL_SNIP",re.sub(r"\s+"," ",data[6000:16000])[:7000])
+            else:
+              m=re.search(r'<table class="views-view-grid">(.*?)</table>',data,re.S)
+              print("PAGE1_GRID",bool(m),"BOOKIDS",re.findall(r'href="[^"]*/books/(\d+)"',m.group(1) if m else "")[:40])
+          PY
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
