@@ -25,38 +25,26 @@ jobs:
         uses: actions/checkout@v4
       - name: Validate application JavaScript
         run: node --check app.js && node --check curriculum.js && node --check sw.js
-      - name: Extract official textbook filter labels
+      - name: Read official textbook publication-year options
         continue-on-error: true
         run: |
           python - <<'PY'
-          import urllib.request,re
+          import urllib.request
           from html.parser import HTMLParser
           class P(HTMLParser):
-            def __init__(self):
-              super().__init__(); self.sel=None; self.opt=None; self.data={}
+            def __init__(self): super().__init__(); self.sel=None; self.opt=None; self.data={}
             def handle_starttag(self,t,attrs):
               a=dict(attrs)
               if t=="select": self.sel={"name":a.get("name"),"options":[]}
               elif t=="option" and self.sel is not None: self.opt={"value":a.get("value",""),"text":""}
             def handle_data(self,d):
-              if self.opt is not None: self.opt["text"]+=d
+              if self.opt is not None:self.opt["text"]+=d
             def handle_endtag(self,t):
-              if t=="option" and self.sel is not None and self.opt is not None:
-                self.sel["options"].append(self.opt); self.opt=None
-              elif t=="select" and self.sel is not None:
-                self.data[self.sel["name"]]=self.sel["options"]; self.sel=None
-          req=urllib.request.Request("http://chap.sch.ir/",headers={"User-Agent":"Mozilla/5.0"})
-          html=urllib.request.urlopen(req,timeout=40).read().decode("utf-8","replace")
+              if t=="option" and self.sel is not None and self.opt is not None:self.sel["options"].append(self.opt);self.opt=None
+              elif t=="select" and self.sel is not None:self.data[self.sel["name"]]=self.sel["options"];self.sel=None
+          html=urllib.request.urlopen(urllib.request.Request("http://chap.sch.ir/",headers={"User-Agent":"Mozilla/5.0"}),timeout=40).read().decode("utf-8","replace")
           p=P();p.feed(html)
-          for name,opts in p.data.items():
-            print("\\nSELECT",name,"COUNT",len(opts))
-            if name=="field_year_tid":
-              for o in opts: print("YEAR",o["value"],repr(o["text"].strip()))
-            elif name=="tid":
-              pat=re.compile(r"اول|دوم|سوم|چهارم|پنجم|ششم|هفتم|هشتم|نهم|دهم|یازدهم|دوازدهم|ابتدایی|متوسطه|فنی|حرفه|کاردانش|نظری|صنعت|هنر|خدمات|کشاورزی|ریاضی|تجربی|انسانی|معارف|معماری|حسابداری|تربیت کودک|شبکه|الکتروتکنیک|عمومی",re.I)
-              for o in opts:
-                t=o["text"].strip()
-                if pat.search(t): print("TERM",o["value"],repr(t))
+          for o in p.data.get("field_year_tid",[]):print("YEAR",o["value"],repr(o["text"].strip()))
           PY
       - name: Configure Pages
         uses: actions/configure-pages@v5
