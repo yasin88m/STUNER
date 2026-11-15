@@ -30,20 +30,20 @@ jobs:
         run: |
           python - <<'PY'
           import urllib.request,re,html
-          from html.parser import HTMLParser
           u="http://chap.sch.ir/advanced_search?field_year_tid=1402"
           req=urllib.request.Request(u,headers={"User-Agent":"Mozilla/5.0"})
           data=urllib.request.urlopen(req,timeout=45).read().decode("utf-8","replace")
-          print("URL",u,"BYTES",len(data),"TITLE",re.search(r"<title>(.*?)</title>",data,re.S).group(1) if re.search(r"<title>(.*?)</title>",data,re.S) else "")
-          links=re.findall(r'href=["\\']([^"\\']*/books/\\d+[^"\\']*)["\\'][^>]*>(.*?)</a>',data,re.S)
-          clean=lambda x:re.sub(r"\\s+"," ",html.unescape(re.sub(r"<[^>]+>"," ",x))).strip()
+          m=re.search(r"<title>(.*?)</title>",data,re.S)
+          print("URL",u,"BYTES",len(data),"TITLE",html.unescape(m.group(1)) if m else "")
+          links=re.findall(r'href="([^"]*/books/\d+[^"]*)"[^>]*>(.*?)</a>',data,re.S)
+          clean=lambda x:re.sub(r"\s+"," ",html.unescape(re.sub(r"<[^>]+>"," ",x))).strip()
           print("BOOK_LINK_COUNT",len(links))
-          for h,t in links[:100]:print("BOOK",h,clean(t))
-          print("PAGER",re.findall(r'href=["\\']([^"\\']*(?:page=|pager)[^"\\']*)["\\']',data)[:40])
-          for key in ["views-row","view-empty","pager","result"]: 
+          for h,t in links[:120]:print("BOOK",h,clean(t))
+          print("PAGER",re.findall(r'href="([^"]*(?:page=|pager)[^"]*)"',data)[:60])
+          for key in ["views-row","view-empty","pager","result"]:
             print("MARKER",key,data.find(key))
           p=data.find("views-row")
-          print("ROW_SNIP",data[p:p+4000] if p>=0 else data[10000:14000])
+          print("ROW_SNIP",data[p:p+3500] if p>=0 else data[8000:11500])
           PY
       - name: Configure Pages
         uses: actions/configure-pages@v5
