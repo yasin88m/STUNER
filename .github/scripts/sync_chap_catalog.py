@@ -180,7 +180,7 @@ def classify_path(path, grade, level):
         major = next((x for x in names[i+1:] if x not in ("پایه دهم","پایه یازدهم","پایه دوازدهم")), "")
         aliases = {"علوم انسانی": "ادبیات و علوم انسانی"}
         return {"track": "نظری", "fieldGroup": "", "major": aliases.get(major, major)}
-    track = "فنی‌وحرفه‌ای" if any("فنی" in x and "حرفه" in x for x in names) else ("کاردانش" if any("کاردانش" in x for x in names) else "")
+    track = "فنی‌وحرفه‌ای" if any("فنی" in x and "حرفه" in x for x in names) else ("کاردانش" if any("کاردانش" in x or "کار دانش" in x for x in names) else "")
     if not track:
         return None
     if any("دروس مشترك فنی" in x or "دروس مشترک فنی" in x for x in names):
@@ -195,9 +195,11 @@ def classify_path(path, grade, level):
             group = "مدیریت و خدمات"; break
         if "هنر" in x or "معماری" in x:
             group = "هنر"; break
+    if not group and track == "کاردانش":
+        return {"track": track, "fieldGroup": "مشترک", "major": "__common__"}
     if not group:
         return None
-    ignored = {"صنعت","هنر","خدمات","کشاورزی","فنی حرفه ای","فنی‌وحرفه‌ای","کاردانش","گروه صنعت","گروه هنر","گروه خدمات","گروه کشاورزی","معماری و ساختمان","گروه معماری و ساختمان"}
+    ignored = {"صنعت","هنر","خدمات","کشاورزی","فنی حرفه ای","فنی‌وحرفه‌ای","کاردانش","کار دانش","گروه صنعت","گروه هنر","گروه خدمات","گروه کشاورزی","معماری و ساختمان","گروه معماری و ساختمان"}
     candidates = [x for x in names if x not in ignored and not x.startswith("پایه ") and not x.startswith("گروه ")]
     # The most specific non-grade item is the specialty. Common group labels are not majors.
     major = candidates[-1] if candidates else ""
