@@ -124,3 +124,6 @@ python -m http.server 8080
 - The import excludes teacher-guidance and special-education taxonomy branches from the standard student selector; it retains student workbooks and official supplementary student books associated with the selected grade.
 - Shared technical/vocational and Kardanesh books are merged into the selected specialty's book list.
 - The catalogue is generated during deployment and cached by the service worker for offline access. Do not manually edit chap-catalog.js.
+
+
+<!-- [sync-catalog] Refresh official book pages and discover direct PDF URLs. -->
