@@ -33,6 +33,14 @@ function fa(v){return String(v).replace(/[0-9]/g,d=>"۰۱۲۳۴۵۶۷۸۹"[+d])}
 function esc(s=""){return String(s).replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function fmt(s,opt={weekday:"short",day:"numeric",month:"long"}){try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{...opt,timeZone:IRAN_TZ}).format(dateObj(s))}catch{return s||"بدون تاریخ"}}
 
+function toast(msg){let el=document.createElement("div");el.className="toast";el.textContent=msg;$("#toastRoot").append(el);setTimeout(()=>el.remove(),3000)}
+function uid(){return crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2)}
+function name(){return state.student?.firstName||"دانش‌آموز"}
+function initials(){return state.student?.firstName?.[0]||"؟"}
+function totalMins(){return state.sessions.reduce((a,s)=>a+(+s.minutes||0),0)}
+function average(){return state.grades.length?state.grades.reduce((a,g)=>a+(+g.score),0)/state.grades.length:null}
+
+
 function dueText(s){if(!s)return"بدون مهلت";let d=Math.round((dateObj(s)-dateObj(isoToday()))/86400000);return d<0?"مهلت گذشته":d===0?"امروز":d===1?"فردا":fa(d)+" روز دیگر"}
 function subjectOptions(sel){return state.subjects.map(s=>`<option ${s===sel?"selected":""}>${esc(s)}</option>`).join("")}
 function heading(t,p,a=""){return `<div class="page-heading"><div><h1>${t}</h1><p>${p}</p></div>${a}</div>`}
