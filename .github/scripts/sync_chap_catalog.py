@@ -27,7 +27,7 @@ def clean(value):
     value = html.unescape(re.sub(r"<[^>]+>", " ", value or ""))
     return re.sub(r"\s+", " ", value).strip()
 
-def fetch(url, attempts=3):
+def fetch(url, attempts=2):
     last = None
     for attempt in range(attempts):
         try:
@@ -35,7 +35,7 @@ def fetch(url, attempts=3):
                 "User-Agent": UA,
                 "Accept": "text/html,application/xhtml+xml,application/pdf,*/*",
             })
-            with urllib.request.urlopen(request, timeout=55) as response:
+            with urllib.request.urlopen(request, timeout=30) as response:
                 return response.read().decode("utf-8", "replace")
         except Exception as exc:
             last = exc
@@ -279,12 +279,16 @@ def main():
     errors = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=18) as pool:
         futures = {pool.submit(fetch_category, item, year_id): item for item in categories}
+        completed = 0
         for future in concurrent.futures.as_completed(futures):
             item = futures[future]
             try:
                 results.append(future.result())
             except Exception as exc:
                 errors.append((item["termId"], item["path"], repr(exc)))
+            completed += 1
+            if completed % 50 == 0 or completed == len(categories):
+                print("CATEGORY_PROGRESS", completed, "/", len(categories), "books found so far", sum(len(x["bookIds"]) for x in results), flush=True)
     results.sort(key=lambda x: (x["educationLevel"], x["grade"], x["track"], x["fieldGroup"], x["major"], int(x["termId"])))
     book_cards = {}
     for category in results:
@@ -299,20 +303,27 @@ def main():
     if len(errors) > max(15, len(categories) // 12):
         raise RuntimeError("Too many catalogue category requests failed; refusing incomplete import")
 
-    # Fetch full title and the official PDF URL from each book's own detail page.
-    books_by_id = {}
+    # Search cards already contain full titles in most cases. Only open detail pages
+    # for titles visibly shortened with ellipses; those pages provide the full title
+    # and the direct official PDF link.
+    books_by_id = {
+        book_id: {**book_cards[book_id], "pdfUrl": "", "pdfUrls": [], "sourceYear": TARGET_YEAR}
+        for book_id in book_ids
+    }
+    needs_detail = [book_id for book_id in book_ids if re.search(r"\\.{2,}|…", book_cards[book_id]["title"])]
+    print("DETAIL_PAGES_REQUIRED", len(needs_detail), "OF", len(book_ids), flush=True)
     with concurrent.futures.ThreadPoolExecutor(max_workers=18) as pool:
-        futures = {pool.submit(enrich_book, book_cards[book_id]): book_id for book_id in book_ids}
+        futures = {pool.submit(enrich_book, book_cards[book_id]): book_id for book_id in needs_detail}
+        completed = 0
         for future in concurrent.futures.as_completed(futures):
             book_id = futures[future]
             try:
                 books_by_id[book_id] = future.result()
             except Exception as exc:
-                # Keep a record from the category card if detail metadata is temporarily unavailable.
-                books_by_id[book_id] = {
-                    **book_cards[book_id], "pdfUrl": "", "pdfUrls": [],
-                    "sourceYear": TARGET_YEAR, "detailFetchError": str(exc),
-                }
+                books_by_id[book_id]["detailFetchError"] = str(exc)
+            completed += 1
+            if completed % 50 == 0 or completed == len(needs_detail):
+                print("DETAIL_PROGRESS", completed, "/", len(needs_detail), flush=True)
 
     ready_categories = []
     for category in results:
