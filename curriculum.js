@@ -370,7 +370,8 @@ window.STUNER_CURRICULUM={
   if(student.track==="فنی‌وحرفه‌ای"||student.track==="کاردانش"){
    let common=vocationalCommon[student.grade]||[];
    let specialist=specialtyFor(student.major,student.grade);
-   return [...new Set([...common,...specialist])];
+   let bookTitles=this.getBooks(student).map(b=>b.title);
+   return [...new Set([...common,...specialist,...bookTitles])];
   }
   return[];
  }
