@@ -81,22 +81,43 @@ class DetailParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.in_h1 = False
+        self.in_anchor = False
         self.title = ""
+        self.anchor_text = ""
+        self.anchor_href = ""
         self.pdfs = []
+    def add_candidate(self, value):
+        value = html.unescape(str(value or "")).strip()
+        if not value:
+            return
+        lower = value.lower()
+        if ".pdf" in lower or "download" in lower or "دانلود" in value or "دریافت" in value:
+            if value.startswith(("http://", "https://", "/", "sites/")):
+                self.pdfs.append(urllib.parse.urljoin(BASE + "/", value))
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
         if tag == "h1":
             self.in_h1 = True
         if tag == "a":
-            href = html.unescape(attrs.get("href", ""))
-            if ".pdf" in href.lower():
-                self.pdfs.append(urllib.parse.urljoin(BASE + "/", href))
+            self.in_anchor = True
+            self.anchor_href = html.unescape(attrs.get("href", ""))
+            self.anchor_text = ""
+        for key in ("href", "src", "data", "content", "data-file-url"):
+            self.add_candidate(attrs.get(key, ""))
     def handle_data(self, data):
         if self.in_h1:
             self.title += data
+        if self.in_anchor:
+            self.anchor_text += data
     def handle_endtag(self, tag):
         if tag == "h1":
             self.in_h1 = False
+        if tag == "a" and self.in_anchor:
+            if re.search(r"pdf|دانلود|دریافت|فایل کتاب", self.anchor_text, re.I):
+                self.add_candidate(self.anchor_href)
+            self.in_anchor = False
+            self.anchor_href = ""
+            self.anchor_text = ""
 
 def get_year_id(home):
     parser = SelectParser()
@@ -303,17 +324,14 @@ def main():
     if len(errors) > max(15, len(categories) // 12):
         raise RuntimeError("Too many catalogue category requests failed; refusing incomplete import")
 
-    # Search cards already contain full titles in most cases. Only open detail pages
-    # for titles visibly shortened with ellipses; those pages provide the full title
-    # and the direct official PDF link.
+    # Inspect every official book detail page to discover direct PDF/download links.
     books_by_id = {
         book_id: {**book_cards[book_id], "pdfUrl": "", "pdfUrls": [], "sourceYear": TARGET_YEAR}
         for book_id in book_ids
     }
-    needs_detail = [book_id for book_id in book_ids if re.search(r"\\.{2,}|…", book_cards[book_id]["title"])]
-    print("DETAIL_PAGES_REQUIRED", len(needs_detail), "OF", len(book_ids), flush=True)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=18) as pool:
-        futures = {pool.submit(enrich_book, book_cards[book_id]): book_id for book_id in needs_detail}
+    print("DETAIL_PAGES_REQUIRED", len(book_ids), flush=True)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=28) as pool:
+        futures = {pool.submit(enrich_book, book_cards[book_id]): book_id for book_id in book_ids}
         completed = 0
         for future in concurrent.futures.as_completed(futures):
             book_id = futures[future]
@@ -322,8 +340,11 @@ def main():
             except Exception as exc:
                 books_by_id[book_id]["detailFetchError"] = str(exc)
             completed += 1
-            if completed % 50 == 0 or completed == len(needs_detail):
-                print("DETAIL_PROGRESS", completed, "/", len(needs_detail), flush=True)
+            if completed % 50 == 0 or completed == len(book_ids):
+                found = sum(bool(x.get("pdfUrl")) for x in books_by_id.values())
+                print("DETAIL_PROGRESS", completed, "/", len(book_ids), "PDF_LINKS", found, flush=True)
+    pdf_count = sum(bool(x.get("pdfUrl")) for x in books_by_id.values())
+    print("OFFICIAL_DIRECT_PDF_LINKS", pdf_count, "OF", len(books_by_id), flush=True)
 
     ready_categories = []
     for category in results:
