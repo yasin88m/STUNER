@@ -28,9 +28,9 @@ const allColumns=["ردیف","نام","نام خانوادگی","کد ملی","�
 function render(role){
  if(state.role!==role){state.role=role;state.rows=[];state.note="";state.fileName="";}
  const isStudent=role==="student";
- return '<details class="portal-card principal-disclosure school-import-card" '+(state.rows.length||state.note?'open':"")+'><summary><i data-lucide="file-spreadsheet"></i> ورود گروهی '+(isStudent?"دانش‌آموزان":"معلمان")+' از اکسل <i data-lucide="chevron-down"></i></summary>'+
+ return '<details class="portal-card principal-disclosure school-import-card" '+(state.rows.length||state.note?'open':"")+'><summary><i data-lucide="file-text"></i> ورود گروهی '+(isStudent?"دانش‌آموزان":"معلمان")+' از اکسل <i data-lucide="chevron-down"></i></summary>'+
  '<p class="portal-note">فایل اکسل (.xlsx) یا CSV را انتخاب کنید. ستون‌ها: '+(isStudent?"ردیف، نام، نام خانوادگی، کد ملی، شماره تماس، پایه تحصیلی، رشته تحصیلی":"ردیف، نام، نام خانوادگی، کد ملی، شماره تماس (پایه و رشته اختیاری)")+'.</p>'+
- '<div class="school-import-top"><label class="school-import-file"><i data-lucide="upload"></i><span>انتخاب فایل اکسل</span><input type="file" id="schoolImportFile" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"></label><button class="portal-secondary" data-import-template="'+role+'" type="button"><i data-lucide="download"></i> دریافت فایل نمونه</button></div>'+
+ '<div class="school-import-top"><label class="school-import-file"><i data-lucide="file-text"></i><span>انتخاب فایل اکسل</span><input type="file" id="schoolImportFile" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"></label><button class="portal-secondary" data-import-template="'+role+'" type="button"><i data-lucide="arrow-right"></i> دریافت فایل نمونه</button></div>'+
  '<p class="school-import-hint">نام کاربری هر نفر کد ملی ۱۰ رقمی و رمز اولیه او شماره موبایل درج‌شده در فایل است. صفر ابتدای اعداد حفظ می‌شود. رمز اولیه قابل حدس است؛ به کاربران تأکید کنید پس از ورود تغییرش دهند. '+(isStudent?"کلاس هر نفر فقط در صورت تطابق دقیق پایه و رشته تشخیص داده می‌شود.":"معلمان بدون هیچ انتساب کلاسی ثبت می‌شوند؛ مدیر بعداً کلاس‌هایشان را تعیین می‌کند.")+'</p>'+
  '<div id="schoolImportContent" aria-live="polite">'+view()+'</div></details>';
 }
@@ -106,7 +106,7 @@ function view(){
  '<div class="school-import-scroll"><table class="school-import-table"><thead><tr><th>ردیف</th><th>نام و نام خانوادگی</th><th>کد ملی</th><th>کلاس</th><th>وضعیت</th></tr></thead><tbody>'+sample+'</tbody></table></div>'+
  (rows.length>18?'<p class="portal-note">۱۸ ردیف نخست نشان داده می‌شود؛ بررسی و ثبت برای همه '+rows.length+' ردیف انجام می‌شود.</p>':"")+
  (errors?'<div class="school-import-errors"><strong>ردیف‌های نیازمند بررسی</strong><ul>'+errors+'</ul></div>':"")+
- '<div class="school-import-actions">'+(valid.length?'<button type="button" class="portal-primary" data-import-start '+(state.running?'disabled':"")+'><i data-lucide="user-plus"></i> '+(state.running?"در حال ثبت…":"ثبت "+valid.length+" حساب معتبر")+'</button>':"")+
+ '<div class="school-import-actions">'+(valid.length?'<button type="button" class="portal-primary" data-import-start '+(state.running?'disabled':"")+'><i data-lucide="plus"></i> '+(state.running?"در حال ثبت…":"ثبت "+valid.length+" حساب معتبر")+'</button>':"")+
  (state.running?'<button type="button" class="portal-secondary" data-import-stop>توقف پس از گروه جاری</button>':"")+'</div>'+
  '<p class="school-import-result" role="status">'+esc(state.note||"فقط ردیف‌های معتبر ثبت می‌شوند. سایر ردیف‌ها نیاز به اصلاح فایل دارند.")+'</p>';
 }
@@ -138,7 +138,7 @@ async function startImport(){
    const batch=pending.slice(at,at+20),payload=batch.map(r=>({username:r.username,password:r.password,display_name:r.first+" "+r.last,grade:r.grade,major:r.major,class_id:r.class_id}));
    const reply=await state.submitBatch({mode:"import_members",school_id:state.schoolId,role:state.role,rows:payload});
    if(!Array.isArray(reply.results)||reply.results.length!==batch.length)throw Error("پاسخ سرور برای یک گروه کامل نیست؛ وضعیت حساب‌ها را بررسی کنید.");
-   reply.results.forEach((entry,i)=>{batch[i].status=entry.created===true?"done":"failed";batch[i].serverError=entry.created===true?"":String(entry.error||"این حساب ثبت نشد.")});
+   reply.results.forEach((entry,i)=>{batch[i].status=entry.created===true?"done":"failed";batch[i].serverError=entry.created===true?"":String(entry.error||"این حساب ثبت نشد.");batch[i].password="";});
    state.note="پیشرفت: "+state.rows.filter(r=>r.status==="done").length+" حساب ثبت شده از "+pending.length+" ردیف آماده.";
    redraw();
   }
