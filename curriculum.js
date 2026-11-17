@@ -589,7 +589,7 @@ function roshdSourceFor(student){
  return "https://www.roshd.ir/fanavari";
 }
 
-const bookSources={official:"https://chap.oerp.ir/",distribution:"https://www.irtextbook.ir/"};
+const bookSources={official:"http://chap.oerp.ir/",distribution:"https://www.irtextbook.ir/"};
 const chapCatalog=window.STUNER_CHAP_CATALOG||null;
 const chapCategories=Array.isArray(chapCatalog?.categories)?chapCatalog.categories:[];
 const chapBooks=chapCatalog?.books||{};
