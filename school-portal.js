@@ -5,30 +5,86 @@ const cfg=window.STUNER_SUPABASE_CONFIG||{};
 const el=document.getElementById("portalRoot"),cover=document.getElementById("schoolPortal");
 const app=document.getElementById("app"),on=document.getElementById("onboarding");
 const ready=/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(cfg.url||"")&&/^(sb_publishable_|eyJ)/.test(cfg.publishableKey||"");
-let client=null,user=null,role="student",members=[],current=null,classes=[],people=[],teacherLinks=[],school=null,assignments=[];
+let client=null,user=null,role="student",members=[],current=null,classes=[],people=[],teacherLinks=[],school=null,assignments=[],accountNames=[];
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+const usernameRx=/^[a-z][a-z0-9_]{3,31}$/;
+const loginEmail=(name)=>name.trim().toLowerCase()+"@accounts.stuner.invalid";
+async function provision(payload,authenticated=false){
+ const headers={"Content-Type":"application/json","apikey":cfg.publishableKey};
+ if(authenticated){
+  const {data:{session}}=await client.auth.getSession();
+  if(!session?.access_token)throw Error("ابتدا با حساب مدیر وارد شو.");
+  headers.Authorization="Bearer "+session.access_token;
+ }
+ const response=await fetch(cfg.url+"/functions/v1/stuner-provision-user",{
+  method:"POST",headers,body:JSON.stringify(payload)
+ });
+ let result={};
+ try{result=await response.json()}catch{}
+ if(!response.ok)throw Error(result.error||"ایجاد حساب امکان‌پذیر نشد.");
+ return result;
+}
+const gradeSets={
+ elementary:["اول","دوم","سوم","چهارم","پنجم","ششم"],
+ middle:["هفتم","هشتم","نهم"],
+ secondary:["دهم","یازدهم","دوازدهم"],
+ vocational:["دهم","یازدهم","دوازدهم"]
+};
+const schoolKindName={elementary:"دبستان",middle:"متوسطه اول",secondary:"دبیرستان",vocational:"هنرستان"};
+function schoolChoices(kind){
+ const vocational=kind==="vocational",advanced=vocational||kind==="secondary";
+ const branch=vocational?'<label>شاخه تحصیلی<select name="branch"><option value="فنی‌وحرفه‌ای">فنی‌وحرفه‌ای</option><option value="کاردانش">کاردانش</option></select></label>':
+   kind==="secondary"?'<label>شاخه تحصیلی<input name="branch" value="نظری" readonly></label>':"";
+ const gradeOptions=(gradeSets[kind]||[]).map(g=>'<label class="portal-grade"><input type="checkbox" name="grades" value="'+g+'" checked><span>'+g+'</span></label>').join("");
+ return branch+
+   '<fieldset class="portal-grade-set"><legend>پایه‌های موجود در مدرسه</legend><div class="portal-grade-options">'+gradeOptions+'</div></fieldset>'+
+   (advanced?'<label>رشته‌های موجود (هر رشته در یک خط)<textarea name="majors" rows="4" required maxlength="2500" placeholder="شبکه و نرم‌افزار\\nمعماری داخلی\\nفتوگرافیک"></textarea></label>':
+      '<p class="portal-note">برای این مقطع به ازای هر پایه یک کلاس ساخته می‌شود.</p>')+
+   '<div class="portal-preview" id="schoolClassPreview"></div>';
+}
+function updateSchoolPreview(){
+ const form=el.querySelector("#schoolForm");
+ if(!form)return;
+ const d=new FormData(form),kind=d.get("kind"),
+  grades=d.getAll("grades"),
+  majors=kind==="vocational"||kind==="secondary"?[...new Set(String(d.get("majors")||"").split(/[\\n،,؛;]+/).map(x=>x.trim()).filter(Boolean))]:[];
+ const result=document.getElementById("schoolClassPreview");
+ if(result){
+  const items=grades.flatMap(g=>majors.length?majors.map(m=>g+" - "+m):[g+" - کلاس عمومی"]);
+  result.innerHTML='<strong>پیش‌نمایش کلاس‌های خودکار: '+items.length+' کلاس</strong>'+
+   (items.length?'<div class="portal-class-chips">'+items.slice(0,70).map(x=>'<span>'+esc(x)+'</span>').join("")+'</div>':"<p>حداقل یک پایه انتخاب کن.</p>");
+ }
+}
+
 function show(){cover.hidden=false;app.style.display="none";on.hidden=true}
 function message(v){const x=document.getElementById("portalMessage");if(x)x.textContent=v}
 function head(title){return '<div class="portal-head"><strong>STUNER · استیونر</strong><h1>'+esc(title)+'</h1>'+(user?'<button data-action="logout" class="portal-secondary">خروج</button>':'')+'</div>'}
 function login(){
  show();current=null;
- el.innerHTML=head("ورود به سامانه مدارس")+'<section class="portal-card"><div class="portal-roles"><button data-role="student">دانش‌آموز</button><button data-role="teacher">معلم</button><button data-role="principal">مدیر</button></div><form id="loginForm" class="portal-form"><label>ایمیل<input name="email" type="email" autocomplete="email" dir="ltr" required></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" dir="ltr" required></label><button class="portal-primary">ورود</button></form><div class="portal-actions"><button data-action="signup">ساخت حساب</button><button data-action="forgot">بازیابی رمز</button></div><p class="portal-note">انتخاب نقش به تنهایی دسترسی ایجاد نمی‌کند. نقش واقعی از دیتابیس بررسی می‌شود.</p><p class="portal-error" id="portalMessage"></p></section>';
+ el.innerHTML=head("ورود به سامانه مدارس")+'<section class="portal-card"><div class="portal-roles"><button data-role="student">دانش‌آموز</button><button data-role="teacher">معلم</button><button data-role="principal">مدیر مدرسه</button></div><form id="loginForm" class="portal-form"><label>نام کاربری<input name="username" type="text" autocomplete="username" dir="ltr" required minlength="4" maxlength="32" pattern="[a-z][a-z0-9_]{3,31}" placeholder="navid_1405"></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" dir="ltr" required></label><button class="portal-primary">ورود به استیونر</button></form><div class="portal-actions"><button data-action="signup">ساخت حساب مدیر مدرسه</button></div><p class="portal-note">حساب معلم و دانش‌آموز توسط مدیر مدرسه ساخته می‌شود؛ ایمیل نیاز نیست. دسترسی هر نقش در سرور بررسی می‌شود.</p><p class="portal-error" id="portalMessage" aria-live="polite"></p></section>';
  updateRole();
 }
 function updateRole(){el.querySelectorAll("[data-role]").forEach(x=>x.classList.toggle("active",x.dataset.role===role))}
 function signup(){
- show();el.innerHTML=head("ایجاد حساب")+'<section class="portal-card"><form id="signupForm" class="portal-form"><label>ایمیل<input name="email" type="email" dir="ltr" required></label><label>رمز عبور (حداقل هشت کاراکتر)<input name="password" type="password" minlength="8" dir="ltr" required></label><button class="portal-primary">ثبت نام</button></form><button data-action="back" class="portal-secondary">بازگشت</button><p id="portalMessage" class="portal-error"></p></section>';
-}
-function forgot(){
- show();el.innerHTML=head("بازیابی رمز عبور")+'<section class="portal-card"><form id="forgotForm" class="portal-form"><label>ایمیل<input name="email" type="email" dir="ltr" required></label><button class="portal-primary">ارسال ایمیل بازیابی</button></form><button data-action="back" class="portal-secondary">بازگشت</button><p id="portalMessage" class="portal-error"></p></section>';
+ show();role="principal";
+ el.innerHTML=head("ثبت‌نام مدیر مدرسه")+'<section class="portal-card"><form id="signupForm" class="portal-form"><label>نام و نام خانوادگی<input name="display_name" type="text" required maxlength="120" minlength="2" autocomplete="name"></label><label>نام کاربری<input name="username" type="text" required maxlength="32" minlength="4" pattern="[a-z][a-z0-9_]{3,31}" dir="ltr" autocomplete="username" placeholder="school_manager"></label><label>رمز عبور (حداقل ۱۰ کاراکتر)<input name="password" type="password" required minlength="10" maxlength="128" dir="ltr" autocomplete="new-password"></label><button class="portal-primary">ایجاد حساب مدیر</button></form><button data-action="back" class="portal-secondary">بازگشت به ورود</button><p class="portal-note">برای ثبت‌نام ایمیل یا شماره تلفن لازم نیست. رمز را در جایی امن نگه دار؛ بازیابی خودکار رمز بدون روش ارتباطی فعال نیست.</p><p id="portalMessage" class="portal-error" aria-live="polite"></p></section>';
 }
 function picker(){
  show();
  const options=members.filter(m=>m.role===role).map(m=>'<button data-school="'+esc(m.school_id)+'" class="portal-school"><strong>'+esc(m.schools?.name||"مدرسه")+'</strong><small>'+esc(m.role==="principal"?"مدیر":m.role==="teacher"?"معلم":"دانش‌آموز")+'</small></button>').join("");
- el.innerHTML=head("انتخاب مدرسه")+'<section class="portal-card">'+(options||'<p>با این نقش هنوز عضو هیچ مدرسه‌ای نیستی.</p>')+(role==="principal"?'<button data-action="create" class="portal-primary">ساخت مدرسه جدید</button>':'')+'<form id="redeemForm" class="portal-form"><label>کد دعوت از مدیر مدرسه<input name="code" dir="ltr" required></label><button>ثبت کد دعوت</button></form><button data-action="back" class="portal-secondary">انتخاب نقش دیگر</button><p id="portalMessage" class="portal-error"></p></section>';
+ el.innerHTML=head("انتخاب مدرسه")+'<section class="portal-card">'+(options||'<p>هنوز مدرسه‌ای برای این نقش ثبت نشده است.</p>')+(role==="principal"?'<button data-action="create" class="portal-primary">ایجاد مدرسه جدید</button>':'<p class="portal-note">اگر به مدرسه دسترسی نداری از مدیر بخواه حساب و کلاس تو را تعیین کند.</p>')+'<button data-action="back" class="portal-secondary">بازگشت به انتخاب نقش</button><p id="portalMessage" class="portal-error"></p></section>';
 }
 function newSchool(){
- show();el.innerHTML=head("ساخت مدرسه جدید")+'<section class="portal-card"><form id="schoolForm" class="portal-form"><label>نام مدرسه<input name="name" required minlength="3" maxlength="160"></label><label>نوع مدرسه<select name="kind"><option value="elementary">دبستان</option><option value="middle">متوسطه اول</option><option value="secondary">دبیرستان</option><option value="vocational">هنرستان</option></select></label><label>نام و نام خانوادگی مدیر<input name="manager" required minlength="2"></label><button class="portal-primary">ایجاد مدرسه</button></form><button data-action="picker" class="portal-secondary">بازگشت</button><p id="portalMessage" class="portal-error"></p></section>';
+ show();
+ el.innerHTML=head("ثبت مدرسه و ساخت خودکار کلاس‌ها")+'<section class="portal-card"><form id="schoolForm" class="portal-form"><label>نام مدرسه<input name="name" required minlength="3" maxlength="160" placeholder="مثلاً هنرستان محمدیان"></label><label>نوع مدرسه<select name="kind" id="schoolKind"><option value="vocational">هنرستان</option><option value="secondary">دبیرستان</option><option value="middle">متوسطه اول</option><option value="elementary">دبستان</option></select></label><label>نام مدیر<input name="manager" required minlength="2" maxlength="120" value="'+esc(user?.user_metadata?.name||"")+'"></label><div id="schoolChoices"></div><button class="portal-primary">ساخت مدرسه و تمام کلاس‌ها</button></form><button data-action="picker" class="portal-secondary">بازگشت</button><p id="portalMessage" class="portal-error"></p></section>';
+ renderSchoolFields();
+}
+function renderSchoolFields(){
+ const kind=el.querySelector("#schoolKind")?.value||"vocational";
+ const target=el.querySelector("#schoolChoices");
+ if(target)target.innerHTML=schoolChoices(kind);
+ updateSchoolPreview();
 }
 async function sync(){
  const {data:session,error:sessionError}=await client.auth.getSession();if(sessionError)throw sessionError;
@@ -51,15 +107,16 @@ async function enter(member){
   const src=document.createElement("script");src.src="./app.js";document.body.appendChild(src);return;
  }
  const sid=current.school_id;
- const [s,c,p,t,w]=await Promise.all([
-  client.from("schools").select("id,name,kind").eq("id",sid).single(),
-  client.from("school_classes").select("id,name,grade,school_id").eq("school_id",sid),
+ const [s,c,p,t,w,n]=await Promise.all([
+  client.from("schools").select("id,name,kind,branch,majors,grades").eq("id",sid).single(),
+  client.from("school_classes").select("id,name,grade,major,school_id").eq("school_id",sid),
   client.from("school_memberships").select("user_id,role,display_name,grade,class_id").eq("school_id",sid),
   client.from("class_teachers").select("class_id,teacher_id").eq("school_id",sid),
-  client.from("school_assignments").select("id,school_id,class_id,teacher_id,kind,title,subject,description,due_date,created_at").eq("school_id",sid).order("due_date",{ascending:true})
+  client.from("school_assignments").select("id,school_id,class_id,teacher_id,kind,title,subject,description,due_date,created_at").eq("school_id",sid).order("due_date",{ascending:true}),
+  client.from("account_usernames").select("user_id,username")
  ]);
- for(const r of [s,c,p,t,w])if(r.error)throw r.error;
- school=s.data;classes=c.data||[];people=p.data||[];teacherLinks=t.data||[];assignments=w.data||[];dashboard();
+ for(const r of [s,c,p,t,w,n])if(r.error)throw r.error;
+ school=s.data;classes=c.data||[];people=p.data||[];teacherLinks=t.data||[];assignments=w.data||[];accountNames=n.data||[];dashboard();
 }
 function dashboard(){
  show();
@@ -67,11 +124,12 @@ function dashboard(){
  const visible=teacher?classes.filter(c=>teacherLinks.some(t=>t.class_id===c.id&&t.teacher_id===user.id)):classes;
  const students=people.filter(p=>p.role==="student"&&(!teacher||visible.some(c=>c.id===p.class_id)));
  let body='<div class="portal-stats"><div><small>کلاس‌ها</small><strong>'+visible.length+'</strong></div><div><small>دانش‌آموزان</small><strong>'+students.length+'</strong></div><div><small>معلمان</small><strong>'+people.filter(p=>p.role==="teacher").length+'</strong></div></div>';
+ body+='<section class="portal-card"><h2>مشخصات مدرسه</h2><div class="portal-record"><strong>نوع مدرسه</strong><span>'+esc(schoolKindName[school.kind]||school.kind)+'</span></div><div class="portal-record"><strong>شاخه</strong><span>'+esc(school.branch||"—")+'</span></div><div class="portal-record"><strong>رشته‌ها</strong><span>'+esc((school.majors||[]).join("، ")||"عمومی")+'</span></div><div class="portal-record"><strong>پایه‌ها</strong><span>'+esc((school.grades||[]).join("، "))+'</span></div></section>';
  body+='<section class="portal-card"><h2>کلاس‌ها</h2>'+(visible.map(c=>'<div class="portal-record"><strong>'+esc(c.name)+'</strong><span>'+esc(c.grade)+'</span></div>').join("")||'<p>کلاسی ثبت نشده است.</p>')+'</section>';
  if(director){
   const opts=classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+' · '+esc(c.grade)+'</option>').join("");
   body+='<section class="portal-card"><h2>ساخت کلاس</h2><form id="classForm" class="portal-form"><label>عنوان کلاس<input name="name" required></label><label>پایه<input name="grade" required></label><button class="portal-primary">ایجاد کلاس</button></form></section>';
-  body+='<section class="portal-card"><h2>دعوت معلم یا دانش‌آموز</h2><form id="inviteForm" class="portal-form"><label>نقش<select name="role"><option value="student">دانش‌آموز</option><option value="teacher">معلم</option></select></label><label>نام کامل<input name="name" required></label><label>ایمیل<input name="email" type="email" dir="ltr" required></label><label>پایه (فقط دانش‌آموز)<input name="grade" placeholder="مثلاً هفتم"></label><label>کلاس<select name="classid"><option value="">بدون کلاس</option>'+opts+'</select></label><button class="portal-primary">ایجاد کد دعوت</button></form><div id="inviteOutput"></div><p class="portal-note">کد دعوت فقط برای ایمیل مشخص‌شده و به مدت ۱۴ روز معتبر است.</p></section>';
+  body+='<section class="portal-card"><h2>ساخت حساب معلم و دانش‌آموز</h2><form id="newMemberForm" class="portal-form"><label>نوع حساب<select name="role" id="newMemberRole"><option value="student">دانش‌آموز</option><option value="teacher">معلم</option></select></label><label>نام و نام خانوادگی<input name="display_name" required minlength="2" maxlength="120" placeholder="نام واقعی کاربر"></label><label>نام کاربری<input name="username" dir="ltr" pattern="[a-z][a-z0-9_]{3,31}" minlength="4" maxlength="32" placeholder="student_701" required></label><label>رمز عبور اولیه (حداقل ۱۰ کاراکتر)<input name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label><label>کلاس<select name="class_id" id="newMemberClass"><option value="">انتخاب کلاس</option>'+classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("")+'</select></label><p class="portal-note">برای دانش‌آموز انتخاب کلاس الزامی است؛ معلم می‌تواند بعداً به کلاس اختصاص یابد.</p><button class="portal-primary">ایجاد حساب و ثبت در مدرسه</button></form><div id="newMemberResult"></div></section>';
  }
 
  if(teacher){
@@ -92,19 +150,25 @@ function dashboard(){
   const teachers=people.filter(x=>x.role==="teacher");
   body+='<section class="portal-card"><h2>اختصاص معلم به کلاس</h2><form class="portal-form" id="assignTeacherForm"><label>معلم<select name="teacher_id">'+teachers.map(t=>'<option value="'+esc(t.user_id)+'">'+esc(t.display_name)+'</option>').join("")+'</select></label><label>کلاس<select name="class_id">'+classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+' · '+esc(c.grade)+'</option>').join("")+'</select></label><button class="portal-primary">ثبت انتساب</button></form></section>';
  }
- body+='<section class="portal-card"><h2>'+(director?'اعضای مدرسه':'دانش‌آموزان کلاس‌های من')+'</h2>'+( (director?people:students).map(p=>'<div class="portal-record"><strong>'+esc(p.display_name)+'</strong><span>'+esc(p.role==="principal"?"مدیر":p.role==="teacher"?"معلم":"دانش‌آموز")+' · '+esc(p.grade||"")+'</span></div>').join("")||'<p>عضوی ثبت نشده است.</p>')+'</section>';
+ body+='<section class="portal-card"><h2>'+(director?'اعضای مدرسه':'دانش‌آموزان کلاس‌های من')+'</h2>'+( (director?people:students).map(p=>'<div class="portal-record"><strong>'+esc(p.display_name)+'</strong><span>'+esc(p.role==="principal"?"مدیر":p.role==="teacher"?"معلم":"دانش‌آموز")+' · '+esc(p.grade||"")+' · '+esc(accountNames.find(x=>x.user_id===p.user_id)?.username||"—")+'</span></div>').join("")||'<p>عضوی ثبت نشده است.</p>')+'</section>';
  el.innerHTML=head(school.name)+'<div class="portal-context"><span>'+esc(director?"پنل مدیر": "پنل معلم")+'</span><button data-action="picker">تغییر مدرسه</button></div>'+body+'<p id="portalMessage" class="portal-error"></p>';
 }
 async function handle(form){
  const d=new FormData(form);
  try{
   let r;
-  if(form.id==="loginForm"){r=await client.auth.signInWithPassword({email:String(d.get("email")).trim(),password:d.get("password")});if(r.error)throw r.error;await sync();return}
-  if(form.id==="signupForm"){r=await client.auth.signUp({email:String(d.get("email")).trim(),password:d.get("password")});if(r.error)throw r.error;if(r.data.session)await sync();else message("ایمیل تأیید حساب ارسال شد. پس از تأیید وارد شو.");return}
-  if(form.id==="forgotForm"){r=await client.auth.resetPasswordForEmail(String(d.get("email")).trim(),{redirectTo:location.origin+location.pathname});if(r.error)throw r.error;message("اگر حساب وجود داشته باشد، لینک بازیابی ارسال می‌شود.");return}
-  if(form.id==="schoolForm"){r=await client.rpc("create_school",{p_name:d.get("name"),p_kind:d.get("kind"),p_manager:d.get("manager")});if(r.error)throw r.error;role="principal";sessionStorage.setItem("stuner.school",r.data);await sync();return}
-  if(form.id==="redeemForm"){r=await client.rpc("redeem_school_invite",{p_token:String(d.get("code")).trim()});if(r.error)throw r.error;sessionStorage.setItem("stuner.school",r.data);await sync();return}
-
+  if(form.id==="loginForm"){const username=String(d.get("username")||"").trim().toLowerCase();if(!usernameRx.test(username))throw Error("نام کاربری معتبر نیست.");r=await client.auth.signInWithPassword({email:loginEmail(username),password:String(d.get("password")||"")});if(r.error)throw Error("نام کاربری یا رمز عبور نادرست است.");await sync();return}
+  if(form.id==="signupForm"){const username=String(d.get("username")||"").trim().toLowerCase(),password=String(d.get("password")||"");await provision({mode:"register_manager",username,password,display_name:String(d.get("display_name")||"").trim()});r=await client.auth.signInWithPassword({email:loginEmail(username),password});if(r.error)throw r.error;role="principal";await sync();return}
+  if(form.id==="schoolForm"){const kind=String(d.get("kind")||""),grades=d.getAll("grades"),majors=(kind==="vocational"||kind==="secondary")?[...new Set(String(d.get("majors")||"").split(/[\n،,؛;]+/).map(x=>x.trim()).filter(Boolean))]:[];if(!grades.length)throw Error("حداقل یک پایه انتخاب کن.");if((kind==="vocational"||kind==="secondary")&&!majors.length)throw Error("حداقل یک رشته وارد کن.");r=await client.rpc("create_school_with_classes",{p_name:String(d.get("name")||"").trim(),p_kind:kind,p_branch:kind==="vocational"?d.get("branch"):kind==="secondary"?"نظری":null,p_manager:String(d.get("manager")||"").trim(),p_grades:grades,p_majors:majors});if(r.error)throw r.error;role="principal";sessionStorage.setItem("stuner.school",r.data);await sync();return}
+  if(form.id==="newMemberForm"){
+   const username=String(d.get("username")||"").trim().toLowerCase();
+   const modeRole=d.get("role"),classId=String(d.get("class_id")||"");
+   if(modeRole==="student"&&!classId)throw Error("ابتدا کلاس دانش‌آموز را انتخاب کن.");
+   const result=await provision({mode:"create_member",school_id:school.id,role:modeRole,class_id:classId||null,display_name:String(d.get("display_name")||"").trim(),username,password:String(d.get("password")||"")},true);
+   await enter(current);
+   message("حساب "+(modeRole==="teacher"?"معلم":"دانش‌آموز")+" با نام کاربری "+result.username+" ساخته شد.");
+   return;
+  }
   if(form.id==="assignmentForm"){
    const classId=String(d.get("class_id")||"");
    if(!teacherLinks.some(x=>x.teacher_id===user.id&&x.class_id===classId))throw Error("به این کلاس دسترسی نداری.");
@@ -123,14 +187,7 @@ async function handle(form){
    if(r.error)throw r.error;await enter(current);message("معلم به کلاس اختصاص یافت.");return;
   }
   if(form.id==="classForm"){r=await client.from("school_classes").insert({school_id:school.id,name:String(d.get("name")).trim(),grade:String(d.get("grade")).trim()});if(r.error)throw r.error;await enter(current);return}
-  if(form.id==="inviteForm"){
-   const isStudent=d.get("role")==="student";const cls=classes.find(c=>c.id===d.get("classid"));
-   const grade=isStudent?String(d.get("grade")||cls?.grade||"").trim():null;
-   if(isStudent&&!grade)throw Error("پایه دانش‌آموز الزامی است.");
-   r=await client.rpc("create_school_invite",{p_school:school.id,p_email:String(d.get("email")).trim(),p_name:String(d.get("name")).trim(),p_role:d.get("role"),p_grade:grade||null,p_class:cls?.id||null});
-   if(r.error)throw r.error;
-   document.getElementById("inviteOutput").innerHTML='<div class="portal-invite"><strong>کد دعوت (این کد را امن ارسال کن):</strong><code dir="ltr">'+esc(r.data)+'</code></div>';
-  }
+
  }catch(e){message(e.message||"خطا در ثبت اطلاعات")}
 }
 el.addEventListener("click",async e=>{
@@ -148,9 +205,11 @@ el.addEventListener("click",async e=>{
  }
  const a=e.target.closest("[data-action]")?.dataset.action;
  if(a==="logout"){await client.auth.signOut();location.reload()}
- if(a==="signup")signup();if(a==="forgot")forgot();if(a==="back")login();
+ if(a==="signup")signup();if(a==="back")login();
  if(a==="create")newSchool();if(a==="picker")picker();
 });
+el.addEventListener("change",e=>{if(e.target.id==="schoolKind"){renderSchoolFields();return}if(e.target.closest("#schoolForm"))updateSchoolPreview()});
+el.addEventListener("input",e=>{if(e.target.closest("#schoolForm"))updateSchoolPreview()});
 el.addEventListener("submit",async e=>{if(!e.target.matches("form"))return;e.preventDefault();const btn=e.target.querySelector("button");if(btn)btn.disabled=true;await handle(e.target);if(btn?.isConnected)btn.disabled=false});
 async function start(){
  show();

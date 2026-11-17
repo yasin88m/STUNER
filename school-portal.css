@@ -54,3 +54,13 @@
 .school-assignment-record small{font-size:11px;color:#718575}
 .portal-form textarea{width:100%;min-height:84px;padding:11px;border:1px solid #d7e8dc;border-radius:12px;font-family:inherit}
 @media(max-width:480px){.school-work-row{align-items:flex-start;flex-direction:column}.school-work-done{align-self:flex-start}}
+
+.portal-grade-set{border:1px solid #dcece0;border-radius:14px;padding:12px;margin:0}
+.portal-grade-set legend{font-weight:800;font-size:12px;padding:0 5px}
+.portal-grade-options{display:flex;gap:8px;flex-wrap:wrap}
+.portal-grade{display:flex!important;flex-direction:row!important;gap:6px!important;align-items:center;border:1px solid #d9e9de;padding:9px;border-radius:10px;cursor:pointer}
+.portal-grade input{width:16px!important;min-height:16px!important;accent-color:#126c4b}
+.portal-preview{border:1px dashed #bfd6c5;border-radius:14px;background:#f6fbf7;padding:12px;display:grid;gap:10px}
+.portal-preview strong{font-size:12px;color:#126547}
+.portal-class-chips{display:flex;flex-wrap:wrap;gap:6px}
+.portal-class-chips span{font-size:10px;color:#24593d;background:#e6f3e9;border-radius:7px;padding:6px 9px}
