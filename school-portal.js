@@ -226,7 +226,10 @@ function directorUi(){
   }
   const entries=people.filter(p=>p.role===kind);
   formCard.insertAdjacentHTML("beforebegin",'<section class="portal-card portal-list-card"><h2>لیست '+(isTeacher?"معلمان":"دانش‌آموزان")+' ('+entries.length+')</h2>'+(entries.map(p=>'<div class="portal-person"><div class="portal-person-avatar">'+esc(p.display_name?.trim()?.charAt(0)||"؟")+'</div><div><strong>'+esc(p.display_name)+'</strong><small>نام کاربری: '+esc(accountNames.find(a=>a.user_id===p.user_id)?.username||"—")+'</small><small>'+(isTeacher?"کلاس‌ها: "+esc(teacherLinks.filter(t=>t.teacher_id===p.user_id).map(t=>classes.find(c=>c.id===t.class_id)?.name||"").filter(Boolean).join("، ")||"تعیین نشده"):"کلاس: "+esc(classes.find(c=>c.id===p.class_id)?.name||"—"))+'</small></div></div>').join("")||'<p>هنوز حسابی ثبت نشده است.</p>')+'</section>');
-  if(isTeacher){const assign=find("اختصاص معلم به کلاس");if(assign)assign.hidden=false}
+  if(isTeacher){
+   const assign=find("اختصاص معلم به کلاس");if(assign)assign.hidden=false;
+   formCard.insertAdjacentHTML("afterend",'<section class="portal-card"><h2>دعوت معلمی که از قبل حساب دارد</h2><p class="portal-note">برای معلمی که در مدرسه دیگری نیز تدریس دارد، حساب تکراری نساز. کد دعوت را به او بده تا خودش عضویت در این مدرسه را تأیید کند.</p><form id="inviteExistingTeacherForm" class="portal-form"><label>نام کاربری فعلی معلم<input name="username" dir="ltr" pattern="[a-z][a-z0-9_]{3,31}" required></label><label>نام و نام خانوادگی معلم<input name="display_name" minlength="2" maxlength="120" required></label><label>کلاس اولیه (اختیاری)<select name="class_id"><option value="">بعداً تعیین می‌کنم</option>'+classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("")+'</select></label><button class="portal-primary">ایجاد کد دعوت معلم</button></form><div id="existingTeacherInviteResult" role="status" aria-live="polite"></div></section>');
+  }
   return;
  }
  if(directorSection==="work"){const card=find("تکالیف و امتحانات مدرسه");if(card)card.hidden=false}
@@ -240,6 +243,17 @@ async function handle(form){
   if(form.id==="loginForm"){const username=String(d.get("username")||"").trim().toLowerCase();if(!usernameRx.test(username))throw Error("نام کاربری معتبر نیست.");r=await client.auth.signInWithPassword({email:loginEmail(username),password:String(d.get("password")||"")});if(r.error)throw Error("نام کاربری یا رمز عبور نادرست است.");await sync();return}
   if(form.id==="signupForm"){const username=String(d.get("username")||"").trim().toLowerCase(),password=String(d.get("password")||"");await provision({mode:"register_manager",username,password,display_name:String(d.get("display_name")||"").trim()});r=await client.auth.signInWithPassword({email:loginEmail(username),password});if(r.error)throw r.error;role="principal";await sync();return}
   if(form.id==="schoolForm"){const kind=String(d.get("kind")||""),grades=d.getAll("grades"),majors=(kind==="vocational"||kind==="secondary")?[...new Set(String(d.get("majors")||"").split(/[\n،,؛;]+/).map(x=>x.trim()).filter(Boolean))]:[];if(!grades.length)throw Error("حداقل یک پایه انتخاب کن.");if((kind==="vocational"||kind==="secondary")&&!majors.length)throw Error("حداقل یک رشته وارد کن.");r=await client.rpc("create_school_with_classes",{p_name:String(d.get("name")||"").trim(),p_kind:kind,p_branch:kind==="vocational"?d.get("branch"):kind==="secondary"?"نظری":null,p_manager:String(d.get("manager")||"").trim(),p_grades:grades,p_majors:majors});if(r.error)throw r.error;role="principal";sessionStorage.setItem("stuner.school",r.data);await sync();return}
+  if(form.id==="inviteExistingTeacherForm"){
+   const username=String(d.get("username")||"").trim().toLowerCase(),name=String(d.get("display_name")||"").trim();
+   if(!usernameRx.test(username))throw Error("نام کاربری معلم معتبر نیست.");
+   const classroom=String(d.get("class_id")||"");
+   if(classroom&&!classes.some(c=>c.id===classroom))throw Error("کلاس انتخاب‌شده به این مدرسه تعلق ندارد.");
+   const invite=await client.rpc("create_school_invite",{p_school:school.id,p_email:loginEmail(username),p_name:name,p_role:"teacher",p_grade:null,p_class:classroom||null});
+   if(invite.error)throw invite.error;
+   const result=document.getElementById("existingTeacherInviteResult");
+   if(result)result.innerHTML='<div class="portal-invite"><strong>کد دعوت معلم ساخته شد.</strong><p>این کد را فقط به همان معلم بده تا در صفحه «مدارس من» وارد کند. کد تا ۱۴ روز معتبر است.</p><code dir="ltr">'+esc(invite.data)+'</code></div>';
+   return;
+  }
   if(form.id==="resetMemberForm"){
    const username=String(d.get("username")||"").trim().toLowerCase();
    await provision({mode:"reset_member",school_id:school.id,username,password:String(d.get("password")||"")},true);
