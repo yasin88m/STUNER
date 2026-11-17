@@ -130,6 +130,8 @@ function dashboard(){
   const opts=classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+' · '+esc(c.grade)+'</option>').join("");
   body+='<section class="portal-card"><h2>ساخت کلاس</h2><form id="classForm" class="portal-form"><label>عنوان کلاس<input name="name" required></label><label>پایه<input name="grade" required></label><button class="portal-primary">ایجاد کلاس</button></form></section>';
   body+='<section class="portal-card"><h2>ساخت حساب معلم و دانش‌آموز</h2><form id="newMemberForm" class="portal-form"><label>نوع حساب<select name="role" id="newMemberRole"><option value="student">دانش‌آموز</option><option value="teacher">معلم</option></select></label><label>نام و نام خانوادگی<input name="display_name" required minlength="2" maxlength="120" placeholder="نام واقعی کاربر"></label><label>نام کاربری<input name="username" dir="ltr" pattern="[a-z][a-z0-9_]{3,31}" minlength="4" maxlength="32" placeholder="student_701" required></label><label>رمز عبور اولیه (حداقل ۱۰ کاراکتر)<input name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label><label>کلاس<select name="class_id" id="newMemberClass"><option value="">انتخاب کلاس</option>'+classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("")+'</select></label><p class="portal-note">برای دانش‌آموز انتخاب کلاس الزامی است؛ معلم می‌تواند بعداً به کلاس اختصاص یابد.</p><button class="portal-primary">ایجاد حساب و ثبت در مدرسه</button></form><div id="newMemberResult"></div></section>';
+  body+='<section class="portal-card"><h2>تغییر رمز عبور معلم یا دانش‌آموز</h2><form id="resetMemberForm" class="portal-form"><label>نام کاربری حساب<input name="username" dir="ltr" pattern="[a-z][a-z0-9_]{3,31}" required placeholder="student_701"></label><label>رمز عبور جدید (حداقل ۱۰ کاراکتر)<input type="password" name="password" minlength="10" maxlength="128" required autocomplete="new-password"></label><button class="portal-primary">تنظیم رمز جدید</button></form></section>';
+
  }
 
  if(teacher){
@@ -160,6 +162,11 @@ async function handle(form){
   if(form.id==="loginForm"){const username=String(d.get("username")||"").trim().toLowerCase();if(!usernameRx.test(username))throw Error("نام کاربری معتبر نیست.");r=await client.auth.signInWithPassword({email:loginEmail(username),password:String(d.get("password")||"")});if(r.error)throw Error("نام کاربری یا رمز عبور نادرست است.");await sync();return}
   if(form.id==="signupForm"){const username=String(d.get("username")||"").trim().toLowerCase(),password=String(d.get("password")||"");await provision({mode:"register_manager",username,password,display_name:String(d.get("display_name")||"").trim()});r=await client.auth.signInWithPassword({email:loginEmail(username),password});if(r.error)throw r.error;role="principal";await sync();return}
   if(form.id==="schoolForm"){const kind=String(d.get("kind")||""),grades=d.getAll("grades"),majors=(kind==="vocational"||kind==="secondary")?[...new Set(String(d.get("majors")||"").split(/[\n،,؛;]+/).map(x=>x.trim()).filter(Boolean))]:[];if(!grades.length)throw Error("حداقل یک پایه انتخاب کن.");if((kind==="vocational"||kind==="secondary")&&!majors.length)throw Error("حداقل یک رشته وارد کن.");r=await client.rpc("create_school_with_classes",{p_name:String(d.get("name")||"").trim(),p_kind:kind,p_branch:kind==="vocational"?d.get("branch"):kind==="secondary"?"نظری":null,p_manager:String(d.get("manager")||"").trim(),p_grades:grades,p_majors:majors});if(r.error)throw r.error;role="principal";sessionStorage.setItem("stuner.school",r.data);await sync();return}
+  if(form.id==="resetMemberForm"){
+   const username=String(d.get("username")||"").trim().toLowerCase();
+   await provision({mode:"reset_member",school_id:school.id,username,password:String(d.get("password")||"")},true);
+   message("رمز عبور حساب "+username+" با موفقیت تغییر کرد.");return;
+  }
   if(form.id==="newMemberForm"){
    const username=String(d.get("username")||"").trim().toLowerCase();
    const modeRole=d.get("role"),classId=String(d.get("class_id")||"");
