@@ -3,7 +3,7 @@
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const KEY="stuner.app.v1:"+window.STUNER_ACTIVE_USER.id+":"+window.STUNER_ACTIVE_USER.schoolId, IRAN_TZ="Asia/Tehran", days=["شنبه","یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه"];
 const base=()=>({student:null,tasks:[],exams:[],grades:[],plans:[],sessions:[],subjects:["ریاضی","علوم","فارسی","عربی","زبان انگلیسی","مطالعات اجتماعی","دینی","ادبیات"],preferences:{notifyTasks:true,notifyStudy:true,notifyBreak:true,taskReminderTime:"08:00",studyReminderTime:"16:00"},timer:{mode:"study",remaining:1500,running:false,subject:"ریاضی",activity:"study",activityId:""}});
-let state=read(),page="home",taskFilter="all",planDay=(dateObj(isoToday()).getUTCDay()+1)%7,calAnchor=isoToday(),calSelected=isoToday(),ticker=null,deadline=null;
+let state=read(),page="home",taskFilter="all",taskView="tasks",planDay=(dateObj(isoToday()).getUTCDay()+1)%7,calAnchor=isoToday(),calSelected=isoToday(),ticker=null,deadline=null;
 function read(){try{let s=JSON.parse(localStorage.getItem(KEY)||"null");return s?{...base(),...s,preferences:{...base().preferences,...s.preferences},timer:{...base().timer,...s.timer,running:false}}:base()}catch{return base()}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch{}}
 function isoToday(){
@@ -132,11 +132,11 @@ function subjectOptions(sel){return state.subjects.map(s=>`<option ${s===sel?"se
 function heading(t,p,a=""){return `<div class="page-heading"><div><h1>${t}</h1><p>${p}</p></div>${a}</div>`}
 function empty(t,p,i="✦"){return `<div class="empty-state"><div class="empty-icon">${i}</div><strong>${t}</strong>${p}</div>`}
 function taskRow(t,compact=false){
- if(t.fromSchool)return '<div class="task-row school-inline-item"><button type="button" aria-label="تغییر وضعیت انجام تکلیف" class="check-control '+(t.done?"checked":"")+'" data-school-complete="'+esc(t.schoolId)+'"></button><div class="task-main"><strong>'+esc(t.title)+'</strong><small>'+esc(t.subject||"")+(t.note?" · "+esc(t.note):"")+'</small><span class="school-source">تکلیف معلم</span></div><span class="task-due">'+dueText(t.due)+'</span></div>';
+ if(t.fromSchool)return '<div class="task-row school-inline-item"><button type="button" aria-label="تغییر وضعیت انجام تکلیف" class="check-control '+(t.done?"checked":"")+'" data-school-complete="'+esc(t.schoolId)+'"></button><div class="task-main"><strong>'+esc(t.title)+'</strong><small>'+esc(t.subject||"")+(t.note?" · "+esc(t.note):"")+'</small><span class="school-source">تکلیف معلم · غیرقابل حذف</span></div><span class="task-due">'+dueText(t.due)+'</span><button type="button" class="mini-icon-button timer-start" data-start-task-timer="'+esc(t.id)+'" aria-label="شروع تایمر تکلیف معلم"><i data-lucide="play"></i></button></div>';
  return '<div class="task-row"><button class="check-control '+(t.done?"checked":"")+'" data-toggle-task="'+esc(t.id)+'"></button><div class="task-main"><strong style="'+(t.done?"text-decoration:line-through;color:#9aa69f":"")+'">'+esc(t.title)+'</strong><small>'+esc(t.subject||"بدون درس")+(t.note?" · "+esc(t.note):"")+'</small></div><span class="task-due '+(!t.done&&t.due===isoToday()?"urgent":"")+'">'+dueText(t.due)+'</span><button class="mini-icon-button timer-start" data-start-task-timer="'+esc(t.id)+'" title="شروع تایمر تکلیف" aria-label="شروع تایمر تکلیف">▶</button>'+(compact?"":'<button class="mini-icon-button delete" data-delete-task="'+esc(t.id)+'">×</button>')+'</div>';
 }
 function examRow(e,withDelete=false){
- if(e.fromSchool)return '<div class="exam-mini school-inline-item"><div class="exam-date"><strong>'+new Intl.DateTimeFormat("fa-IR-u-ca-persian",{day:"numeric",timeZone:IRAN_TZ}).format(dateObj(e.date))+'</strong></div><div class="exam-mini-main"><strong>'+esc(e.title)+'</strong><small>'+esc(e.subject||"")+(e.note?" · "+esc(e.note):"")+'</small><span class="school-source">امتحان معلم</span></div><span class="pill gray">'+dueText(e.date)+'</span></div>';
+ if(e.fromSchool)return '<div class="exam-mini school-inline-item"><div class="exam-date"><strong>'+new Intl.DateTimeFormat("fa-IR-u-ca-persian",{day:"numeric",timeZone:IRAN_TZ}).format(dateObj(e.date))+'</strong></div><div class="exam-mini-main"><strong>'+esc(e.title)+'</strong><small>'+esc(e.subject||"")+(e.note?" · "+esc(e.note):"")+'</small><span class="school-source">امتحان معلم · غیرقابل حذف</span></div><span class="pill gray">'+dueText(e.date)+'</span><button type="button" class="mini-icon-button timer-start" data-start-exam-timer="'+esc(e.id)+'" aria-label="شروع تایمر امتحان معلم"><i data-lucide="play"></i></button></div>';
  let d=dateObj(e.date);
  return '<div class="exam-mini"><div class="exam-date"><strong>'+new Intl.DateTimeFormat("fa-IR-u-ca-persian",{day:"numeric",timeZone:IRAN_TZ}).format(d)+'</strong><small>'+new Intl.DateTimeFormat("fa-IR-u-ca-persian",{month:"short",timeZone:IRAN_TZ}).format(d)+'</small></div><div class="exam-mini-main"><strong>'+esc(e.title)+'</strong><small>'+esc(e.subject||"")+(e.note?" · "+esc(e.note):"")+'</small></div><button class="mini-icon-button timer-start" data-start-exam-timer="'+esc(e.id)+'" title="شروع تایمر آمادگی امتحان" aria-label="شروع تایمر آمادگی امتحان">▶</button><span class="pill '+(e.date===isoToday()?"red":"gray")+'">'+dueText(e.date)+'</span>'+(withDelete?'<button class="mini-icon-button delete" data-delete-exam="'+esc(e.id)+'">×</button>':"")+'</div>';
 }
@@ -161,18 +161,18 @@ function renderHome(){
  `;
 }
 function timerTarget(){
- if(state.timer.activity==="task")return state.tasks.find(x=>x.id===state.timer.activityId&&!x.done&&activeSubject(x.subject))||null;
- if(state.timer.activity==="exam")return state.exams.find(x=>x.id===state.timer.activityId&&activeSubject(x.subject))||null;
+ if(state.timer.activity==="task")return allStudentTasks().find(x=>x.id===state.timer.activityId&&!x.done)||null;
+ if(state.timer.activity==="exam")return allStudentExams().find(x=>x.id===state.timer.activityId)||null;
  return null;
 }
 function timerTargetSelect(){
  const activity=state.timer.activity||"study",study=state.timer.mode==="study";
  if(activity==="task"){
-  const items=state.tasks.filter(x=>!x.done&&activeSubject(x.subject));
+  const items=allStudentTasks().filter(x=>!x.done);
   return '<label class="timer-subject"><span>تکلیف مورد نظر</span><select id="timerActivityTarget" '+(study?"":"disabled")+'><option value="">'+(items.length?"انتخاب تکلیف":"هنوز تکلیفی ثبت نشده")+'</option>'+items.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===state.timer.activityId?"selected":"")+'>'+esc(x.title)+(x.subject?" · "+esc(x.subject):"")+'</option>').join("")+'</select></label>';
  }
  if(activity==="exam"){
-  const items=state.exams.filter(x=>activeSubject(x.subject)).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const items=allStudentExams().sort((a,b)=>a.date.localeCompare(b.date));
   return '<label class="timer-subject"><span>امتحان مورد نظر</span><select id="timerActivityTarget" '+(study?"":"disabled")+'><option value="">'+(items.length?"انتخاب امتحان":"هنوز امتحانی ثبت نشده")+'</option>'+items.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===state.timer.activityId?"selected":"")+'>'+esc(x.title)+(x.subject?" · "+esc(x.subject):"")+'</option>').join("")+'</select></label>';
  }
  return "";
@@ -188,13 +188,18 @@ function renderPlan(){
  return `${heading("برنامه‌ریز درسی","برنامه هفتگی‌ات رو بچین و قدم‌به‌قدم پیش برو.",'<button class="primary-button small-button" data-action="add-plan">＋ جلسه جدید</button>')}<div class="plan-week">${days.map((d,i)=>`<button class="day-chip ${i===planDay?"active":""}" data-plan-day="${i}"><small>${d}</small><strong>${i===(iranWeekDay()+1)%7?"امروز":["ش","ی","د","س","چ","پ","ج"][i]}</strong></button>`).join("")}</div><section class="card panel"><div class="section-title" style="margin-top:0"><div><h2>جلسه‌های ${days[planDay]}</h2><p>${fa(list.length)} جلسه برنامه‌ریزی‌شده</p></div></div>${list.length?list.map(p=>`<div class="schedule-item"><div class="schedule-time">${fa(p.time)}</div><div class="schedule-line"></div><div class="schedule-info"><strong>${esc(p.subject)}</strong><small>${esc(p.note||"زمان مطالعه")}</small></div><div class="row-actions"><span class="schedule-duration">${fa(p.duration)} دقیقه</span><button class="mini-icon-button delete" data-delete-plan="${p.id}">×</button></div></div>`).join(""):empty("هنوز جلسه‌ای برای این روز نداری","با دکمه «جلسه جدید» برنامه مطالعه‌ات رو بساز.","▦")}</section><section class="card panel" style="margin-top:15px"><div class="section-title" style="margin-top:0"><div><h2>شروع یک جلسه تمرکز</h2><p>با تایمر پومودورو زمان مطالعه‌ات رو ثبت کن.</p></div></div><button class="primary-button" data-page="timer">شروع تایمر ۲۵ دقیقه‌ای ←</button></section>`;
 }
 function renderTasks(){
- let all=allStudentTasks().sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999")),filtered=all.filter(t=>taskFilter==="all"||(taskFilter==="pending"&&!t.done)||(taskFilter==="done"&&t.done));
- return `${schoolNotice()}${heading("مدیریت تکالیف","همه کارها رو یک‌جا ببین و با خیال راحت انجامشون بده.",'<button class="primary-button small-button" data-action="add-task">＋ تکلیف جدید</button>')}<div class="toolbar" style="margin-bottom:14px"><div class="filter-tabs"><button class="filter-tab ${taskFilter==="all"?"active":""}" data-task-filter="all">همه (${fa(all.length)})</button><button class="filter-tab ${taskFilter==="pending"?"active":""}" data-task-filter="pending">باقی‌مانده (${fa(all.filter(t=>!t.done).length)})</button><button class="filter-tab ${taskFilter==="done"?"active":""}" data-task-filter="done">انجام‌شده (${fa(all.filter(t=>t.done).length)})</button></div></div><section class="card list-card">${filtered.length?filtered.map(t=>taskRow(t)).join(""):empty("چیزی برای نمایش نیست","از دکمه تکلیف جدید برای اضافه کردن یک کار استفاده کن.","☑")}</section>`;
+ const tasks=allStudentTasks().sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"));
+ const exams=allStudentExams().sort((a,b)=>a.date.localeCompare(b.date));
+ const isExam=taskView==="exams";
+ const buttons='<button type="button" role="tab" aria-selected="'+(!isExam)+'" class="'+(!isExam?"active":"")+'" data-work-tab="tasks"><i data-lucide="clipboard-check"></i> تکالیف <span>'+fa(tasks.length)+'</span></button><button type="button" role="tab" aria-selected="'+isExam+'" class="'+(isExam?"active":"")+'" data-work-tab="exams"><i data-lucide="graduation-cap"></i> امتحانات <span>'+fa(exams.length)+'</span></button>';
+ const top=heading("تکالیف و امتحانات","برنامه‌های شخصی و ارسالی معلمان در یک صفحه.",'<button class="primary-button small-button" data-action="'+(isExam?"add-exam":"add-task")+'"><i data-lucide="plus"></i> '+(isExam?"امتحان جدید":"تکلیف جدید")+'</button>')+'<div class="work-main-tabs" role="tablist" aria-label="نوع فعالیت">'+buttons+'</div>'+schoolNotice();
+ if(isExam){
+  return top+'<div class="stats-grid work-exam-stats"><article class="card stat-card"><span class="stat-icon"><i data-lucide="calendar-check"></i></span><div><strong>'+fa(exams.filter(e=>e.date>=isoToday()).length)+'</strong><small>امتحان پیش رو</small></div></article><article class="card stat-card"><span class="stat-icon"><i data-lucide="calendar-days"></i></span><div><strong>'+fa(exams.filter(e=>e.date<isoToday()).length)+'</strong><small>امتحان گذشته</small></div></article></div><section class="card list-card">'+(exams.length?exams.map(e=>examRow(e,true)).join(""):empty("امتحانی ثبت نشده","می‌توانی امتحان شخصی اضافه کنی.","calendar-days"))+'</section>';
+ }
+ const filtered=tasks.filter(t=>taskFilter==="all"||(taskFilter==="pending"&&!t.done)||(taskFilter==="done"&&t.done));
+ return top+'<div class="toolbar work-subfilter"><div class="filter-tabs"><button class="filter-tab '+(taskFilter==="all"?"active":"")+'" data-task-filter="all">همه ('+fa(tasks.length)+')</button><button class="filter-tab '+(taskFilter==="pending"?"active":"")+'" data-task-filter="pending">باقی‌مانده ('+fa(tasks.filter(t=>!t.done).length)+')</button><button class="filter-tab '+(taskFilter==="done"?"active":"")+'" data-task-filter="done">انجام‌شده ('+fa(tasks.filter(t=>t.done).length)+')</button></div></div><section class="card list-card">'+(filtered.length?filtered.map(t=>taskRow(t)).join(""):empty("تکلیفی برای نمایش نیست","تکلیف‌های شخصی و مدرسه اینجا دیده می‌شوند.","clipboard-check"))+'</section>';
 }
-function renderExams(){
- let all=allStudentExams().sort((a,b)=>a.date.localeCompare(b.date));
- return `${schoolNotice()}${heading("مدیریت امتحانات","برای امتحان‌های پیش رو از قبل آماده شو.",'<button class="primary-button small-button" data-action="add-exam">＋ امتحان جدید</button>')}<div class="stats-grid" style="margin:0 0 15px"><article class="card stat-card"><span class="stat-icon">♜</span><div><strong>${fa(all.filter(e=>e.date>=isoToday()).length)}</strong><small>امتحان پیش رو</small></div></article><article class="card stat-card"><span class="stat-icon">✓</span><div><strong>${fa(all.filter(e=>e.date<isoToday()).length)}</strong><small>امتحان گذشته</small></div></article></div><section class="card list-card">${all.length?all.map(e=>examRow(e,true)).join(""):empty("هنوز امتحانی ثبت نکردی","تاریخ امتحان بعدی رو اضافه کن تا به‌موقع آماده بشی.","♜")}</section>`;
-}
+function renderExams(){return renderTasks()}
 function jalali(d){
  let ps=new Intl.DateTimeFormat("en-US-u-ca-persian",{year:"numeric",month:"numeric",day:"numeric",timeZone:IRAN_TZ}).formatToParts(d),g=k=>Number(ps.find(p=>p.type===k)?.value||0);
  return {y:g("year"),m:g("month"),d:g("day")};
@@ -288,7 +293,8 @@ function render(){
  app.style.display="";on.hidden=true;$("#topAvatar").textContent=initials();
  let views={home:renderHome,plan:renderPlan,timer:renderTimer,tasks:renderTasks,exams:renderExams,calendar:renderCalendar,stats:renderStats,more:renderMore,profile:renderProfile,books:renderBooks};
  $("#mainContent").innerHTML=(views[page]||renderHome)();
- $("[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
+ $("[data-page]",document.querySelector(".sidebar")).concat($("[data-page]",document.querySelector(".bottom-nav"))).forEach(x=>x.classList.toggle("active",x.dataset.page===page));
+ window.STUNER_ICONS?.refresh?.();
  if(state.timer.running)tickerStart();else if(ticker){clearInterval(ticker);ticker=null}
 }
 function openModal(title,body){$("#modalRoot").innerHTML=`<div class="modal-backdrop" data-modal-backdrop><section class="modal-card" role="dialog" aria-modal="true"><div class="modal-head"><h2>${title}</h2><button class="close-button" data-close-modal>×</button></div>${body}</section></div>`;let f=$("input,select,textarea",$("#modalRoot"));if(f)setTimeout(()=>f.focus(),50)}
@@ -299,7 +305,7 @@ function examModal(){openModal("افزودن امتحان",`<form id="examForm" 
 function planModal(){openModal("افزودن جلسه مطالعه",`<form id="planForm" class="modal-form"><label class="field"><span>درس</span><select name="subject">${subjectOptions(state.timer.subject)}</select></label><label class="field"><span>روز هفته</span><select name="day">${days.map((d,i)=>`<option value="${i}" ${i===planDay?"selected":""}>${d}</option>`).join("")}</select></label><div class="field-row"><label class="field"><span>ساعت شروع</span><input name="time" type="text" inputmode="numeric" dir="ltr" maxlength="5" placeholder="۱۶:۰۰" value="۱۶:۰۰" required></label><label class="field"><span>مدت (دقیقه)</span><input name="duration" type="number" min="5" max="300" step="5" value="45" required></label></div><label class="field"><span>توضیح (اختیاری)</span><input name="note" placeholder="مثلاً مرور فصل سوم"></label><div class="modal-actions"><button class="primary-button" type="submit">ثبت جلسه</button><button class="secondary-button" type="button" data-close-modal>انصراف</button></div></form>`)}
 function gradeModal(){openModal("ثبت نمره جدید",`<form id="gradeForm" class="modal-form"><label class="field"><span>درس</span><select name="subject">${subjectOptions(state.timer.subject)}</select></label><label class="field"><span>عنوان آزمون یا فعالیت</span><input name="title" placeholder="مثلاً امتحان میان‌ترم"></label><div class="field-row"><label class="field"><span>نمره از ۲۰</span><input name="score" type="number" min="0" max="20" step=".25" placeholder="مثلاً ۱۸.۵" required></label>${dateField("date","تاریخ")}</div><div class="modal-actions"><button class="primary-button" type="submit">ثبت نمره</button><button class="secondary-button" type="button" data-close-modal>انصراف</button></div></form>`)}
 function editProfileModal(){let s=state.student;openModal("ویرایش مشخصات",`<form id="profileForm" class="modal-form"><div class="field-row"><label class="field"><span>نام</span><input name="firstName" value="${esc(s.firstName)}" required></label><label class="field"><span>نام خانوادگی</span><input name="lastName" value="${esc(s.lastName)}" required></label></div><label class="field"><span>پایه تحصیلی</span><select name="grade">${["اول ابتدایی","دوم ابتدایی","سوم ابتدایی","چهارم ابتدایی","پنجم ابتدایی","ششم ابتدایی","هفتم","هشتم","نهم","دهم","یازدهم","دوازدهم","دانشجو"].map(g=>`<option ${g===s.grade?"selected":""}>${g}</option>`).join("")}</select></label><label class="field"><span>سن</span><input name="age" type="number" min="6" max="30" value="${s.age}" required></label><div class="modal-actions"><button class="primary-button" type="submit">ذخیره تغییرات</button><button class="secondary-button" type="button" data-close-modal>انصراف</button></div></form>`)}
-function go(p){page=p;render();window.scrollTo({top:0,behavior:"smooth"})}
+function go(p){if(p==="exams"){taskView="exams";page="tasks"}else{page=p;if(p==="tasks")taskView="tasks"}render();window.scrollTo({top:0,behavior:"smooth"})}
 function remove(key,id){state[key]=state[key].filter(x=>x.id!==id);save();render();toast("مورد انتخاب‌شده حذف شد.")}
 function notify(title,body){if(!("Notification"in window)||Notification.permission!=="granted")return;try{if("serviceWorker"in navigator&&navigator.serviceWorker.controller)navigator.serviceWorker.ready.then(r=>r.showNotification(title,{body,icon:"./icon.svg",dir:"rtl",lang:"fa"})).catch(()=>new Notification(title,{body,dir:"rtl"}));else new Notification(title,{body,dir:"rtl",lang:"fa"})}catch{}}
 async function enableNotifications(){if(!("Notification"in window)){toast("این مرورگر از اعلان گوشی پشتیبانی نمی‌کند.");return}let p=await Notification.requestPermission();toast(p==="granted"?"اعلان‌ها فعال شدند.":"اجازه اعلان‌ها داده نشد.");if(p==="granted")notify("استیونر آماده است","یادآوری‌های درسی‌ات فعال شدند.")}
@@ -316,8 +322,8 @@ function timerStart(){
 }
 function timerPause(){if(!state.timer.running)return;state.timer.remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));state.timer.running=false;deadline=null;if(ticker)clearInterval(ticker);ticker=null;save();render()}
 function timerReset(){state.timer.running=false;state.timer.remaining=duration();deadline=null;if(ticker)clearInterval(ticker);ticker=null;save();render();toast("تایمر به زمان اولیه برگشت.")}
-function startTimerForTask(id){let x=state.tasks.find(t=>t.id===id&&!t.done);if(!x){toast("این تکلیف در فهرست باقی‌مانده‌ها نیست.");return}if(state.timer.running)timerPause();state.timer.activity="task";state.timer.activityId=id;state.timer.subject=x.subject||state.timer.subject;state.timer.mode="study";state.timer.remaining=1500;page="timer";save();render();timerStart()}
-function startTimerForExam(id){let x=state.exams.find(t=>t.id===id);if(!x){toast("امتحان مورد نظر پیدا نشد.");return}if(state.timer.running)timerPause();state.timer.activity="exam";state.timer.activityId=id;state.timer.subject=x.subject||state.timer.subject;state.timer.mode="study";state.timer.remaining=1500;page="timer";save();render();timerStart()}
+function startTimerForTask(id){let x=allStudentTasks().find(t=>t.id===id&&!t.done);if(!x){toast("این تکلیف در فهرست باقی‌مانده‌ها نیست.");return}if(state.timer.running)timerPause();state.timer.activity="task";state.timer.activityId=id;state.timer.subject=x.subject||state.timer.subject;state.timer.mode="study";state.timer.remaining=1500;page="timer";save();render();timerStart()}
+function startTimerForExam(id){let x=allStudentExams().find(t=>t.id===id);if(!x){toast("امتحان مورد نظر پیدا نشد.");return}if(state.timer.running)timerPause();state.timer.activity="exam";state.timer.activityId=id;state.timer.subject=x.subject||state.timer.subject;state.timer.mode="study";state.timer.remaining=1500;page="timer";save();render();timerStart()}
 function timerComplete(){
  if(ticker)clearInterval(ticker);ticker=null;deadline=null;
  let study=state.timer.mode==="study";
@@ -348,6 +354,7 @@ document.addEventListener("click",e=>{
  if(e.target.closest("[data-close-modal]")||e.target.matches("[data-modal-backdrop]")){closeModal();return}
  let t=e.target.closest("[data-toggle-task]");if(t){let x=state.tasks.find(z=>z.id===t.dataset.toggleTask);if(x){x.done=!x.done;save();render();toast(x.done?"آفرین! تکلیف انجام‌شده ثبت شد.":"وضعیت تکلیف تغییر کرد.")}return}
  for(let [attr,key] of [["data-delete-task","tasks"],["data-delete-exam","exams"],["data-delete-plan","plans"],["data-delete-grade","grades"]]){let x=e.target.closest("["+attr+"]");if(x){remove(key,x.getAttribute(attr));return}}
+ let workTab=e.target.closest("[data-work-tab]");if(workTab){taskView=workTab.dataset.workTab;page="tasks";taskFilter="all";render();return}
  let filter=e.target.closest("[data-task-filter]");if(filter){taskFilter=filter.dataset.taskFilter;render();return}
  let day=e.target.closest("[data-plan-day]");if(day){planDay=+day.dataset.planDay;render();return}
  let cal=e.target.closest("[data-calendar-date]");if(cal){calSelected=cal.dataset.calendarDate;render();return}
@@ -363,9 +370,9 @@ document.addEventListener("change",e=>{
  if(e.target.id==="timerActivity"){
   let activity=e.target.value;if(state.timer.running)timerPause();
   state.timer.activity=activity;
-  let items=activity==="task"?state.tasks.filter(x=>!x.done&&activeSubject(x.subject)):activity==="exam"?state.exams.filter(x=>activeSubject(x.subject)).slice().sort((a,b)=>a.date.localeCompare(b.date)):[];
+  let items=activity==="task"?allStudentTasks().filter(x=>!x.done):activity==="exam"?allStudentExams().sort((a,b)=>a.date.localeCompare(b.date)):[];
   state.timer.activityId=items[0]?.id||"";
-  let target=activity==="task"?state.tasks.find(x=>x.id===state.timer.activityId):activity==="exam"?state.exams.find(x=>x.id===state.timer.activityId):null;
+  let target=activity==="task"?allStudentTasks().find(x=>x.id===state.timer.activityId):activity==="exam"?allStudentExams().find(x=>x.id===state.timer.activityId):null;
   if(target?.subject)state.timer.subject=target.subject;
   save();render();return;
  }
