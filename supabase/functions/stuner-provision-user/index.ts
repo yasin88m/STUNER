@@ -16,7 +16,7 @@ function authAddress(username:string){return username+"@accounts.stuner.invalid"
 
 /* Excel onboarding: authenticate principal on the server and check every class assignment. */
 function normalized(value:unknown){
- return String(value??"").normalize("NFKC").replace(/ي/g,"ی").replace(/ك/g,"ک")
+ return String(value??"").replace(/فتوگرافیگ/g,"فتوگرافیک").normalize("NFKC").replace(/ي/g,"ی").replace(/ك/g,"ک")
   .replace(/[\u064b-\u065f\u0670\u200c\u200d\s_\-–—():.،,]/g,"").toLowerCase();
 }
 function normalizedGrade(value:unknown){
@@ -44,7 +44,7 @@ async function importMembers(req:Request,admin:ReturnType<typeof createClient>,b
  async function createRow(raw:Record<string,unknown>){
   const username=String(raw.username||"").trim(),password=String(raw.password||""),displayName=String(raw.display_name||"").trim();
   if(!/^\d{10}$/.test(username))return {created:false,error:"کد ملی باید ده رقم باشد."};
-  if(!/^09\d{9}$/.test(password))return {created:false,error:"شماره موبایل معتبر نیست."};
+  if(!/^0[1-9]\d{9}$/.test(password))return {created:false,error:"شماره تماس معتبر نیست."};
   if(!validName(displayName))return {created:false,error:"نام و نام خانوادگی معتبر نیست."};
   let classId:string|null=null,grade:string|null=null;
   if(isStudent){
