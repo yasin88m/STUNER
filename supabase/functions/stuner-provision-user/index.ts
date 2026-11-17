@@ -33,7 +33,7 @@ Deno.serve(async(req:Request)=>{
  }
  if(mode!=="register_manager"&&mode!=="create_member"&&mode!=="reset_member")return respond(400,{error:"Unknown operation"});
  let principalId:string|null=null,schoolId:string|null=null,role:"principal"|"teacher"|"student"="principal";
- let membershipGrade:string|null=null,classId:string|null=null;
+ let membershipGrade:string|null=null,classId:string|null=null,teacherClassIds:string[]=[];
  if(mode==="create_member"||mode==="reset_member"){
   const token=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"");
   if(!token||token==="")return respond(401,{error:"Authentication required"});
@@ -57,11 +57,19 @@ Deno.serve(async(req:Request)=>{
   }
   classId=typeof data.class_id==="string"&&data.class_id?data.class_id:null;
   if(role==="student"&&!classId)return respond(400,{error:"A class is required for every student"});
-  if(classId){
-   const c=await admin.from("school_classes").select("id,school_id,grade").eq("id",classId).eq("school_id",schoolId).maybeSingle();
-   if(c.error||!c.data)return respond(400,{error:"Selected class does not belong to school"});
-   membershipGrade=role==="student"?c.data.grade:null;
+  if(role==="teacher"){
+   if(data.class_ids!==undefined&&(!Array.isArray(data.class_ids)||data.class_ids.some(x=>typeof x!=="string")))
+    return respond(400,{error:"فهرست کلاس‌های معلم معتبر نیست."});
+   teacherClassIds=[...new Set([...(data.class_ids as string[]||[]),...(classId?[classId]:[])])];
+   if(teacherClassIds.length>100)return respond(400,{error:"تعداد کلاس‌های انتخاب‌شده بیش از حد مجاز است."});
   }
+  const ids=role==="student"?[classId!]:teacherClassIds;
+  if(ids.length){
+   const found=await admin.from("school_classes").select("id,grade").eq("school_id",schoolId).in("id",ids);
+   if(found.error||found.data?.length!==ids.length)return respond(400,{error:"تمام کلاس‌های انتخاب‌شده باید متعلق به همین مدرسه باشند."});
+   if(role==="student")membershipGrade=found.data[0].grade;
+  }
+  if(role==="teacher")classId=null;
  }else{
   // Public manager registration has an IP-based hourly limit. Prevent cheap mass account creation.
   const remote=(req.headers.get("cf-connecting-ip")||req.headers.get("x-forwarded-for")?.split(",")[0]||"unknown").trim().slice(0,100);
@@ -93,8 +101,8 @@ Deno.serve(async(req:Request)=>{
     grade:membershipGrade,class_id:classId
    });
    if(added.error)throw added.error;
-   if(role==="teacher"&&classId){
-    const t=await admin.from("class_teachers").insert({teacher_id:newId,class_id:classId,school_id:schoolId});
+   if(role==="teacher"&&teacherClassIds.length){
+    const t=await admin.from("class_teachers").insert(teacherClassIds.map(id=>({teacher_id:newId,class_id:id,school_id:schoolId})));
     if(t.error)throw t.error;
    }
   }
