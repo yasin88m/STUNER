@@ -147,10 +147,11 @@ async function startImport(){
    state.note="پیشرفت: "+originalRows.filter(r=>r.status==="done").length+" حساب ثبت شده از "+pending.length+" ردیف آماده.";
    redraw();
   }
+  if(state.schoolId!==targetSchool||state.role!==targetRole)return;
   if(state.stop)state.note="فرایند متوقف شد. برای ادامه، دکمه ثبت حساب‌های باقی‌مانده را بزنید.";
   else state.note="پردازش کامل شد. "+state.rows.filter(r=>r.status==="done").length+" حساب ساخته شد؛ ردیف‌های خطادار در گزارش مشخص‌اند.";
-  if(state.rows.some(r=>r.status==="done")&&state.onComplete)await state.onComplete();
- }catch(e){state.note="اشکال ارتباطی: "+(e.message||"درخواست انجام نشد.")+" — ممکن است برخی حساب‌ها ساخته شده باشند؛ پیش از تلاش دوباره فهرست کاربران را بررسی کنید.";}
+  if(originalRows.some(r=>r.status==="done")&&onComplete)await onComplete();
+ }catch(e){if(state.schoolId!==targetSchool||state.role!==targetRole)return;state.note="اشکال ارتباطی: "+(e.message||"درخواست انجام نشد.")+" — ممکن است برخی حساب‌ها ساخته شده باشند؛ پیش از تلاش دوباره فهرست کاربران را بررسی کنید.";}
  finally{state.running=false;redraw()}
 }
 function exportReport(){
