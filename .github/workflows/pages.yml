@@ -38,7 +38,7 @@ jobs:
           fi
 
       - name: Validate application JavaScript
-        run: node --check app.js && node --check school-portal.js && node --check teacher-portal.js && node --check stuner-icons.js && node --check school-work.js && node --check curriculum.js && node --check sw.js && node --check chap-catalog.js
+        run: node --check app.js && node --check school-portal.js && node --check teacher-portal.js && node --check stuner-jalali.js && node --check stuner-icons.js && node --check school-work.js && node --check curriculum.js && node --check sw.js && node --check chap-catalog.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
