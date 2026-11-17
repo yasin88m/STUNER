@@ -107,3 +107,10 @@
 .school-inline-sync button{border:0;background:#d4ebdc;color:#176341;border-radius:8px;padding:6px 11px;font:inherit;cursor:pointer}
 .school-inline-item .school-source{font-size:10px;background:#e8f4ec;color:#276749;border-radius:7px;padding:3px 7px;justify-self:start}
 @media(max-width:560px){.portal-class-grid,.portal-class-checks,.portal-info-grid{grid-template-columns:1fr}#portalRoot .portal-head:has(.portal-hamburger) h1{font-size:18px}}
+
+/* Lucide navigation affordances in the management drawer */
+.portal-nav-menu>button{display:flex;align-items:center;gap:11px;min-height:46px}
+.portal-nav-menu>button .stuner-icon{width:19px;height:19px}
+.portal-hamburger>.stuner-icon{width:23px;height:23px}
+.portal-invite code{background:#fff;padding:10px 12px;border-radius:10px;border:1px solid #d5ebdd;font-size:11px;user-select:all}
+.portal-invite p{line-height:1.9}
