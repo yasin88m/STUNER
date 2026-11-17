@@ -1,0 +1,39 @@
+/* Persian Excel roster onboarding - principal dashboard. */
+.school-import-card{border:1px solid #badfc8!important;background:linear-gradient(180deg,#fbfefc,#fff)}
+.school-import-card>summary{color:#176644!important}
+.school-import-top{display:flex;align-items:stretch;gap:12px;flex-wrap:wrap}
+.school-import-file{position:relative;overflow:hidden;display:inline-flex!important;align-items:center;justify-content:center;flex-direction:row!important;gap:10px;background:#176e4d;border:1px solid #176e4d;border-radius:13px;min-height:46px;padding:10px 17px;color:#fff!important;font-weight:800!important;font-size:12px!important;cursor:pointer;flex:1;min-width:210px}
+.school-import-file:hover{background:#10543b}
+.school-import-file input[type="file"]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:1;font-size:16px}
+.school-import-file:focus-within{outline:3px solid #51c18a;outline-offset:2px}
+.school-import-top>.portal-secondary{display:inline-flex;gap:8px;align-items:center;justify-content:center;padding:10px 17px;min-height:46px}
+.school-import-hint{font-size:11px!important;color:#5e7c6a!important;line-height:2.1!important;padding:12px 14px;background:#f2f9f4;border:1px dashed #c6e3ce;border-radius:13px}
+.school-import-empty{font-size:12px!important;color:#789183!important;line-height:2.2!important}
+.school-import-filename{font-size:11px!important;font-weight:750!important;color:#2b7651!important;word-break:break-all}
+.school-import-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.school-import-stats span{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #e0ece4;background:#f6faf7;padding:10px;border-radius:10px;color:#6f8578;font-size:11px}
+.school-import-stats b{font-size:15px;color:#21684b}
+.school-import-scroll{width:100%;overflow-x:auto;border:1px solid #e0ebe2;border-radius:12px}
+.school-import-table{border-collapse:collapse;width:100%;min-width:630px;text-align:right;font-size:11px}
+.school-import-table th{white-space:nowrap;background:#eef7f1;color:#527461;font-weight:800;padding:12px 10px;border-bottom:1px solid #e2eee6}
+.school-import-table td{padding:12px 10px;border-bottom:1px solid #f1f5f2;color:#3d6350;vertical-align:middle}
+.school-import-table tr:last-child td{border-bottom:0}
+.school-import-table td[dir="ltr"]{text-align:right;font-family:Vazirmatn,Arial,sans-serif}
+.school-import-tag{display:inline-flex;font-size:10px;font-weight:800;border-radius:20px;white-space:nowrap;padding:5px 9px;border:1px solid #cde4d4;background:#e9f7ee;color:#216943}
+.school-import-tag.invalid,.school-import-tag.failed{border-color:#f0d7ce;background:#fff3ef;color:#ad543b}
+.school-import-tag.done{border-color:#b9e6cf;background:#e0f8ed;color:#167847}
+.school-import-errors{background:#fff9f6;border:1px solid #f1d8cb;border-radius:12px;padding:13px 16px;color:#8f5140;font-size:11px}
+.school-import-errors>strong{display:block;margin-bottom:6px}
+.school-import-errors ul{padding-right:18px;margin:0;display:grid;gap:7px;line-height:1.9}
+.school-import-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.school-import-actions .portal-primary{width:auto;min-width:170px;display:inline-flex;align-items:center;justify-content:center;gap:9px}
+.school-import-actions .portal-secondary{min-height:43px}
+.school-import-result{font-size:11px!important;color:#55735e!important;line-height:2.1!important}
+.school-import-card .stuner-icon{width:19px;height:19px;flex:none}
+@media(max-width:650px){
+ .school-import-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .school-import-file{min-width:100%}
+ .school-import-top>.portal-secondary{width:100%}
+ .school-import-actions .portal-primary,.school-import-actions .portal-secondary{width:100%}
+ .school-import-card{padding:16px!important}
+}
