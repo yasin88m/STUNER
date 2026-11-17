@@ -128,6 +128,12 @@ async function enter(member){
   window.STUNER_SCHOOL_WORK?.init(client,user,member);
   const src=document.createElement("script");src.src="./app.js";document.body.appendChild(src);return;
  }
+ if(member.role==="teacher"){
+  show();
+  if(!window.STUNER_TEACHER_UI)throw Error("پنل معلم بارگذاری نشده است.");
+  await window.STUNER_TEACHER_UI.start({client,user,members,active:member,root:el});
+  return;
+ }
  const sid=current.school_id;
  const [s,c,p,t,w,n]=await Promise.all([
   client.from("schools").select("id,name,kind,branch,majors,grades").eq("id",sid).single(),
