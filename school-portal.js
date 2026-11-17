@@ -109,6 +109,21 @@ async function enter(member){
  if(member.role==="student"){
   cover.hidden=true;app.style.display="";on.hidden=true;
   window.STUNER_ACTIVE_USER={id:user.id,schoolId:member.school_id};
+  window.STUNER_STUDENT_ACCOUNT={
+   username:String(user.email||"").split("@")[0],
+   async updateProfile(values){
+    const result=await provision({mode:"update_student_profile",school_id:member.school_id,...values},true);
+    if(!result.ok)throw Error("ویرایش حساب انجام نشد.");
+    member.display_name=result.display_name;
+    window.STUNER_STUDENT_ACCOUNT.username=result.username;
+    if(user.user_metadata)user.user_metadata.stuner_age=result.age;
+    if(window.STUNER_ACTIVE_STUDENT_PROFILE){
+     window.STUNER_ACTIVE_STUDENT_PROFILE.firstName=String(values.first_name);
+     window.STUNER_ACTIVE_STUDENT_PROFILE.lastName=String(values.last_name);
+    }
+    return result;
+   }
+  };
   if(!document.getElementById("stunerStudentLogout")){const logout=document.createElement("button");logout.id="stunerStudentLogout";logout.type="button";logout.textContent="خروج از حساب";logout.className="secondary-button small-button";logout.addEventListener("click",async()=>{await client.auth.signOut();location.reload()});document.querySelector(".topbar-actions")?.appendChild(logout);}
   // Enrollment is the source of truth for the student's class and educational profile.
   if(member.class_id){
@@ -127,6 +142,7 @@ async function enter(member){
    const display=String(member.display_name||"دانش‌آموز").trim().split(/\s+/);
    window.STUNER_ACTIVE_STUDENT_PROFILE={
     firstName:display[0],lastName:display.slice(1).join(" ")||"",
+    ...(Number.isInteger(Number(user.user_metadata?.stuner_age))&&Number(user.user_metadata?.stuner_age)>=6?{age:Number(user.user_metadata.stuner_age)}:{}),
     educationLevel:level,grade,track,major,fieldGroup:matches?.fieldGroup||""
    };
   }
