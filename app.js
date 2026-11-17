@@ -253,13 +253,17 @@ function renderStats(){
 }
 function renderMore(){return `${heading("بخش‌های بیشتر","همه ابزارهای مورد نیازت در یک جا.")}<div class="more-grid"><button class="more-tile" data-page="books"><span class="tile-icon">▤</span><span><strong>کتابخانه درسی</strong><small>کتاب‌های پایه و رشته خودت</small></span></button><button class="more-tile" data-page="exams"><span class="tile-icon">♜</span><span><strong>امتحانات</strong><small>تاریخ و مهلت آزمون‌ها</small></span></button><button class="more-tile" data-page="calendar"><span class="tile-icon">▣</span><span><strong>تقویم</strong><small>نمای روزانه و ماهانه</small></span></button><button class="more-tile" data-page="stats"><span class="tile-icon">▥</span><span><strong>نمرات و کارنامه</strong><small>معدل و عملکرد دروس</small></span></button><button class="more-tile" data-page="profile"><span class="tile-icon">◉</span><span><strong>پروفایل دانش‌آموز</strong><small>مشخصات و تنظیمات</small></span></button></div><section class="card panel" style="margin-top:16px"><div class="section-title" style="margin-top:0"><div><h2>یادآوری‌ها</h2><p>اعلان‌های تکالیف و زمان مطالعه</p></div></div><div class="settings-row"><div><strong>اعلان تکالیف امروز</strong><small>یادآوری کارهایی که مهلتشان امروز است</small></div><input class="switch" type="checkbox" data-pref="notifyTasks" ${state.preferences.notifyTasks?"checked":""}></div><div class="settings-row"><div><strong>اعلان‌های تایمر مطالعه</strong><small>پایان زمان مطالعه و استراحت</small></div><input class="switch" type="checkbox" data-pref="notifyStudy" ${state.preferences.notifyStudy?"checked":""}></div><div class="settings-row"><div><strong>زمان یادآوری تکالیف</strong><small>یادآوری تکالیف امروز و فردا</small></div><input class="inline-input" style="width:112px;text-align:center" type="text" inputmode="numeric" dir="ltr" maxlength="5" placeholder="۰۸:۰۰" data-pref-time="taskReminderTime" value="${fa(state.preferences.taskReminderTime||"08:00")}"></div><div class="settings-row"><div><strong>زمان پیشنهادی مطالعه</strong><small>یادآوری روزانه برای شروع مطالعه</small></div><input class="inline-input" style="width:112px;text-align:center" type="text" inputmode="numeric" dir="ltr" maxlength="5" placeholder="۱۶:۰۰" data-pref-time="studyReminderTime" value="${fa(state.preferences.studyReminderTime||"16:00")}"></div><button class="secondary-button small-button" style="margin-top:14px" data-action="enable-notifications">فعال‌سازی اعلان‌های گوشی</button></section>`}
 function officialBookUrl(value){
- const raw=String(value||"").trim();
- if(!raw)return "https://chap.oerp.ir/";
+ const raw=String(value||"").trim(),official="http://chap.oerp.ir/";
+ if(!raw)return official;
  try{
-  const url=new URL(raw,"https://chap.oerp.ir/");
-  if(["chap.sch.ir","www.chap.sch.ir"].includes(url.hostname.toLowerCase()))url.hostname="chap.oerp.ir";
+  const url=new URL(raw,official),host=url.hostname.toLowerCase();
+  if(["chap.sch.ir","www.chap.sch.ir","chap.oerp.ir","www.chap.oerp.ir"].includes(host)){
+   url.hostname="chap.oerp.ir";
+   url.protocol="http:";
+  }
+  if(url.protocol!=="http:"&&url.protocol!=="https:")return official;
   return url.href;
- }catch{return raw;}
+ }catch{return official}
 }
 function renderBooks(){
  const books=studentBooks(),student=state.student;
