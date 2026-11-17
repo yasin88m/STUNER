@@ -6,6 +6,7 @@ const el=document.getElementById("portalRoot"),cover=document.getElementById("sc
 const app=document.getElementById("app"),on=document.getElementById("onboarding");
 const ready=/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(cfg.url||"")&&/^(sb_publishable_|eyJ)/.test(cfg.publishableKey||"");
 let client=null,user=null,role="student",members=[],current=null,classes=[],people=[],teacherLinks=[],school=null,assignments=[],accountNames=[];
+let directorSection="home",directorMenu=false,viewClassId=null;
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 const usernameRx=/^[a-z][a-z0-9_]{3,31}$/;
@@ -174,7 +175,57 @@ function dashboard(){
  }
  body+='<section class="portal-card"><h2>'+(director?'اعضای مدرسه':'دانش‌آموزان کلاس‌های من')+'</h2>'+( (director?people:students).map(p=>'<div class="portal-record"><strong>'+esc(p.display_name)+'</strong><span>'+esc(p.role==="principal"?"مدیر":p.role==="teacher"?"معلم":"دانش‌آموز")+' · '+esc(p.grade||"")+' · '+esc(accountNames.find(x=>x.user_id===p.user_id)?.username||"—")+'</span></div>').join("")||'<p>عضوی ثبت نشده است.</p>')+'</section>';
  el.innerHTML=head(school.name)+'<div class="portal-context"><span>'+esc(director?"پنل مدیر": "پنل معلم")+'</span><button data-action="picker">تغییر مدرسه</button></div>'+body+'<p id="portalMessage" class="portal-error"></p>';
+ if(director)directorUi();
 }
+
+function directorUi(){
+ const sections=[["home","صفحه اصلی"],["students","دانش‌آموزان"],["teachers","معلمان"],["classes","کلاس‌ها"],["work","تکالیف و امتحانات"],["security","تغییر رمز عبور"]];
+ const cards=[...el.querySelectorAll(".portal-card")];
+ const find=title=>cards.find(c=>c.querySelector("h2")?.textContent.trim()===title);
+ cards.forEach(c=>c.hidden=true);
+ const stats=el.querySelector(".portal-stats");if(stats)stats.hidden=directorSection!=="home";
+ const context=el.querySelector(".portal-context");if(context)context.hidden=true;
+ const header=el.querySelector(".portal-head");
+ if(header)header.innerHTML='<button class="portal-hamburger" type="button" data-director-action="menu" aria-label="منوی مدیریت" aria-expanded="'+directorMenu+'"><span></span><span></span><span></span></button><div><small>STUNER · '+esc(school.name)+'</small><h1>'+sections.find(x=>x[0]===directorSection)[1]+'</h1></div>';
+ const old=el.querySelector(".portal-director-nav");if(old)old.remove();
+ if(directorMenu)el.insertAdjacentHTML("afterbegin",'<div class="portal-director-nav"><button class="portal-nav-scrim" data-director-action="close" aria-label="بستن منو"></button><nav class="portal-nav-menu" aria-label="منوی مدیر"><div class="portal-nav-title"><strong>مدیریت '+esc(school.name)+'</strong><button data-director-action="close" aria-label="بستن">×</button></div>'+sections.map(x=>'<button class="'+(directorSection===x[0]?"active":"")+'" data-director-page="'+x[0]+'">'+x[1]+'</button>').join("")+'<button data-action="picker">تغییر مدرسه</button><button data-action="logout">خروج</button></nav></div>');
+ if(directorSection==="home"){find("مشخصات مدرسه").hidden=false;return}
+ if(directorSection==="classes"){
+  const card=find("کلاس‌ها");card.hidden=false;
+  const selected=classes.find(c=>c.id===viewClassId);
+  if(selected){
+   const students=people.filter(p=>p.role==="student"&&p.class_id===selected.id);
+   card.innerHTML='<button class="portal-secondary" data-class-back>بازگشت به کلاس‌ها</button><h2>'+esc(selected.name)+'</h2><p>پایه '+esc(selected.grade)+' · '+students.length+' دانش‌آموز</p><h3>دانش‌آموزان این کلاس</h3>'+(students.map(p=>'<div class="portal-record"><strong>'+esc(p.display_name)+'</strong><span>نام کاربری: '+esc(accountNames.find(a=>a.user_id===p.user_id)?.username||"—")+'</span></div>').join("")||'<p>هنوز دانش‌آموزی ندارد.</p>');
+  }else{
+   card.innerHTML='<h2>کلاس‌ها</h2><p>روی هر کلاس بزن تا دانش‌آموزان آن را ببینی.</p><div class="portal-class-grid">'+classes.map(c=>'<button class="portal-class-tile" data-class-detail="'+esc(c.id)+'"><strong>'+esc(c.name)+'</strong><small>'+people.filter(p=>p.role==="student"&&p.class_id===c.id).length+' دانش‌آموز · پایه '+esc(c.grade)+'</small><span>مشاهده ←</span></button>').join("")+'</div>';
+   const add=find("ساخت کلاس");if(add)add.hidden=false;
+  }
+  return;
+ }
+ if(directorSection==="students"||directorSection==="teachers"){
+  const isTeacher=directorSection==="teachers",kind=isTeacher?"teacher":"student";
+  const formCard=find("ساخت حساب معلم و دانش‌آموز");
+  formCard.hidden=false;formCard.querySelector("h2").textContent=isTeacher?"افزودن معلم جدید":"افزودن دانش‌آموز جدید";
+  const roleControl=formCard.querySelector("#newMemberRole");
+  roleControl.value=kind;roleControl.closest("label").hidden=true;
+  const classControl=formCard.querySelector("#newMemberClass");
+  classControl.closest("label").hidden=isTeacher;
+  classControl.required=!isTeacher;
+  if(isTeacher){
+   const group=document.createElement("fieldset");
+   group.className="portal-grade-set";
+   group.innerHTML='<legend>کلاس‌های این معلم (انتخاب چندتایی)</legend><p class="portal-note">همه کلاس‌های مورد نظر را انتخاب کن.</p><div class="portal-class-checks">'+classes.map(c=>'<label class="portal-class-check"><input type="checkbox" name="class_ids" value="'+esc(c.id)+'"><span>'+esc(c.name)+'</span></label>').join("")+'</div>';
+   classControl.closest("label").after(group);
+  }
+  const entries=people.filter(p=>p.role===kind);
+  formCard.insertAdjacentHTML("beforebegin",'<section class="portal-card portal-list-card"><h2>لیست '+(isTeacher?"معلمان":"دانش‌آموزان")+' ('+entries.length+')</h2>'+(entries.map(p=>'<div class="portal-person"><div class="portal-person-avatar">'+esc(p.display_name?.trim()?.charAt(0)||"؟")+'</div><div><strong>'+esc(p.display_name)+'</strong><small>نام کاربری: '+esc(accountNames.find(a=>a.user_id===p.user_id)?.username||"—")+'</small><small>'+(isTeacher?"کلاس‌ها: "+esc(teacherLinks.filter(t=>t.teacher_id===p.user_id).map(t=>classes.find(c=>c.id===t.class_id)?.name||"").filter(Boolean).join("، ")||"تعیین نشده"):"کلاس: "+esc(classes.find(c=>c.id===p.class_id)?.name||"—"))+'</small></div></div>').join("")||'<p>هنوز حسابی ثبت نشده است.</p>')+'</section>');
+  if(isTeacher){const assign=find("اختصاص معلم به کلاس");if(assign)assign.hidden=false}
+  return;
+ }
+ if(directorSection==="work"){const card=find("تکالیف و امتحانات مدرسه");if(card)card.hidden=false}
+ if(directorSection==="security"){const card=find("تغییر رمز عبور معلم یا دانش‌آموز");if(card)card.hidden=false}
+}
+
 async function handle(form){
  const d=new FormData(form);
  try{
