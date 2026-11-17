@@ -26,7 +26,7 @@ function findClass(grade,major){
 }
 const allColumns=["ردیف","نام","نام خانوادگی","کد ملی","شماره تماس","پایه تحصیلی","رشته تحصیلی"];
 function render(role){
- if(state.role!==role){state.role=role;state.rows=[];state.note="";state.fileName="";}
+ if(state.role!==role){state.stop=true;state.role=role;state.rows=[];state.note="";state.fileName="";}
  const isStudent=role==="student";
  return '<details class="portal-card principal-disclosure school-import-card" '+(state.rows.length||state.note?'open':"")+'><summary><i data-lucide="file-text"></i> ورود گروهی '+(isStudent?"دانش‌آموزان":"معلمان")+' از اکسل <i data-lucide="chevron-down"></i></summary>'+
  '<p class="portal-note">فایل اکسل (.xlsx) یا CSV را انتخاب کنید. ستون‌ها: '+(isStudent?"ردیف، نام، نام خانوادگی، کد ملی، شماره تماس، پایه تحصیلی، رشته تحصیلی":"ردیف، نام، نام خانوادگی، کد ملی، شماره تماس (پایه و رشته اختیاری)")+'.</p>'+
@@ -35,7 +35,7 @@ function render(role){
  '<div id="schoolImportContent" aria-live="polite">'+view()+'</div></details>';
 }
 function configure(options){
- if(state.schoolId&&state.schoolId!==options.school.id){state.rows=[];state.note="";state.fileName="";}
+ if(state.schoolId&&state.schoolId!==options.school.id){state.stop=true;state.rows=[];state.note="";state.fileName="";}
  state.schoolId=options.school.id;state.school=options.school;state.classes=options.classes;state.known=options.known||[];
  state.submitBatch=options.submitBatch;state.onComplete=options.onComplete;
 }
@@ -90,7 +90,7 @@ function compile(grid,role){
    if(match?.error)errs.push(match.error);
    if(match?.id){classId=match.id;className=match.name;}
   }
-  records.push({line:i+1,first,last,username,password,grade,major,class_id:classId,className,error:errs.join(" "),status:errs.length?"invalid":"pending",serverError:""});
+  records.push({line:i+1,first,last,username,password:errs.length?"":password,grade,major,class_id:classId,className,error:errs.join(" "),status:errs.length?"invalid":"pending",serverError:""});
  }
  if(!records.length)throw Error("در فایل هیچ ردیف اطلاعاتی پیدا نشد.");
  if(records.length>2000)throw Error("فایل بیش از ۲۰۰۰ نفر دارد. فایل را به چند بخش تقسیم کنید.");
@@ -116,6 +116,7 @@ function redraw(){
 }
 async function parseFile(file){
  if(state.running)return;
+ const targetRole=state.role,targetSchool=state.schoolId;
  state.rows=[];state.note="";state.fileName=file.name;redraw();
  try{
   if(file.size>5*1024*1024)throw Error("اندازه فایل نباید بیش از ۵ مگابایت باشد.");
@@ -124,22 +125,26 @@ async function parseFile(file){
   if(isXlsx&&typeof window.readXlsxFile!=="function")throw Error("کتابخانه خواندن اکسل بارگذاری نشده است؛ اتصال اینترنت را بررسی و صفحه را تازه‌سازی کنید.");
   state.note="در حال خواندن و اعتبارسنجی فایل…";redraw();
   const grid=isCsv?readCsv(await file.text()):await window.readXlsxFile(file);
-  state.rows=compile(grid,state.role);state.note="پیش‌نمایش آماده است. پیش از ثبت، کلاس‌ها و ردیف‌های خطادار را بررسی کنید.";
+  if(state.role!==targetRole||state.schoolId!==targetSchool)return;
+  state.rows=compile(grid,targetRole);state.note="پیش‌نمایش آماده است. پیش از ثبت، کلاس‌ها و ردیف‌های خطادار را بررسی کنید.";
  }catch(e){state.note=e.message||"خواندن فایل اکسل ممکن نشد.";}
  redraw();
 }
 async function startImport(){
  if(state.running||!state.submitBatch)return;
- state.running=true;state.stop=false;redraw();
+ state.running=true;state.stop=false;
+ const targetSchool=state.schoolId,targetRole=state.role,submitBatch=state.submitBatch,onComplete=state.onComplete,originalRows=state.rows;
+ redraw();
  try{
-  const pending=state.rows.filter(x=>x.status==="pending");
+  const pending=originalRows.filter(x=>x.status==="pending");
   for(let at=0;at<pending.length;at+=20){
-   if(state.stop)break;
+   if(state.stop||state.schoolId!==targetSchool||state.role!==targetRole)break;
    const batch=pending.slice(at,at+20),payload=batch.map(r=>({username:r.username,password:r.password,display_name:r.first+" "+r.last,grade:r.grade,major:r.major,class_id:r.class_id}));
-   const reply=await state.submitBatch({mode:"import_members",school_id:state.schoolId,role:state.role,rows:payload});
+   const reply=await submitBatch({mode:"import_members",school_id:targetSchool,role:targetRole,rows:payload});
    if(!Array.isArray(reply.results)||reply.results.length!==batch.length)throw Error("پاسخ سرور برای یک گروه کامل نیست؛ وضعیت حساب‌ها را بررسی کنید.");
    reply.results.forEach((entry,i)=>{batch[i].status=entry.created===true?"done":"failed";batch[i].serverError=entry.created===true?"":String(entry.error||"این حساب ثبت نشد.");batch[i].password="";});
-   state.note="پیشرفت: "+state.rows.filter(r=>r.status==="done").length+" حساب ثبت شده از "+pending.length+" ردیف آماده.";
+   if(state.schoolId!==targetSchool||state.role!==targetRole){state.stop=true;break}
+   state.note="پیشرفت: "+originalRows.filter(r=>r.status==="done").length+" حساب ثبت شده از "+pending.length+" ردیف آماده.";
    redraw();
   }
   if(state.stop)state.note="فرایند متوقف شد. برای ادامه، دکمه ثبت حساب‌های باقی‌مانده را بزنید.";
