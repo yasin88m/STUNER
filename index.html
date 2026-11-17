@@ -23,7 +23,7 @@
       </a>
       <div class="topbar-actions">
         <button class="icon-button notification-button" id="notificationButton" aria-label="اعلان‌ها" title="اعلان‌ها">
-          <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+          <i data-lucide="bell"></i>
           <i class="notification-dot"></i>
         </button>
         <button class="avatar-button" id="topAvatar" aria-label="پروفایل دانش‌آموز">؟</button>
@@ -34,17 +34,16 @@
       <aside class="sidebar">
         <div class="sidebar-label">فضای دانش‌آموز</div>
         <nav class="side-nav" aria-label="ناوبری اصلی">
-          <button class="nav-item active" data-page="home"><span class="nav-icon">⌂</span>خانه</button>
-          <button class="nav-item" data-page="plan"><span class="nav-icon">▦</span>برنامه‌ریز درسی</button>
-          <button class="nav-item" data-page="tasks"><span class="nav-icon">☑</span>تکالیف</button>
-          <button class="nav-item" data-page="books"><span class="nav-icon">▤</span>کتابخانه درسی</button>
-          <button class="nav-item" data-page="exams"><span class="nav-icon">♜</span>امتحانات</button>
-          <button class="nav-item" data-page="calendar"><span class="nav-icon">▣</span>تقویم</button>
-          <button class="nav-item" data-page="stats"><span class="nav-icon">▥</span>آمار و نمرات</button>
-          <button class="nav-item" data-page="profile"><span class="nav-icon">◉</span>پروفایل</button>
+          <button class="nav-item active" data-page="home"><span class="nav-icon"><i data-lucide="house"></i></span>خانه</button>
+          <button class="nav-item" data-page="plan"><span class="nav-icon"><i data-lucide="calendar-days"></i></span>برنامه‌ریز درسی</button>
+          <button class="nav-item" data-page="tasks"><span class="nav-icon"><i data-lucide="clipboard-check"></i></span>تکالیف</button>
+          <button class="nav-item" data-page="books"><span class="nav-icon"><i data-lucide="book-open"></i></span>کتابخانه درسی</button>
+          <button class="nav-item" data-page="calendar"><span class="nav-icon"><i data-lucide="calendar-days"></i></span>تقویم</button>
+          <button class="nav-item" data-page="stats"><span class="nav-icon"><i data-lucide="chart-no-axes-column"></i></span>آمار و نمرات</button>
+          <button class="nav-item" data-page="profile"><span class="nav-icon"><i data-lucide="user-round"></i></span>پروفایل</button>
         </nav>
         <div class="sidebar-tip">
-          <span class="tip-icon">✦</span>
+          <span class="tip-icon"><i data-lucide="sparkles"></i></span>
           <strong>قدم‌های کوچک، نتیجه‌های بزرگ</strong>
           <p>هر روز کمی بهتر از دیروز باش.</p>
         </div>
@@ -55,11 +54,11 @@
     </div>
 
     <nav class="bottom-nav" aria-label="ناوبری موبایل">
-      <button class="bottom-item active" data-page="home"><span>⌂</span><small>خانه</small></button>
-      <button class="bottom-item" data-page="plan"><span>▦</span><small>برنامه</small></button>
-      <button class="bottom-item" data-page="tasks"><span>☑</span><small>تکالیف</small></button>
-      <button class="bottom-item" data-page="stats"><span>▥</span><small>آمار</small></button>
-      <button class="bottom-item" data-page="more"><span>•••</span><small>بیشتر</small></button>
+      <button class="bottom-item active" data-page="home"><span><i data-lucide="house"></i></span><small>خانه</small></button>
+      <button class="bottom-item" data-page="plan"><span><i data-lucide="calendar-days"></i></span><small>برنامه</small></button>
+      <button class="bottom-item" data-page="tasks"><span><i data-lucide="clipboard-check"></i></span><small>تکالیف</small></button>
+      <button class="bottom-item" data-page="stats"><span><i data-lucide="chart-no-axes-column"></i></span><small>آمار</small></button>
+      <button class="bottom-item" data-page="more"><span><i data-lucide="ellipsis"></i></span><small>بیشتر</small></button>
     </nav>
   </div>
 
@@ -127,7 +126,9 @@
   <script src="./curriculum.js" defer></script>
   <script src="./supabase-config.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.94.1/dist/umd/supabase.js" defer></script>
+  <script src="./stuner-icons.js" defer></script>
   <script src="./school-work.js" defer></script>
+  <script src="./teacher-portal.js" defer></script>
   <script src="./school-portal.js" defer></script>
 </body>
 </html>
