@@ -103,6 +103,26 @@ async function enter(member){
   cover.hidden=true;app.style.display="";on.hidden=true;
   window.STUNER_ACTIVE_USER={id:user.id,schoolId:member.school_id};
   if(!document.getElementById("stunerStudentLogout")){const logout=document.createElement("button");logout.id="stunerStudentLogout";logout.type="button";logout.textContent="خروج از حساب";logout.className="secondary-button small-button";logout.addEventListener("click",async()=>{await client.auth.signOut();location.reload()});document.querySelector(".topbar-actions")?.appendChild(logout);}
+  // Enrollment is the source of truth for the student's class and educational profile.
+  if(member.class_id){
+   const [cl,sch]=await Promise.all([
+    client.from("school_classes").select("grade,major,school_id").eq("id",member.class_id).eq("school_id",member.school_id).single(),
+    client.from("schools").select("kind,branch").eq("id",member.school_id).single()
+   ]);
+   if(cl.error||sch.error)throw cl.error||sch.error;
+   const selectedGrade=cl.data.grade,major=cl.data.major||"",branch=sch.data.branch||"";
+   const level=sch.data.kind==="elementary"?"elementary":sch.data.kind==="middle"?"middle":"secondary";
+   const track=level==="secondary"?(branch||"نظری"):"";
+   const grade=level==="elementary"?selectedGrade+" ابتدایی":selectedGrade;
+   const compact=x=>String(x||"").replace(/[\u200c\s-]/g,"").replace(/ي/g,"ی").replace(/ك/g,"ک");
+   const matches=(window.STUNER_CHAP_CATALOG?.categories||[]).find(x=>x.educationLevel===level&&x.grade===grade&&
+      compact(x.major)===compact(major)&&compact(x.track)===compact(track));
+   const display=String(member.display_name||"دانش‌آموز").trim().split(/\s+/);
+   window.STUNER_ACTIVE_STUDENT_PROFILE={
+    firstName:display[0],lastName:display.slice(1).join(" ")||"",
+    educationLevel:level,grade,track,major,fieldGroup:matches?.fieldGroup||""
+   };
+  }
   window.STUNER_SCHOOL_WORK?.init(client,user,member);
   const src=document.createElement("script");src.src="./app.js";document.body.appendChild(src);return;
  }
