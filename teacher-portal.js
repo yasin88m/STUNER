@@ -61,11 +61,11 @@ function createPage(){
  '<div class="teacher-fields-grid"><label>مدرسه<select name="school_id" id="teacherAssignmentSchool" required>'+schoolOptions()+'</select></label><label>نوع فعالیت<select name="kind" required><option value="task">تکلیف</option><option value="exam">امتحان</option></select></label></div>'+
  '<fieldset class="teacher-fieldset"><legend>کلاس‌های دریافت‌کننده</legend><p>می‌توانید هم‌زمان چند کلاس از یک مدرسه را انتخاب کنید.</p><div id="teacherClassChoices" class="teacher-class-checks">'+classChoices(state.schoolId)+'</div></fieldset>'+
  '<div class="teacher-fields-grid"><label>درس<input name="subject" maxlength="100" placeholder="مثلاً ریاضی" required></label><label>عنوان<input name="title" minlength="2" maxlength="150" placeholder="مثلاً تمرین فصل سوم" required></label></div>'+
- '<label>تاریخ امتحان یا مهلت تحویل<input type="date" name="due_date" required></label><label>توضیحات برای دانش‌آموزان<textarea name="description" rows="4" maxlength="3000" placeholder="جزئیات درس، محدوده صفحات، نکات و راهنمای انجام"></textarea></label>'+
+ ''+window.STUNER_JALALI.field("due_date","تاریخ امتحان یا مهلت تحویل")+'<label>توضیحات برای دانش‌آموزان<textarea name="description" rows="4" maxlength="3000" placeholder="جزئیات درس، محدوده صفحات، نکات و راهنمای انجام"></textarea></label>'+
  '<div class="teacher-form-footer"><p>پس از ثبت، این فعالیت مستقیماً در بخش تکالیف یا امتحانات دانش‌آموزان کلاس‌های انتخاب‌شده نمایش داده می‌شود.</p><button class="portal-primary" type="submit">'+icon("send")+' ثبت و ارسال</button></div></form><p class="portal-error" id="teacherFormMessage" role="status" aria-live="polite"></p></section>';
 }
 function workRows(rows){
- return rows.length?rows.map(a=>'<div class="teacher-work-row"><span class="teacher-work-icon">'+icon(a.kind==="task"?"clipboard-check":"graduation-cap")+'</span><div><strong>'+esc(a.title)+'</strong><small>'+esc(a.subject)+' · '+displaySchool(a.school_id)+' · '+esc(state.classes.find(c=>c.id===a.class_id)?.name||"—")+'</small></div><span class="teacher-work-date">'+esc(a.due_date)+'</span></div>').join(""):'<p class="teacher-empty">هنوز تکلیف یا امتحانی ثبت نشده است.</p>';
+ return rows.length?rows.map(a=>'<div class="teacher-work-row"><span class="teacher-work-icon">'+icon(a.kind==="task"?"clipboard-check":"graduation-cap")+'</span><div><strong>'+esc(a.title)+'</strong><small>'+esc(a.subject)+' · '+displaySchool(a.school_id)+' · '+esc(state.classes.find(c=>c.id===a.class_id)?.name||"—")+'</small></div><span class="teacher-work-date">'+esc(window.STUNER_JALALI.formatted(a.due_date))+'</span></div>').join(""):'<p class="teacher-empty">هنوز تکلیف یا امتحانی ثبت نشده است.</p>';
 }
 function workPage(){
  return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>فعالیت‌های ثبت‌شده</h2><p>فهرست تکالیف و امتحاناتی که ارسال کرده‌اید</p></div><button data-teacher-page="create" class="portal-secondary">'+icon("plus")+' ثبت جدید</button></div>'+workRows(state.assignments)+'</section>';
@@ -93,6 +93,7 @@ async function load(){
 }
 const refresh=async()=>{await load();render()};
 async function onClick(e){
+ if(window.STUNER_JALALI?.handleClick(e))return;
  const page=e.target.closest("[data-teacher-page]");
  if(page){state.page=page.dataset.teacherPage;state.menu=false;state.classId="";render();return}
  const menu=e.target.closest("[data-teacher-menu]");
@@ -144,7 +145,7 @@ async function onSubmit(e){
  if(!ids.length){msg.textContent="حداقل یک کلاس را انتخاب کنید.";return}
  if(ids.some(id=>!schoolClasses(schoolId).some(c=>c.id===id))){msg.textContent="به یکی از کلاس‌های انتخاب‌شده دسترسی ندارید.";return}
  const rows=ids.map(classId=>({school_id:schoolId,class_id:classId,teacher_id:state.user.id,kind:data.get("kind"),subject:String(data.get("subject")||"").trim(),title:String(data.get("title")||"").trim(),description:String(data.get("description")||"").trim(),due_date:data.get("due_date")}));
- if(rows.some(x=>!x.title||!x.subject||!x.due_date)){msg.textContent="اطلاعات تکلیف یا امتحان را کامل کنید.";return}
+ if(rows.some(x=>!x.title||!x.subject||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(String(x.due_date||"")))){msg.textContent="اطلاعات تکلیف یا امتحان را کامل کنید.";return}
  state.busy=true;const btn=form.querySelector('button[type="submit"]');btn.disabled=true;
  try{
   const result=await state.client.from("school_assignments").insert(rows);
