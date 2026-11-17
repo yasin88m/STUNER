@@ -9,10 +9,79 @@ const originHeaders={
 function respond(status:number,data:unknown){
  return new Response(JSON.stringify(data),{status,headers:{...originHeaders,"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"}});
 }
-const usernameOk=(x:unknown):x is string=>typeof x==="string"&&/^[a-z][a-z0-9_]{3,31}$/.test(x);
+const usernameOk=(x:unknown):x is string=>typeof x==="string"&&/^(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})$/.test(x);
 const validName=(x:unknown)=>typeof x==="string"&&x.trim().length>=2&&x.trim().length<=120;
 const validPassword=(x:unknown)=>typeof x==="string"&&x.length>=10&&x.length<=128;
 function authAddress(username:string){return username+"@accounts.stuner.invalid"}
+
+/* Excel onboarding: authenticate principal on the server and check every class assignment. */
+function normalized(value:unknown){
+ return String(value??"").normalize("NFKC").replace(/ي/g,"ی").replace(/ك/g,"ک")
+  .replace(/[\u064b-\u065f\u0670\u200c\u200d\s_\-–—():.،,]/g,"").toLowerCase();
+}
+function normalizedGrade(value:unknown){
+ const original=normalized(value);
+ const map:Record<string,string>={"1":"اول","2":"دوم","3":"سوم","4":"چهارم","5":"پنجم","6":"ششم","7":"هفتم","8":"نهم","9":"نهم","10":"دهم","11":"یازدهم","12":"دوازدهم"};
+ return normalized(map[original]||original);
+}
+async function importMembers(req:Request,admin:ReturnType<typeof createClient>,body:Record<string,unknown>){
+ const token=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"");
+ if(!token)return respond(401,{error:"برای ورود گروهی باید با حساب مدیر وارد شوید."});
+ const auth=await admin.auth.getUser(token);
+ if(auth.error||!auth.data.user)return respond(401,{error:"نشست مدیر معتبر نیست؛ دوباره وارد شوید."});
+ const schoolId=String(body.school_id||""),role=body.role;
+ if(!/^[0-9a-f-]{36}$/i.test(schoolId)||!["student","teacher"].includes(String(role)))return respond(400,{error:"مدرسه یا نقش معتبر نیست."});
+ const principal=await admin.from("school_memberships").select("school_id")
+  .eq("school_id",schoolId).eq("user_id",auth.data.user.id).eq("role","principal").maybeSingle();
+ if(principal.error||!principal.data)return respond(403,{error:"فقط مدیر همین مدرسه مجاز به وارد کردن گروهی کاربران است."});
+ if(!Array.isArray(body.rows)||body.rows.length<1||body.rows.length>20)return respond(400,{error:"در هر مرحله بین ۱ تا ۲۰ نفر قابل ثبت است."});
+ const list=body.rows as Record<string,unknown>[];
+ if(list.some(x=>!x||typeof x!=="object"||Array.isArray(x)))return respond(400,{error:"ساختار ردیف‌های ورودی معتبر نیست."});
+ const isStudent=role==="student";
+ const cls=isStudent?await admin.from("school_classes").select("id,grade,major").eq("school_id",schoolId):null;
+ if(cls?.error)return respond(503,{error:"امکان بررسی کلاس‌های مدرسه نیست."});
+ const classes=cls?.data||[];
+ async function createRow(raw:Record<string,unknown>){
+  const username=String(raw.username||"").trim(),password=String(raw.password||""),displayName=String(raw.display_name||"").trim();
+  if(!/^\d{10}$/.test(username))return {created:false,error:"کد ملی باید ده رقم باشد."};
+  if(!/^09\d{9}$/.test(password))return {created:false,error:"شماره موبایل معتبر نیست."};
+  if(!validName(displayName))return {created:false,error:"نام و نام خانوادگی معتبر نیست."};
+  let classId:string|null=null,grade:string|null=null;
+  if(isStudent){
+   classId=String(raw.class_id||"");
+   const classroom=classes.find(c=>c.id===classId);
+   if(!classroom)return {created:false,error:"کلاس انتخابی متعلق به مدرسه نیست."};
+   if(normalizedGrade(classroom.grade)!==normalizedGrade(raw.grade)||normalized(classroom.major||"")!==normalized(raw.major||""))
+    return {created:false,error:"پایه یا رشته با کلاس انتخابی هماهنگ نیست."};
+   grade=classroom.grade;
+  }else if(raw.class_id)return {created:false,error:"انتساب کلاس معلم باید توسط مدیر انجام شود."};
+  const created=await admin.auth.admin.createUser({
+   email:authAddress(username),password,email_confirm:true,
+   app_metadata:{stuner_account:true,created_from_excel:true}
+  });
+  if(created.error||!created.data.user)return {created:false,error:"این کد ملی قبلاً ثبت شده یا ایجاد حساب ممکن نیست."};
+  const userId=created.data.user.id;
+  try{
+   const mapped=await admin.from("account_usernames").insert({username,user_id:userId});
+   if(mapped.error)throw mapped.error;
+   const member=await admin.from("school_memberships").insert({
+    user_id:userId,school_id:schoolId,role,display_name:displayName,grade,class_id:classId
+   });
+   if(member.error)throw member.error;
+   return {created:true};
+  }catch{
+   await admin.auth.admin.deleteUser(userId);
+   return {created:false,error:"ثبت اطلاعات کاربر ناقص بود؛ این ردیف را بررسی کنید."};
+  }
+ }
+ const results: {created:boolean,error?:string}[]=[];
+ for(let i=0;i<list.length;i+=3){
+  const partial=await Promise.all(list.slice(i,i+3).map(x=>createRow(x)));
+  results.push(...partial);
+ }
+ return respond(200,{ok:true,results});
+}
+
 Deno.serve(async(req:Request)=>{
  if(req.method==="OPTIONS")return new Response(null,{status:204,headers:originHeaders});
  if(req.method!=="POST")return respond(405,{error:"Method not allowed"});
@@ -25,11 +94,12 @@ Deno.serve(async(req:Request)=>{
  let data:Record<string,unknown>;
  try{data=await req.json();if(!data||typeof data!=="object"||Array.isArray(data))throw Error()}catch{return respond(400,{error:"Invalid request"})}
  const mode=data.mode;
+ if(mode==="import_members")return await importMembers(req,admin,data);
  const username=String(data.username||"").trim().toLowerCase();
  const name=String(data.display_name||"").trim();
  const password=data.password;
  if(!usernameOk(username)||(mode!=="reset_member"&&!validName(name))||!validPassword(password)){
-  return respond(400,{error:"نام کاربری باید ۴ تا ۳۲ کاراکتر لاتین و عدد یا _ باشد. رمز عبور حداقل ۱۰ کاراکتر لازم دارد."});
+  return respond(400,{error:"نام کاربری باید با حرف لاتین شروع شود یا کد ملی ۱۰ رقمی باشد. رمز عبور حداقل ۱۰ کاراکتر لازم دارد."});
  }
  if(mode!=="register_manager"&&mode!=="create_member"&&mode!=="reset_member")return respond(400,{error:"Unknown operation"});
  let principalId:string|null=null,schoolId:string|null=null,role:"principal"|"teacher"|"student"="principal";
