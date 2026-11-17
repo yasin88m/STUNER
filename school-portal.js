@@ -109,6 +109,12 @@ async function enter(member){
  if(member.role==="student"){
   cover.hidden=true;app.style.display="";on.hidden=true;
   window.STUNER_ACTIVE_USER={id:user.id,schoolId:member.school_id};
+  const personalParts=String(member.display_name||"دانش‌آموز").trim().split(/\s+/);
+  window.STUNER_ACTIVE_STUDENT_PROFILE={
+   firstName:personalParts[0]||"دانش‌آموز",lastName:personalParts.slice(1).join(" ")||"",
+   grade:"",major:"",educationLevel:"",
+   ...(Number.isInteger(Number(user.user_metadata?.stuner_age))&&Number(user.user_metadata?.stuner_age)>=6?{age:Number(user.user_metadata.stuner_age)}:{})
+  };
   window.STUNER_STUDENT_ACCOUNT={
    username:String(user.email||"").split("@")[0],
    async updateProfile(values){
@@ -116,6 +122,7 @@ async function enter(member){
     if(!result.ok)throw Error("ویرایش حساب انجام نشد.");
     member.display_name=result.display_name;
     window.STUNER_STUDENT_ACCOUNT.username=result.username;
+    try{const refreshed=await client.auth.refreshSession();if(refreshed.data?.user)user=refreshed.data.user;}catch{}
     if(user.user_metadata)user.user_metadata.stuner_age=result.age;
     if(window.STUNER_ACTIVE_STUDENT_PROFILE){
      window.STUNER_ACTIVE_STUDENT_PROFILE.firstName=String(values.first_name);
