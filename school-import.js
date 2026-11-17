@@ -31,7 +31,7 @@ function render(role){
  return '<details class="portal-card principal-disclosure school-import-card" '+(state.rows.length||state.note?'open':"")+'><summary><i data-lucide="file-text"></i> ورود گروهی '+(isStudent?"دانش‌آموزان":"معلمان")+' از اکسل <i data-lucide="chevron-down"></i></summary>'+
  '<p class="portal-note">فایل اکسل (.xlsx) یا CSV را انتخاب کنید. ستون‌ها: '+(isStudent?"ردیف، نام، نام خانوادگی، کد ملی، شماره تماس، پایه تحصیلی، رشته تحصیلی":"ردیف، نام، نام خانوادگی، کد ملی، شماره تماس (پایه و رشته اختیاری)")+'.</p>'+
  '<div class="school-import-top"><label class="school-import-file"><i data-lucide="file-text"></i><span>انتخاب فایل اکسل</span><input type="file" id="schoolImportFile" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"></label><button class="portal-secondary" data-import-template="'+role+'" type="button"><i data-lucide="arrow-right"></i> دریافت فایل نمونه</button></div>'+
- '<p class="school-import-hint">نام کاربری هر نفر کد ملی ۱۰ رقمی و رمز اولیه او شماره موبایل درج‌شده در فایل است. صفر ابتدای اعداد حفظ می‌شود. رمز اولیه قابل حدس است؛ به کاربران تأکید کنید پس از ورود تغییرش دهند. '+(isStudent?"کلاس هر نفر فقط در صورت تطابق دقیق پایه و رشته تشخیص داده می‌شود.":"معلمان بدون هیچ انتساب کلاسی ثبت می‌شوند؛ مدیر بعداً کلاس‌هایشان را تعیین می‌کند.")+'</p>'+
+ '<p class="school-import-hint">نام کاربری هر نفر کد ملی ۱۰ رقمی و رمز اولیه او شماره تماس درج‌شده در فایل است. صفر ابتدای اعداد حفظ می‌شود. رمز اولیه قابل حدس است؛ به کاربران تأکید کنید پس از ورود تغییرش دهند. '+(isStudent?"کلاس هر نفر فقط در صورت تطابق دقیق پایه و رشته تشخیص داده می‌شود.":"معلمان بدون هیچ انتساب کلاسی ثبت می‌شوند؛ مدیر بعداً کلاس‌هایشان را تعیین می‌کند.")+'</p>'+
  '<div id="schoolImportContent" aria-live="polite">'+view()+'</div></details>';
 }
 function configure(options){
@@ -40,7 +40,7 @@ function configure(options){
  state.submitBatch=options.submitBatch;state.onComplete=options.onComplete;
 }
 function template(role){
- const headers=role==="teacher"?allColumns.slice(0,5):allColumns;
+ const headers=allColumns;
  const content="\ufeff"+headers.join(",")+"\r\n";
  const blob=new Blob([content],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob);
  const a=document.createElement("a");a.href=url;a.download=role==="teacher"?"stuner-teachers-template.csv":"stuner-students-template.csv";
@@ -80,9 +80,9 @@ function compile(grid,role){
   const password=phoneValue(get("phone")),grade=get("grade"),major=get("major"),errs=[];
   if(first.length<1||last.length<2||first.length+last.length>118)errs.push("نام و نام خانوادگی معتبر نیست.");
   if(!/^\d{10}$/.test(username))errs.push("کد ملی باید ۱۰ رقم باشد.");
-  if(!/^09\d{9}$/.test(password))errs.push("شماره موبایل باید ۱۱ رقم و با ۰۹ شروع شود.");
+  if(!/^0[1-9]\d{9}$/.test(password))errs.push("شماره تماس باید ۱۱ رقم و با صفر شروع شود.");
   if(seen.has(username))errs.push("کد ملی در همین فایل تکراری است.");else if(username)seen.add(username);
-  if(known.has(username))errs.push("این نام کاربری در همین مدرسه ثبت شده است.");
+  if(known.has(username))errs.push("این نام کاربری در همین مدرسه ثبت شده است؛ حساب تکراری نسازید.");
   let classId=null,className="انتساب توسط مدیر";
   if(role==="student"){
    if(!grade)errs.push("پایه تحصیلی وارد نشده است.");
