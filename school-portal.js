@@ -71,6 +71,10 @@ function signup(){
  show();role="principal";
  el.innerHTML=head("ثبت‌نام مدیر مدرسه")+'<section class="portal-card"><form id="signupForm" class="portal-form"><label>نام و نام خانوادگی<input name="display_name" type="text" required maxlength="120" minlength="2" autocomplete="name"></label><label>نام کاربری<input name="username" type="text" required maxlength="32" minlength="4" pattern="(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})" dir="ltr" autocomplete="username" placeholder="school_manager"></label><label>رمز عبور (حداقل ۱۰ کاراکتر)<input name="password" type="password" required minlength="10" maxlength="128" dir="ltr" autocomplete="new-password"></label><button class="portal-primary">ایجاد حساب مدیر</button></form><button data-action="back" class="portal-secondary">بازگشت به ورود</button><p class="portal-note">برای ثبت‌نام ایمیل یا شماره تلفن لازم نیست. رمز را در جایی امن نگه دار؛ بازیابی خودکار رمز بدون روش ارتباطی فعال نیست.</p><p id="portalMessage" class="portal-error" aria-live="polite"></p></section>';
 }
+function initialPasswordPage(){
+ show();current=null;
+ el.innerHTML=head("تغییر رمز اولیه")+'<section class="portal-card"><h2>برای امنیت حساب، رمز جدید تعیین کن</h2><p class="portal-note">شماره تماس فقط رمز اولیه حساب واردشده از اکسل است. قبل از استفاده از سامانه، رمز شخصی حداقل ۱۲ کاراکتری با حروف و عدد انتخاب کن.</p><form class="portal-form" id="initialPasswordForm"><label>رمز جدید<input name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" dir="ltr" required></label><label>تکرار رمز جدید<input name="confirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" dir="ltr" required></label><button class="portal-primary" type="submit">ذخیره رمز و ورود به سامانه</button></form><p id="portalMessage" class="portal-error" aria-live="polite"></p></section>';
+}
 function picker(){
  show();
  const options=members.filter(m=>m.role===role).map(m=>'<button data-school="'+esc(m.school_id)+'" class="portal-school"><strong>'+esc(m.schools?.name||"مدرسه")+'</strong><small>'+esc(m.role==="principal"?"مدیر":m.role==="teacher"?"معلم":"دانش‌آموز")+'</small></button>').join("");
@@ -91,6 +95,7 @@ async function sync(){
  const {data:session,error:sessionError}=await client.auth.getSession();if(sessionError)throw sessionError;
  user=session.session?.user||null;members=[];current=null;
  if(!user){login();return}
+ if(user.app_metadata?.stuner_initial_password_change===true){initialPasswordPage();return}
  const {data,error}=await client.from("school_memberships").select("school_id,user_id,role,display_name,grade,class_id,schools(name,kind)").eq("user_id",user.id);
  if(error)throw error;members=data||[];
  if(members.length&&!members.some(m=>m.role===role))role=members[0].role;
@@ -228,6 +233,15 @@ async function handle(form){
  const d=new FormData(form);
  try{
   let r;
+  if(form.id==="initialPasswordForm"){
+   const password=String(d.get("password")||""),confirmPassword=String(d.get("confirm")||"");
+   if(password!==confirmPassword)throw Error("تکرار رمز با رمز جدید یکسان نیست.");
+   if(password.length<12||!/[0-9]/.test(password)||!/\p{L}/u.test(password))throw Error("رمز جدید باید حداقل ۱۲ کاراکتر و شامل حروف و عدد باشد.");
+   await provision({mode:"change_initial_password",password},true);
+   const refreshed=await client.auth.refreshSession();
+   if(refreshed.error){await client.auth.signOut();login();message("رمز تغییر کرد؛ با رمز جدید دوباره وارد شو.");return}
+   await sync();return;
+  }
   if(form.id==="loginForm"){const username=String(d.get("username")||"").trim().toLowerCase();if(!usernameRx.test(username))throw Error("نام کاربری معتبر نیست.");r=await client.auth.signInWithPassword({email:loginEmail(username),password:String(d.get("password")||"")});if(r.error)throw Error("نام کاربری یا رمز عبور نادرست است.");await sync();return}
   if(form.id==="signupForm"){const username=String(d.get("username")||"").trim().toLowerCase(),password=String(d.get("password")||"");await provision({mode:"register_manager",username,password,display_name:String(d.get("display_name")||"").trim()});r=await client.auth.signInWithPassword({email:loginEmail(username),password});if(r.error)throw r.error;role="principal";await sync();return}
   if(form.id==="schoolForm"){const kind=String(d.get("kind")||""),grades=d.getAll("grades"),majors=(kind==="vocational"||kind==="secondary")?[...new Set(String(d.get("majors")||"").split(/[\n،,؛;]+/).map(x=>x.trim()).filter(Boolean))]:[];if(!grades.length)throw Error("حداقل یک پایه انتخاب کن.");if((kind==="vocational"||kind==="secondary")&&!majors.length)throw Error("حداقل یک رشته وارد کن.");r=await client.rpc("create_school_with_classes",{p_name:String(d.get("name")||"").trim(),p_kind:kind,p_branch:kind==="vocational"?d.get("branch"):kind==="secondary"?"نظری":null,p_manager:String(d.get("manager")||"").trim(),p_grades:grades,p_majors:majors});if(r.error)throw r.error;role="principal";sessionStorage.setItem("stuner.school",r.data);await sync();return}
