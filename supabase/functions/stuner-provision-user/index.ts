@@ -100,6 +100,61 @@ async function changeInitialPassword(req:Request,admin:ReturnType<typeof createC
  return respond(200,{ok:true,updated:true});
 }
 
+
+/* Account-owned student profile edit. Academic enrollment is deliberately immutable here. */
+async function updateStudentProfile(req:Request,admin:ReturnType<typeof createClient>,data:Record<string,unknown>){
+ const token=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"");
+ if(!token)return respond(401,{error:"برای ویرایش پروفایل ابتدا وارد شوید."});
+ const auth=await admin.auth.getUser(token);
+ if(auth.error||!auth.data.user)return respond(401,{error:"نشست کاربری معتبر نیست."});
+ const user=auth.data.user,schoolId=String(data.school_id||"");
+ if(!/^[0-9a-f-]{36}$/i.test(schoolId))return respond(400,{error:"مدرسه معتبر نیست."});
+ const membership=await admin.from("school_memberships").select("display_name")
+  .eq("school_id",schoolId).eq("user_id",user.id).eq("role","student").maybeSingle();
+ if(membership.error||!membership.data)return respond(403,{error:"ویرایش مشخصات فقط برای دانش‌آموز همین مدرسه مجاز است."});
+ const firstName=String(data.first_name||"").trim(),lastName=String(data.last_name||"").trim();
+ const displayName=firstName+" "+lastName;
+ const age=Number(data.age);
+ const username=String(data.username||"").trim().toLowerCase();
+ if(firstName.length<2||firstName.length>40||lastName.length<2||lastName.length>60||!validName(displayName))
+  return respond(400,{error:"نام و نام خانوادگی معتبر وارد کنید."});
+ if(!Number.isInteger(age)||age<6||age>30)return respond(400,{error:"سن باید بین ۶ تا ۳۰ سال باشد."});
+ if(!usernameOk(username))return respond(400,{error:"آیدی باید ۱۰ رقم یا ۴ تا ۳۲ کاراکتر لاتینِ مجاز باشد."});
+ const account=await admin.from("account_usernames").select("username").eq("user_id",user.id).maybeSingle();
+ if(account.error||!account.data)return respond(404,{error:"آیدی حساب پیدا نشد."});
+ const previousUsername=account.data.username;
+ const changedId=username!==previousUsername;
+ if(changedId){
+  const used=await admin.from("account_usernames").select("user_id").eq("username",username).maybeSingle();
+  if(used.error)return respond(503,{error:"بررسی آیدی جدید ممکن نیست."});
+  if(used.data)return respond(409,{error:"این آیدی قبلاً استفاده شده است."});
+ }
+ const previousName=membership.data.display_name;
+ const previousEmail=user.email||authAddress(previousUsername);
+ const previousMeta=user.user_metadata||{};
+ const membershipUpdate=await admin.from("school_memberships").update({display_name:displayName})
+  .eq("school_id",schoolId).eq("user_id",user.id).eq("role","student").select("user_id").maybeSingle();
+ if(membershipUpdate.error||!membershipUpdate.data)return respond(503,{error:"ثبت نام دانش‌آموز ممکن نشد."});
+ if(changedId){
+  const mapping=await admin.from("account_usernames").update({username})
+   .eq("user_id",user.id).eq("username",previousUsername).select("user_id").maybeSingle();
+  if(mapping.error||!mapping.data){
+   await admin.from("school_memberships").update({display_name:previousName}).eq("school_id",schoolId).eq("user_id",user.id);
+   return respond(409,{error:"این آیدی قبلاً ثبت شده یا قابل تغییر نیست."});
+  }
+ }
+ const authUpdate=await admin.auth.admin.updateUserById(user.id,{
+  ...(changedId?{email:authAddress(username),email_confirm:true}:{}),
+  user_metadata:{...previousMeta,stuner_age:age}
+ });
+ if(authUpdate.error){
+  if(changedId)await admin.from("account_usernames").update({username:previousUsername}).eq("user_id",user.id).eq("username",username);
+  await admin.from("school_memberships").update({display_name:previousName}).eq("school_id",schoolId).eq("user_id",user.id);
+  return respond(503,{error:"تغییر اطلاعات حساب انجام نشد؛ دوباره تلاش کنید."});
+ }
+ return respond(200,{ok:true,username,display_name:displayName,age});
+}
+
 Deno.serve(async(req:Request)=>{
  if(req.method==="OPTIONS")return new Response(null,{status:204,headers:originHeaders});
  if(req.method!=="POST")return respond(405,{error:"Method not allowed"});
@@ -114,6 +169,7 @@ Deno.serve(async(req:Request)=>{
  const mode=data.mode;
  if(mode==="import_members")return await importMembers(req,admin,data);
  if(mode==="change_initial_password")return await changeInitialPassword(req,admin,data);
+ if(mode==="update_student_profile")return await updateStudentProfile(req,admin,data);
  const username=String(data.username||"").trim().toLowerCase();
  const name=String(data.display_name||"").trim();
  const password=data.password;
