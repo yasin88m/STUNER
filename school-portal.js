@@ -146,94 +146,76 @@ async function enter(member){
  for(const r of [s,c,p,t,w,n])if(r.error)throw r.error;
  school=s.data;classes=c.data||[];people=p.data||[];teacherLinks=t.data||[];assignments=w.data||[];accountNames=n.data||[];dashboard();
 }
-function dashboard(){
- show();
- const director=current.role==="principal",teacher=current.role==="teacher";
- const visible=teacher?classes.filter(c=>teacherLinks.some(t=>t.class_id===c.id&&t.teacher_id===user.id)):classes;
- const students=people.filter(p=>p.role==="student"&&(!teacher||visible.some(c=>c.id===p.class_id)));
- let body='<div class="portal-stats"><div><small>کلاس‌ها</small><strong>'+visible.length+'</strong></div><div><small>دانش‌آموزان</small><strong>'+students.length+'</strong></div><div><small>معلمان</small><strong>'+people.filter(p=>p.role==="teacher").length+'</strong></div></div>';
- body+='<section class="portal-card"><h2>مشخصات مدرسه</h2><div class="portal-record"><strong>نوع مدرسه</strong><span>'+esc(schoolKindName[school.kind]||school.kind)+'</span></div><div class="portal-record"><strong>شاخه</strong><span>'+esc(school.branch||"—")+'</span></div><div class="portal-record"><strong>رشته‌ها</strong><span>'+esc((school.majors||[]).join("، ")||"عمومی")+'</span></div><div class="portal-record"><strong>پایه‌ها</strong><span>'+esc((school.grades||[]).join("، "))+'</span></div></section>';
- body+='<section class="portal-card"><h2>کلاس‌ها</h2>'+(visible.map(c=>'<div class="portal-record"><strong>'+esc(c.name)+'</strong><span>'+esc(c.grade)+'</span></div>').join("")||'<p>کلاسی ثبت نشده است.</p>')+'</section>';
- if(director){
-  const opts=classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+' · '+esc(c.grade)+'</option>').join("");
-  body+='<section class="portal-card"><h2>ساخت کلاس</h2><form id="classForm" class="portal-form"><label>عنوان کلاس<input name="name" required></label><label>پایه<input name="grade" required></label><button class="portal-primary">ایجاد کلاس</button></form></section>';
-  body+='<section class="portal-card"><h2>ساخت حساب معلم و دانش‌آموز</h2><form id="newMemberForm" class="portal-form"><label>نوع حساب<select name="role" id="newMemberRole"><option value="student">دانش‌آموز</option><option value="teacher">معلم</option></select></label><label>نام و نام خانوادگی<input name="display_name" required minlength="2" maxlength="120" placeholder="نام واقعی کاربر"></label><label>نام کاربری<input name="username" dir="ltr" pattern="[a-z][a-z0-9_]{3,31}" minlength="4" maxlength="32" placeholder="student_701" required></label><label>رمز عبور اولیه (حداقل ۱۰ کاراکتر)<input name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label><label>کلاس<select name="class_id" id="newMemberClass"><option value="">انتخاب کلاس</option>'+classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("")+'</select></label><p class="portal-note">برای دانش‌آموز انتخاب کلاس الزامی است؛ معلم می‌تواند بعداً به کلاس اختصاص یابد.</p><button class="portal-primary">ایجاد حساب و ثبت در مدرسه</button></form><div id="newMemberResult"></div></section>';
-  body+='<section class="portal-card"><h2>تغییر رمز عبور معلم یا دانش‌آموز</h2><form id="resetMemberForm" class="portal-form"><label>نام کاربری حساب<input name="username" dir="ltr" pattern="[a-z][a-z0-9_]{3,31}" required placeholder="student_701"></label><label>رمز عبور جدید (حداقل ۱۰ کاراکتر)<input type="password" name="password" minlength="10" maxlength="128" required autocomplete="new-password"></label><button class="portal-primary">تنظیم رمز جدید</button></form></section>';
 
- }
-
- if(teacher){
-  const options=visible.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+' · '+esc(c.grade)+'</option>').join("");
-  body+='<section class="portal-card"><h2>تعیین تکلیف یا امتحان</h2>'+(visible.length?
-   '<form id="assignmentForm" class="portal-form"><label>نوع<select name="kind" required><option value="task">تکلیف</option><option value="exam">امتحان</option></select></label><label>کلاس<select name="class_id" required>'+options+'</select></label><label>درس<input name="subject" placeholder="مثلاً ریاضی" required maxlength="100"></label><label>عنوان<input name="title" placeholder="مثلاً تمرین فصل سوم" required maxlength="150" minlength="2"></label><label>تاریخ تحویل یا امتحان<input name="due_date" type="date" required></label><label>شرح فعالیت<textarea name="description" rows="3" maxlength="3000" placeholder="مباحث یا صفحه‌های کتاب"></textarea></label><button class="portal-primary">ثبت و ارسال به کلاس</button></form>':
-   '<p>ابتدا مدیر مدرسه باید کلاسی را به شما اختصاص دهد.</p>')+'</section>';
- }
- if(teacher||director){
-  const visibleIds=new Set(visible.map(c=>c.id));
-  const list=assignments.filter(x=>director||visibleIds.has(x.class_id));
-  body+='<section class="portal-card"><h2>تکالیف و امتحانات مدرسه</h2>'+(list.map(x=>
-   '<div class="portal-record school-assignment-record"><div><small>'+esc(x.kind==="task"?"تکلیف":"امتحان")+' · '+esc(x.subject)+' · '+esc(classes.find(c=>c.id===x.class_id)?.name||"")+'</small><strong>'+esc(x.title)+'</strong><small>'+esc(x.due_date)+'</small></div>'+
-   (teacher&&x.teacher_id===user.id?'<button class="portal-secondary" data-delete-assignment="'+esc(x.id)+'">حذف</button>':'')+'</div>'
-  ).join("")||'<p>هنوز تکلیف یا امتحانی ثبت نشده است.</p>')+'</section>';
- }
- if(director&&classes.length&&people.some(x=>x.role==="teacher")){
-  const teachers=people.filter(x=>x.role==="teacher");
-  body+='<section class="portal-card"><h2>اختصاص معلم به کلاس</h2><form class="portal-form" id="assignTeacherForm"><label>معلم<select name="teacher_id">'+teachers.map(t=>'<option value="'+esc(t.user_id)+'">'+esc(t.display_name)+'</option>').join("")+'</select></label><label>کلاس<select name="class_id">'+classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+' · '+esc(c.grade)+'</option>').join("")+'</select></label><button class="portal-primary">ثبت انتساب</button></form></section>';
- }
- body+='<section class="portal-card"><h2>'+(director?'اعضای مدرسه':'دانش‌آموزان کلاس‌های من')+'</h2>'+( (director?people:students).map(p=>'<div class="portal-record"><strong>'+esc(p.display_name)+'</strong><span>'+esc(p.role==="principal"?"مدیر":p.role==="teacher"?"معلم":"دانش‌آموز")+' · '+esc(p.grade||"")+' · '+esc(accountNames.find(x=>x.user_id===p.user_id)?.username||"—")+'</span></div>').join("")||'<p>عضوی ثبت نشده است.</p>')+'</section>';
- el.innerHTML=head(school.name)+'<div class="portal-context"><span>'+esc(director?"پنل مدیر": "پنل معلم")+'</span><button data-action="picker">تغییر مدرسه</button></div>'+body+'<p id="portalMessage" class="portal-error"></p>';
- if(director)directorUi();
+const principalNav=[
+ ["home","داشبورد","layout-dashboard"],
+ ["students","دانش‌آموزان","users-round"],
+ ["teachers","معلمان","graduation-cap"],
+ ["classes","کلاس‌ها","school"],
+ ["work","تکالیف و امتحانات","clipboard-check"],
+ ["security","مدیریت رمز عبور","shield-check"]
+];
+const principalIcon=n=>'<i data-lucide="'+n+'"></i>';
+const principalClass=id=>classes.find(c=>c.id===id);
+const principalUsername=id=>accountNames.find(a=>a.user_id===id)?.username||"—";
+function principalPerson(p,teacher=false){
+ const classroom=teacher?teacherLinks.filter(x=>x.teacher_id===p.user_id).map(x=>principalClass(x.class_id)?.name).filter(Boolean).join("، ")||"هنوز کلاسی ندارد":principalClass(p.class_id)?.name||"بدون کلاس";
+ return '<div class="portal-person principal-person"><span class="portal-person-avatar">'+esc(p.display_name?.trim()?.charAt(0)||"؟")+'</span><div><strong>'+esc(p.display_name)+'</strong><small>نام کاربری: <b dir="ltr">'+esc(principalUsername(p.user_id))+'</b></small><small>'+(teacher?"کلاس‌ها: ":"کلاس: ")+esc(classroom)+'</small></div></div>';
 }
-
+function principalOptions(){
+ return classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("");
+}
+function principalSummary(){
+ const students=people.filter(p=>p.role==="student"),teachers=people.filter(p=>p.role==="teacher");
+ const detail=(label,value)=>'<div class="principal-summary-item"><small>'+label+'</small><strong>'+esc(value||"—")+'</strong></div>';
+ return '<section class="teacher-welcome principal-welcome"><div><span>'+principalIcon("sparkles")+' مدیریت هوشمند مدرسه</span><h2>همه بخش‌های '+esc(school.name)+'، در یک نگاه</h2><p>کلاس‌ها، دانش‌آموزان، معلمان و فعالیت‌های آموزشی را از یک پنل منظم مدیریت کنید.</p></div><button type="button" data-director-page="students">'+principalIcon("user-round")+' مدیریت دانش‌آموزان</button></section>'+
+ '<div class="teacher-stats"><div>'+principalIcon("users-round")+'<span>دانش‌آموزان</span><strong>'+students.length+'</strong></div><div>'+principalIcon("graduation-cap")+'<span>معلمان</span><strong>'+teachers.length+'</strong></div><div>'+principalIcon("school")+'<span>کلاس‌ها</span><strong>'+classes.length+'</strong></div></div>'+
+ '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("school")+' مشخصات مدرسه</h2><p>اطلاعات ثبت‌شده هنگام ایجاد مدرسه</p></div><span class="portal-kind">'+esc(schoolKindName[school.kind]||school.kind)+'</span></div>'+
+ '<div class="principal-summary-grid">'+detail("نام مدرسه",school.name)+detail("نوع مدرسه",schoolKindName[school.kind]||school.kind)+detail("شاخه تحصیلی",school.branch||"عمومی")+detail("پایه‌ها",(school.grades||[]).join("، "))+detail("رشته‌های موجود",(school.majors||[]).join("، ")||"عمومی")+'</div></section>'+
+ '<section class="portal-card"><div class="teacher-card-heading"><div><h2>دسترسی سریع</h2><p>بدون شلوغی، مستقیم به بخش مورد نیاز بروید.</p></div></div><div class="teacher-school-grid principal-shortcuts">'+
+ [["students","فهرست دانش‌آموزان","users-round",students.length+" دانش‌آموز"],["teachers","مدیریت معلمان","graduation-cap",teachers.length+" معلم"],["classes","کلاس‌های مدرسه","school",classes.length+" کلاس"],["work","تکالیف و امتحانات","clipboard-check",assignments.length+" فعالیت"]].map(x=>
+ '<button type="button" class="teacher-school-card" data-director-page="'+x[0]+'"><span class="teacher-school-icon">'+principalIcon(x[2])+'</span><strong>'+x[1]+'</strong><small>'+x[3]+'</small><span>مشاهده بخش '+principalIcon("arrow-left")+'</span></button>').join("")+
+ '</div></section>';
+}
+function principalStudents(){
+ const students=people.filter(p=>p.role==="student");
+ return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("users-round")+' فهرست دانش‌آموزان</h2><p>حساب‌ها و کلاس‌های ثبت‌شده در این مدرسه</p></div><span class="portal-kind">'+students.length+' دانش‌آموز</span></div>'+
+ '<div class="principal-list">'+(students.map(p=>principalPerson(p)).join("")||'<p class="teacher-empty">هنوز دانش‌آموزی ثبت نشده است.</p>')+'</div></section>'+
+ '<details class="portal-card principal-disclosure"><summary>'+principalIcon("user-round")+' افزودن دانش‌آموز جدید '+principalIcon("plus")+'</summary><form id="newMemberForm" class="portal-form"><input type="hidden" name="role" value="student"><div class="teacher-fields-grid"><label>نام و نام خانوادگی<input name="display_name" minlength="2" maxlength="120" required></label><label>نام کاربری<input name="username" dir="ltr" minlength="4" maxlength="32" pattern="[a-z][a-z0-9_]{3,31}" placeholder="student_701" required></label></div><div class="teacher-fields-grid"><label>رمز اولیه (حداقل ۱۰ کاراکتر)<input type="password" name="password" minlength="10" maxlength="128" autocomplete="new-password" required></label><label>کلاس<select name="class_id" required><option value="">انتخاب کلاس</option>'+principalOptions()+'</select></label></div><button type="submit" class="portal-primary">'+principalIcon("plus")+' ایجاد حساب دانش‌آموز</button></form></details>';
+}
+function principalTeachers(){
+ const teachers=people.filter(p=>p.role==="teacher");
+ const checkboxes=classes.map(c=>'<label class="teacher-class-option"><input type="checkbox" name="class_ids" value="'+esc(c.id)+'"><span><strong>'+esc(c.name)+'</strong><small>پایه '+esc(c.grade)+'</small></span></label>').join("");
+ return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("graduation-cap")+' فهرست معلمان</h2><p>مشخصات معلمان و کلاس‌های تدریس</p></div><span class="portal-kind">'+teachers.length+' معلم</span></div><div class="principal-list">'+(teachers.map(p=>principalPerson(p,true)).join("")||'<p class="teacher-empty">هنوز معلمی ثبت نشده است.</p>')+'</div></section>'+
+ '<details class="portal-card principal-disclosure"><summary>'+principalIcon("plus")+' ساخت حساب معلم جدید</summary><form id="newMemberForm" class="portal-form"><input type="hidden" name="role" value="teacher"><div class="teacher-fields-grid"><label>نام و نام خانوادگی<input name="display_name" minlength="2" maxlength="120" required></label><label>نام کاربری<input name="username" dir="ltr" minlength="4" maxlength="32" pattern="[a-z][a-z0-9_]{3,31}" placeholder="teacher_101" required></label></div><label>رمز اولیه (حداقل ۱۰ کاراکتر)<input name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label><fieldset class="teacher-fieldset"><legend>انتساب کلاس‌ها به معلم</legend><p>همه کلاس‌هایی که معلم در آن‌ها تدریس می‌کند را انتخاب کنید.</p><div class="teacher-class-checks">'+(checkboxes||'<p class="teacher-empty">کلاسی ثبت نشده است.</p>')+'</div></fieldset><button type="submit" class="portal-primary">'+principalIcon("plus")+' ایجاد حساب و انتساب کلاس‌ها</button></form></details>'+
+ '<details class="portal-card principal-disclosure"><summary>'+principalIcon("school")+' دعوت معلم دارای حساب در مدرسه دیگر</summary><p class="portal-note">معلم با نام کاربری فعلی خود و کد دعوت به این مدرسه می‌پیوندد و نیازی به حساب دوم ندارد.</p><form id="inviteExistingTeacherForm" class="portal-form"><div class="teacher-fields-grid"><label>نام کاربری فعلی<input name="username" dir="ltr" pattern="[a-z][a-z0-9_]{3,31}" required></label><label>نام و نام خانوادگی<input name="display_name" minlength="2" maxlength="120" required></label></div><label>کلاس اولیه (اختیاری)<select name="class_id"><option value="">بعداً تعیین می‌کنم</option>'+principalOptions()+'</select></label><button type="submit" class="portal-primary">'+principalIcon("send")+' ایجاد کد دعوت</button></form><div id="existingTeacherInviteResult" role="status" aria-live="polite"></div></details>'+
+ (teachers.length&&classes.length?'<details class="portal-card principal-disclosure"><summary>'+principalIcon("plus")+' افزودن کلاس به معلم فعلی</summary><form id="assignTeacherForm" class="portal-form"><div class="teacher-fields-grid"><label>معلم<select name="teacher_id">'+teachers.map(t=>'<option value="'+esc(t.user_id)+'">'+esc(t.display_name)+'</option>').join("")+'</select></label><label>کلاس<select name="class_id">'+principalOptions()+'</select></label></div><button class="portal-primary" type="submit">ثبت انتساب کلاس</button></form></details>':"");
+}
+function principalClasses(){
+ const selected=classes.find(c=>c.id===viewClassId);
+ if(selected){
+  const students=people.filter(p=>p.role==="student"&&p.class_id===selected.id);
+  const teachers=people.filter(p=>p.role==="teacher"&&teacherLinks.some(x=>x.class_id===selected.id&&x.teacher_id===p.user_id));
+  return '<button class="portal-secondary teacher-back" type="button" data-class-back>'+principalIcon("arrow-right")+' بازگشت به کلاس‌ها</button><section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("school")+' '+esc(selected.name)+'</h2><p>پایه '+esc(selected.grade)+'</p></div><span class="portal-kind">'+students.length+' دانش‌آموز</span></div><div class="principal-teachers-note"><strong>معلمان کلاس:</strong> '+esc(teachers.map(t=>t.display_name).join("، ")||"هنوز معلمی اختصاص نیافته")+'</div><h3 class="teacher-subtitle">دانش‌آموزان این کلاس</h3><div class="principal-list">'+(students.map(p=>principalPerson(p)).join("")||'<p class="teacher-empty">هنوز دانش‌آموزی در این کلاس ثبت نشده است.</p>')+'</div></section>';
+ }
+ return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("school")+' کلاس‌های مدرسه</h2><p>برای مشاهده اطلاعات و دانش‌آموزان، یک کلاس انتخاب کنید.</p></div><span class="portal-kind">'+classes.length+' کلاس</span></div><div class="teacher-class-grid">'+(classes.map(c=>'<button type="button" class="teacher-class-card" data-class-detail="'+esc(c.id)+'"><span class="teacher-school-icon">'+principalIcon("book-open")+'</span><strong>'+esc(c.name)+'</strong><small>'+esc(c.grade)+' · '+people.filter(p=>p.role==="student"&&p.class_id===c.id).length+' دانش‌آموز</small><span>نمایش دانش‌آموزان '+principalIcon("arrow-left")+'</span></button>').join("")||'<p class="teacher-empty">کلاسی ثبت نشده است.</p>')+'</div></section>'+
+ '<details class="portal-card principal-disclosure"><summary>'+principalIcon("plus")+' ایجاد کلاس جدید</summary><form id="classForm" class="portal-form"><div class="teacher-fields-grid"><label>عنوان کلاس<input name="name" minlength="2" maxlength="120" required></label><label>پایه'+(school.grades?.length?'<select name="grade" required>'+school.grades.map(g=>'<option value="'+esc(g)+'">'+esc(g)+'</option>').join("")+'</select>':'<input name="grade" required maxlength="40">')+'</label></div><button class="portal-primary" type="submit">ایجاد کلاس</button></form></details>';
+}
+function principalWork(){
+ return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("notebook-tabs")+' تکالیف و امتحانات مدرسه</h2><p>فهرست فعالیت‌هایی که معلمان برای کلاس‌ها ثبت کرده‌اند</p></div><span class="portal-kind">'+assignments.length+' فعالیت</span></div>'+
+ (assignments.map(a=>'<div class="teacher-work-row"><span class="teacher-work-icon">'+principalIcon(a.kind==="exam"?"graduation-cap":"clipboard-check")+'</span><div><strong>'+esc(a.title)+'</strong><small>'+esc(a.kind==="exam"?"امتحان":"تکلیف")+' · '+esc(a.subject)+' · '+esc(principalClass(a.class_id)?.name||"—")+'</small></div><span class="teacher-work-date">'+esc(window.STUNER_JALALI?.formatted(a.due_date)||a.due_date)+'</span></div>').join("")||'<p class="teacher-empty">هنوز تکلیف یا امتحانی برای مدرسه ثبت نشده است.</p>')+'</section>';
+}
+function principalSecurity(){
+ return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("shield-check")+' مدیریت رمز عبور</h2><p>تنظیم رمز جدید برای حساب معلم یا دانش‌آموز همین مدرسه</p></div></div><form id="resetMemberForm" class="portal-form"><label>نام کاربری حساب<input name="username" dir="ltr" pattern="[a-z][a-z0-9_]{3,31}" required></label><label>رمز عبور جدید (حداقل ۱۰ کاراکتر)<input name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label><button type="submit" class="portal-primary">'+principalIcon("shield-check")+' تغییر رمز عبور</button></form></section>';
+}
+function dashboard(){show();directorUi()}
 function directorUi(){
- const sections=[["home","صفحه اصلی"],["students","دانش‌آموزان"],["teachers","معلمان"],["classes","کلاس‌ها"],["work","تکالیف و امتحانات"],["security","تغییر رمز عبور"]];
- const cards=[...el.querySelectorAll(".portal-card")];
- const find=title=>cards.find(c=>c.querySelector("h2")?.textContent.trim()===title);
- cards.forEach(c=>c.hidden=true);
- const stats=el.querySelector(".portal-stats");if(stats)stats.hidden=directorSection!=="home";
- const context=el.querySelector(".portal-context");if(context)context.hidden=true;
- const header=el.querySelector(".portal-head");
- if(header)header.innerHTML='<button class="portal-hamburger" type="button" data-director-action="menu" aria-label="منوی مدیریت" aria-expanded="'+directorMenu+'"><i data-lucide="menu"></i></button><div><small>STUNER · '+esc(school.name)+'</small><h1>'+sections.find(x=>x[0]===directorSection)[1]+'</h1></div>';
- const old=el.querySelector(".portal-director-nav");if(old)old.remove();
- if(directorMenu)el.insertAdjacentHTML("afterbegin",'<div class="portal-director-nav"><button class="portal-nav-scrim" data-director-action="close" aria-label="بستن منو"></button><nav class="portal-nav-menu" aria-label="منوی مدیر"><div class="portal-nav-title"><strong>مدیریت '+esc(school.name)+'</strong><button data-director-action="close" aria-label="بستن">×</button></div>'+sections.map(x=>'<button class="'+(directorSection===x[0]?"active":"")+'" data-director-page="'+x[0]+'"><i data-lucide="'+({home:"layout-dashboard",students:"users-round",teachers:"graduation-cap",classes:"school",work:"clipboard-check",security:"shield-check"}[x[0]])+'"></i> '+x[1]+'</button>').join("")+'<button data-action="picker">تغییر مدرسه</button><button data-action="logout">خروج</button></nav></div>');
- if(directorSection==="home"){find("مشخصات مدرسه").hidden=false;return}
- if(directorSection==="classes"){
-  const card=find("کلاس‌ها");card.hidden=false;
-  const selected=classes.find(c=>c.id===viewClassId);
-  if(selected){
-   const students=people.filter(p=>p.role==="student"&&p.class_id===selected.id);
-   card.innerHTML='<button class="portal-secondary" data-class-back>بازگشت به کلاس‌ها</button><h2>'+esc(selected.name)+'</h2><p>پایه '+esc(selected.grade)+' · '+students.length+' دانش‌آموز</p><h3>دانش‌آموزان این کلاس</h3>'+(students.map(p=>'<div class="portal-record"><strong>'+esc(p.display_name)+'</strong><span>نام کاربری: '+esc(accountNames.find(a=>a.user_id===p.user_id)?.username||"—")+'</span></div>').join("")||'<p>هنوز دانش‌آموزی ندارد.</p>');
-  }else{
-   card.innerHTML='<h2>کلاس‌ها</h2><p>روی هر کلاس بزن تا دانش‌آموزان آن را ببینی.</p><div class="portal-class-grid">'+classes.map(c=>'<button class="portal-class-tile" data-class-detail="'+esc(c.id)+'"><strong>'+esc(c.name)+'</strong><small>'+people.filter(p=>p.role==="student"&&p.class_id===c.id).length+' دانش‌آموز · پایه '+esc(c.grade)+'</small><span>مشاهده ←</span></button>').join("")+'</div>';
-   const add=find("ساخت کلاس");if(add)add.hidden=false;
-  }
-  return;
- }
- if(directorSection==="students"||directorSection==="teachers"){
-  const isTeacher=directorSection==="teachers",kind=isTeacher?"teacher":"student";
-  const formCard=find("ساخت حساب معلم و دانش‌آموز");
-  formCard.hidden=false;formCard.querySelector("h2").textContent=isTeacher?"افزودن معلم جدید":"افزودن دانش‌آموز جدید";
-  const roleControl=formCard.querySelector("#newMemberRole");
-  roleControl.value=kind;roleControl.closest("label").hidden=true;
-  const classControl=formCard.querySelector("#newMemberClass");
-  classControl.closest("label").hidden=isTeacher;
-  classControl.required=!isTeacher;
-  if(isTeacher){
-   const group=document.createElement("fieldset");
-   group.className="portal-grade-set";
-   group.innerHTML='<legend>کلاس‌های این معلم (انتخاب چندتایی)</legend><p class="portal-note">همه کلاس‌های مورد نظر را انتخاب کن.</p><div class="portal-class-checks">'+classes.map(c=>'<label class="portal-class-check"><input type="checkbox" name="class_ids" value="'+esc(c.id)+'"><span>'+esc(c.name)+'</span></label>').join("")+'</div>';
-   classControl.closest("label").after(group);
-  }
-  const entries=people.filter(p=>p.role===kind);
-  formCard.insertAdjacentHTML("beforebegin",'<section class="portal-card portal-list-card"><h2>لیست '+(isTeacher?"معلمان":"دانش‌آموزان")+' ('+entries.length+')</h2>'+(entries.map(p=>'<div class="portal-person"><div class="portal-person-avatar">'+esc(p.display_name?.trim()?.charAt(0)||"؟")+'</div><div><strong>'+esc(p.display_name)+'</strong><small>نام کاربری: '+esc(accountNames.find(a=>a.user_id===p.user_id)?.username||"—")+'</small><small>'+(isTeacher?"کلاس‌ها: "+esc(teacherLinks.filter(t=>t.teacher_id===p.user_id).map(t=>classes.find(c=>c.id===t.class_id)?.name||"").filter(Boolean).join("، ")||"تعیین نشده"):"کلاس: "+esc(classes.find(c=>c.id===p.class_id)?.name||"—"))+'</small></div></div>').join("")||'<p>هنوز حسابی ثبت نشده است.</p>')+'</section>');
-  if(isTeacher){
-   const assign=find("اختصاص معلم به کلاس");if(assign)assign.hidden=false;
-   formCard.insertAdjacentHTML("afterend",'<section class="portal-card"><h2>دعوت معلمی که از قبل حساب دارد</h2><p class="portal-note">برای معلمی که در مدرسه دیگری نیز تدریس دارد، حساب تکراری نساز. کد دعوت را به او بده تا خودش عضویت در این مدرسه را تأیید کند.</p><form id="inviteExistingTeacherForm" class="portal-form"><label>نام کاربری فعلی معلم<input name="username" dir="ltr" pattern="[a-z][a-z0-9_]{3,31}" required></label><label>نام و نام خانوادگی معلم<input name="display_name" minlength="2" maxlength="120" required></label><label>کلاس اولیه (اختیاری)<select name="class_id"><option value="">بعداً تعیین می‌کنم</option>'+classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("")+'</select></label><button class="portal-primary">ایجاد کد دعوت معلم</button></form><div id="existingTeacherInviteResult" role="status" aria-live="polite"></div></section>');
-  }
-  return;
- }
- if(directorSection==="work"){const card=find("تکالیف و امتحانات مدرسه");if(card)card.hidden=false}
- if(directorSection==="security"){const card=find("تغییر رمز عبور معلم یا دانش‌آموز");if(card)card.hidden=false}
+ const views={home:principalSummary,students:principalStudents,teachers:principalTeachers,classes:principalClasses,work:principalWork,security:principalSecurity};
+ if(!views[directorSection])directorSection="home";
+ const title=principalNav.find(x=>x[0]===directorSection)?.[1]||"داشبورد";
+ const drawer=directorMenu?'<div class="portal-director-nav"><button class="portal-nav-scrim" type="button" data-director-action="close" aria-label="بستن منو"></button><nav class="portal-nav-menu" aria-label="منوی مدیریت مدرسه"><div class="portal-nav-title"><strong>'+principalIcon("school")+' '+esc(school.name)+'</strong><button type="button" data-director-action="close" aria-label="بستن">×</button></div>'+principalNav.map(x=>'<button type="button" data-director-page="'+x[0]+'" class="'+(directorSection===x[0]?"active":"")+'">'+principalIcon(x[2])+' '+x[1]+'</button>').join("")+'<button data-action="picker">'+principalIcon("repeat")+' تغییر مدرسه</button><button data-action="logout">'+principalIcon("log-out")+' خروج از حساب</button></nav></div>':"";
+ el.innerHTML='<div class="teacher-shell principal-shell"><header class="teacher-appbar"><button type="button" class="portal-hamburger" data-director-action="menu" aria-label="منوی مدیر مدرسه" aria-expanded="'+directorMenu+'">'+principalIcon("menu")+'</button><div class="teacher-page-title"><small>STUNER · پنل مدیر مدرسه</small><h1>'+esc(title)+'</h1></div><span class="teacher-appbar-school">'+principalIcon("school")+' '+esc(school.name)+'</span></header>'+drawer+'<main class="teacher-page principal-page">'+views[directorSection]()+'<p id="portalMessage" class="portal-error" role="status" aria-live="polite"></p></main></div>';
+ window.STUNER_ICONS?.refresh?.();
 }
 
 async function handle(form){
