@@ -49,6 +49,16 @@ document.addEventListener("click",e=>{
 });
 window.STUNER_SCHOOL_WORK={
  init(client,account,m){db=client;user=account;member=m;assignments=[];completed=new Set();loaded=false;refresh()},
- render,refresh
+ render,refresh,
+ snapshot(){
+  return {tasks:assignments.filter(a=>a.kind==="task").map(a=>({
+   id:"school-"+a.id,schoolId:a.id,title:a.title,subject:a.subject,due:a.due_date,
+   note:a.description,done:completed.has(a.id),fromSchool:true
+  })),exams:assignments.filter(a=>a.kind==="exam").map(a=>({
+   id:"school-"+a.id,schoolId:a.id,title:a.title,subject:a.subject,date:a.due_date,
+   note:a.description,fromSchool:true
+  }))};
+ },
+ status(){return {loading:loading&&!loaded,error:loadError,loaded:loaded,active:!!db&&!!member}}
 };
 })();
