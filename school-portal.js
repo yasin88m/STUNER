@@ -131,7 +131,7 @@ async function enter(member){
  if(member.role==="teacher"){
   show();
   if(!window.STUNER_TEACHER_UI)throw Error("پنل معلم بارگذاری نشده است.");
-  await window.STUNER_TEACHER_UI.start({client,user,members,active:member,root:el});
+  await window.STUNER_TEACHER_UI.start({client,user,members,active:member,root:el,onMembershipsChanged:items=>{members=[...members.filter(x=>x.role!=="teacher"),...items]}});
   return;
  }
  const sid=current.school_id;
