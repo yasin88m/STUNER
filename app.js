@@ -226,25 +226,15 @@ function pickerMarkup(selected,anchor){
  return '<div class="jalali-picker-head"><button type="button" data-picker-move="-1" aria-label="ماه قبل">→</button><strong>'+label+'</strong><button type="button" data-picker-move="1" aria-label="ماه بعد">←</button></div><div class="calendar-grid jalali-picker-grid">'+["ش","ی","د","س","چ","پ","ج"].map(x=>'<div class="calendar-weekday">'+x+'</div>').join("")+cells.join("")+'</div>';
 }
 function dateField(name,label,value=isoToday()){
- let anchor=monthStartISO(value);
- return '<div class="field jalali-date-field" data-jalali-field><span>'+esc(label)+'</span><input type="hidden" name="'+name+'" value="'+value+'" required><strong class="jalali-date-display">'+fmt(value,{weekday:"long",day:"numeric",month:"long",year:"numeric"})+'</strong><div class="date-shortcuts"><button type="button" class="date-quick" data-date-quick="0">امروز</button><button type="button" class="date-quick" data-date-quick="1">فردا</button><button type="button" class="date-quick" data-date-quick="7">یک هفته بعد</button></div><div class="jalali-picker" data-picker-anchor="'+anchor+'">'+pickerMarkup(value,anchor)+'</div></div>';
+ return window.STUNER_JALALI.field(name,label,value);
 }
 function updateDateField(field,value){
- let input=$('input[type="hidden"]',field);if(!input)return;
- input.value=value;
- let display=$(".jalali-date-display",field);if(display)display.textContent=fmt(value,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
- let picker=$(".jalali-picker",field),anchor=monthStartISO(value);
- if(picker){picker.dataset.pickerAnchor=anchor;picker.innerHTML=pickerMarkup(value,anchor)}
- $$("[data-date-quick]",field).forEach(b=>b.classList.toggle("active",isoAdd(Number(b.dataset.dateQuick))===value));
+ window.STUNER_JALALI.setDate(field,value);
 }
 function moveDatePicker(field,delta){
- let picker=$(".jalali-picker",field);if(!picker)return;
- let d=dateObj(picker.dataset.pickerAnchor||isoToday());
- d.setUTCDate(d.getUTCDate()+(delta>0?32:-1));
- let next=monthStartISO(isoFromDate(d));
- picker.dataset.pickerAnchor=next;
- picker.innerHTML=pickerMarkup($('input[type="hidden"]',field)?.value||isoToday(),next);
+ window.STUNER_JALALI.move(field,delta);
 }
+
 function renderCalendar(){
  let startISO=monthStartISO(calAnchor),endISO=monthEndISO(calAnchor),start=dateObj(startISO),end=dateObj(endISO);
  let label=new Intl.DateTimeFormat("fa-IR-u-ca-persian",{month:"long",year:"numeric",timeZone:IRAN_TZ}).format(start),cells=[],offset=(start.getUTCDay()+1)%7;
