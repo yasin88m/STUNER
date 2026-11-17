@@ -1,7 +1,7 @@
 /* Dedicated multi-school teacher workspace for STUNER. All reads respect Supabase RLS. */
 (function(){
 "use strict";
-const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],page:"home",joinNote:"",menu:false,schoolId:"",classId:"",busy:false};
+const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],page:"home",joinNote:"",onMembershipsChanged:null,menu:false,schoolId:"",classId:"",busy:false};
 const esc=x=>String(x??"").replace(/[&<>"']/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[a]));
 const icon=n=>'<i data-lucide="'+n+'"></i>';
 const schoolName=id=>state.schools.find(x=>x.school_id===id)?.schools?.name||"مدرسه";
@@ -127,6 +127,7 @@ async function onSubmit(e){
    const linked=await state.client.from("school_memberships").select("school_id,user_id,role,display_name,grade,class_id,schools(name,kind)").eq("user_id",state.user.id).eq("role","teacher");
    if(linked.error)throw linked.error;
    state.schools=linked.data||[];
+   state.onMembershipsChanged?.(state.schools);
    state.schoolId=redeemed.data;state.page="schools";state.joinNote="عضویت در مدرسه جدید با موفقیت ثبت شد.";
    await refresh();
   }catch(err){msg.textContent=err.message||"عضویت انجام نشد.";btn.disabled=false}
@@ -153,8 +154,8 @@ async function onSubmit(e){
  finally{state.busy=false}
 }
 window.STUNER_TEACHER_UI={
- async start({client,user,members,active,root}){
-  state.client=client;state.user=user;state.root=root;
+ async start({client,user,members,active,root,onMembershipsChanged}){
+  state.client=client;state.user=user;state.root=root;state.onMembershipsChanged=onMembershipsChanged;
   state.schools=members.filter(m=>m.role==="teacher");
   state.schoolId=state.schools.some(m=>m.school_id===active.school_id)?active.school_id:state.schools[0]?.school_id||"";
   state.page="home";state.menu=false;state.classId="";
