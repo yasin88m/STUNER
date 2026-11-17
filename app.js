@@ -370,10 +370,10 @@ function timerComplete(){
 function timerSkip(){if(state.timer.running)state.timer.remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));if(ticker)clearInterval(ticker);ticker=null;deadline=null;state.timer.mode=state.timer.mode==="study"?"break":"study";state.timer.remaining=duration();state.timer.running=false;save();render()}
 
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&state.timer.running)timerTick()});
-$("#onboardingForm").addEventListener("submit",e=>{e.preventDefault();let d=new FormData(e.currentTarget),f=String(d.get("firstName")||"").trim(),l=String(d.get("lastName")||"").trim(),a=Number(d.get("age")),level=d.get("educationLevel"),grade=d.get("grade"),track=d.get("track")||"",fieldGroup=d.get("fieldGroup")||"",major=d.get("major")||"";if(!f||!l||a<6||a>30||!level||!grade||(level==="secondary"&&(!track||!major||(track!=="نظری"&&!fieldGroup)))){$("#onboardingError").textContent="لطفاً دوره، پایه و رشته تحصیلی را کامل انتخاب کن.";return}state.student={...(state.student||{}),firstName:f,lastName:l,age:a,educationLevel:level,grade,track:level==="secondary"?track:"",fieldGroup:level==="secondary"&&track!=="نظری"?fieldGroup:"",major:level==="secondary"?major:""};syncStudentSubjects();state.timer.subject=state.subjects[0]||"";save();page="home";render();toast(`اطلاعات تحصیلی ذخیره شد، ${f}!`)});
+$("#onboardingForm").addEventListener("submit",e=>{e.preventDefault();if(managed){toast("پایه و رشته را فقط مدیر مدرسه تغییر می‌دهد.");render();return;}let d=new FormData(e.currentTarget),f=String(d.get("firstName")||"").trim(),l=String(d.get("lastName")||"").trim(),a=Number(d.get("age")),level=d.get("educationLevel"),grade=d.get("grade"),track=d.get("track")||"",fieldGroup=d.get("fieldGroup")||"",major=d.get("major")||"";if(!f||!l||a<6||a>30||!level||!grade||(level==="secondary"&&(!track||!major||(track!=="نظری"&&!fieldGroup)))){$("#onboardingError").textContent="لطفاً دوره، پایه و رشته تحصیلی را کامل انتخاب کن.";return}state.student={...(state.student||{}),firstName:f,lastName:l,age:a,educationLevel:level,grade,track:level==="secondary"?track:"",fieldGroup:level==="secondary"&&track!=="نظری"?fieldGroup:"",major:level==="secondary"?major:""};syncStudentSubjects();state.timer.subject=state.subjects[0]||"";save();page="home";render();toast(`اطلاعات تحصیلی ذخیره شد، ${f}!`)});
 document.addEventListener("click",e=>{
  let p=e.target.closest("[data-page]");if(p){e.preventDefault();go(p.dataset.page);return}
- let a=e.target.closest("[data-action]")?.dataset.action;if(a){if(a==="timer-toggle"){state.timer.running?timerPause():timerStart();return}({"add-task":taskModal,"add-exam":examModal,"add-plan":planModal,"add-grade":gradeModal,"edit-profile":()=>{editingStudent=true;render()},"enable-notifications":enableNotifications,"timer-reset":timerReset,"timer-skip":timerSkip})[a]?.();return}
+ let a=e.target.closest("[data-action]")?.dataset.action;if(a){if(a==="timer-toggle"){state.timer.running?timerPause():timerStart();return}({"add-task":taskModal,"add-exam":examModal,"add-plan":planModal,"add-grade":gradeModal,"edit-profile":()=>{editingProfile=!editingProfile;render();if(editingProfile)document.getElementById("profileEditBox")?.scrollIntoView({behavior:"smooth",block:"nearest"})},"cancel-profile-edit":()=>{editingProfile=false;render()},"enable-notifications":enableNotifications,"timer-reset":timerReset,"timer-skip":timerSkip})[a]?.();return}
   let startTask=e.target.closest("[data-start-task-timer]");if(startTask){startTimerForTask(startTask.dataset.startTaskTimer);return}
   let startExam=e.target.closest("[data-start-exam-timer]");if(startExam){startTimerForExam(startExam.dataset.startExamTimer);return}
   let quick=e.target.closest("[data-date-quick]");if(quick){let field=quick.closest("[data-jalali-field]");if(field)updateDateField(field,isoAdd(Number(quick.dataset.dateQuick)));return}
@@ -387,7 +387,7 @@ document.addEventListener("click",e=>{
  let day=e.target.closest("[data-plan-day]");if(day){planDay=+day.dataset.planDay;render();return}
  let cal=e.target.closest("[data-calendar-date]");if(cal){calSelected=cal.dataset.calendarDate;render();return}
  let move=e.target.closest("[data-calendar-move]");if(move){let d=dateObj(monthStartISO(calAnchor));d.setUTCDate(d.getUTCDate()+(Number(move.dataset.calendarMove)>0?32:-1));calAnchor=monthStartISO(isoFromDate(d));render();return}
- if(e.target.closest("#notificationButton")){go("more");return}if(e.target.closest("#topAvatar")){go("profile");return}
+ if(e.target.closest("#notificationButton")){go("more");return}
 });
 document.addEventListener("change",e=>{
  if(e.target.id==="educationLevel"){updateEducationFields(false);return}
@@ -417,12 +417,30 @@ document.addEventListener("change",e=>{
   state.preferences[key]=value;e.target.value=fa(value);save();toast("زمان یادآوری ذخیره شد.");
  }
 });
-document.addEventListener("submit",e=>{
+document.addEventListener("submit",async e=>{
  let f=e.target;if(f.id==="taskForm"){e.preventDefault();let d=new FormData(f);state.tasks.push({id:uid(),title:String(d.get("title")).trim(),subject:d.get("subject"),due:d.get("due"),note:String(d.get("note")||"").trim(),done:false,createdAt:Date.now()});save();closeModal();render();toast("تکلیف جدید ثبت شد.")}
  if(f.id==="examForm"){e.preventDefault();let d=new FormData(f);state.exams.push({id:uid(),title:String(d.get("title")).trim(),subject:d.get("subject"),date:d.get("date"),note:String(d.get("note")||"").trim(),createdAt:Date.now()});save();closeModal();render();toast("امتحان به تقویمت اضافه شد.")}
  if(f.id==="planForm"){e.preventDefault();let d=new FormData(f),time=normalTime(d.get("time"),"");if(!time){toast("ساعت را به شکل ۱۶:۰۰ وارد کن.");return}state.plans.push({id:uid(),subject:d.get("subject"),day:+d.get("day"),time,duration:+d.get("duration"),note:String(d.get("note")||"").trim()});planDay=+d.get("day");save();closeModal();go("plan");toast("جلسه مطالعه برنامه‌ریزی شد.")}
  if(f.id==="gradeForm"){e.preventDefault();let d=new FormData(f),score=+d.get("score");if(score<0||score>20){toast("نمره باید بین صفر تا ۲۰ باشه.");return}state.grades.push({id:uid(),subject:d.get("subject"),title:String(d.get("title")||"").trim(),score,date:d.get("date"),createdAt:Date.now()});save();closeModal();go("stats");toast("نمره با موفقیت ثبت شد.")}
- if(f.id==="profileForm"){e.preventDefault();let d=new FormData(f);state.student={firstName:String(d.get("firstName")).trim(),lastName:String(d.get("lastName")).trim(),grade:d.get("grade"),age:+d.get("age")};save();closeModal();render();toast("مشخصاتت به‌روزرسانی شد.")}
+ if(f.id==="profileForm"){
+  e.preventDefault();
+  if(profileSubmitting)return;
+  const d=new FormData(f);
+  const firstName=String(d.get("firstName")||"").trim(),lastName=String(d.get("lastName")||"").trim(),age=Number(d.get("age")),username=String(d.get("username")||"").trim().toLowerCase();
+  const note=f.querySelector("#profileEditMessage"),button=f.querySelector('button[type="submit"]');
+  function report(message){if(note)note.textContent=message;else toast(message)}
+  if(firstName.length<2||lastName.length<2||firstName.length>40||lastName.length>60){report("نام و نام خانوادگی معتبر وارد کن.");return}
+  if(!Number.isInteger(age)||age<6||age>30){report("سن باید بین ۶ تا ۳۰ سال باشد.");return}
+  if(!/^(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})$/.test(username)){report("آیدی را به‌صورت ۱۰ رقم یا نام کاربری لاتین معتبر وارد کن.");return}
+  if(!window.STUNER_STUDENT_ACCOUNT?.updateProfile){report("اتصال حساب مدرسه در دسترس نیست. دوباره وارد سامانه شو.");return}
+  profileSubmitting=true;if(button)button.disabled=true;report("در حال ذخیره تغییرات…");
+  try{
+   const result=await window.STUNER_STUDENT_ACCOUNT.updateProfile({first_name:firstName,last_name:lastName,age,username});
+   state.student={...state.student,firstName,lastName,age,username:result.username};
+   save();editingProfile=false;render();toast("مشخصات شخصی ذخیره شد.");
+  }catch(err){report(err.message||"ذخیره مشخصات انجام نشد. دوباره تلاش کن.")}
+  finally{profileSubmitting=false;if(button?.isConnected)button.disabled=false}
+ }
 });
 if("serviceWorker"in navigator&&location.protocol!=="file:")addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 document.addEventListener("stuner-school-work-updated",()=>render());
