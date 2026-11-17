@@ -1,0 +1,37 @@
+
+/* School portal — mobile-first RTL, separate from the student workspace */
+#schoolPortal[hidden]{display:none!important}
+#schoolPortal{position:fixed;inset:0;z-index:500;overflow-y:auto;background:linear-gradient(145deg,#eef8f0,#f8fbf8);padding:30px 14px 110px;font-family:Vazirmatn,Tahoma,sans-serif;direction:rtl;color:#173b2c}
+#portalRoot{width:min(100%,780px);margin:0 auto;display:grid;gap:16px}
+.portal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:12px 0}
+.portal-head strong{color:#166348;font-size:14px}
+.portal-head h1{font-size:24px;margin:8px 0 0;color:#143f2e;font-weight:900}
+.portal-card{background:#fff;border:1px solid #dfece3;border-radius:22px;box-shadow:0 12px 34px rgba(31,91,56,.055);padding:20px;display:grid;gap:14px}
+.portal-card h2{font-size:16px;margin:0 0 8px}
+.portal-card p{margin:0;font-size:12px;line-height:2;color:#577467}
+.portal-form{display:grid;gap:14px}
+.portal-form label{display:grid;gap:7px;font-size:12px;font-weight:700;color:#3d6852}
+.portal-form input,.portal-form select{border:1px solid #d7e8dc;border-radius:12px;min-height:46px;width:100%;font:inherit;font-size:13px;padding:10px 12px;background:#f8fbf9;color:#173b2c;outline:none}
+.portal-form input:focus,.portal-form select:focus{border-color:#199265;box-shadow:0 0 0 3px #19926515}
+.portal-form button,.portal-primary{width:100%;border:0;border-radius:12px;min-height:43px;padding:10px 14px;background:#136e4e;color:white;cursor:pointer;font-family:inherit;font-weight:800}
+.portal-form button:disabled{opacity:.5;cursor:wait}
+.portal-roles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.portal-roles button{font:inherit;font-size:11px;font-weight:750;color:#39634c;background:#eff7f1;border:1px solid #e0ece3;border-radius:12px;padding:12px 4px;cursor:pointer}
+.portal-roles button.active{background:#14573c;border-color:#14573c;color:#fff}
+.portal-actions{display:flex;justify-content:space-around;gap:10px}
+.portal-actions button,.portal-secondary,.portal-context button{font:inherit;font-size:11px;font-weight:700;color:#146344;border:1px solid #d9eade;border-radius:11px;background:#f2f8f4;padding:9px 12px;cursor:pointer}
+.portal-school{border:1px solid #dfece3;border-radius:14px;padding:14px;background:#f7fbf8;text-align:right;display:flex;justify-content:space-between;gap:10px;cursor:pointer;font:inherit;color:#245c40}
+.portal-school strong{font-size:13px}.portal-school small{font-size:11px}
+.portal-note{color:#698473!important;font-size:10px!important}
+.portal-error{font-size:12px;color:#b33c3c;min-height:18px;overflow-wrap:anywhere}
+.portal-context{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px;background:#e1f2e6;border-radius:14px;font-weight:700;font-size:12px}
+.portal-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.portal-stats div{display:grid;gap:8px;padding:16px;border-radius:17px;background:#fff;border:1px solid #e3ede4}
+.portal-stats small{font-size:10px;color:#738b7b}
+.portal-stats strong{font-size:24px;color:#146044}
+.portal-record{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #edf2ee;font-size:12px}
+.portal-record:last-child{border-bottom:none}
+.portal-record span{font-size:11px;color:#678273}
+.portal-invite{display:grid;gap:9px;background:#f1f8f2;border:1px dashed #b4d3bd;border-radius:12px;padding:12px;font-size:12px}
+.portal-invite code{font-size:11px;direction:ltr;text-align:left;overflow-wrap:anywhere;user-select:all}
+@media(max-width:450px){#schoolPortal{padding:14px 12px 100px}.portal-head h1{font-size:20px}.portal-stats{gap:6px}.portal-stats div{padding:11px}.portal-stats strong{font-size:20px}.portal-roles button{font-size:10px}.portal-card{padding:16px}}

@@ -1,7 +1,7 @@
 (() => {
 "use strict";
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
-const KEY="stuner.app.v1", IRAN_TZ="Asia/Tehran", days=["شنبه","یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه"];
+const KEY="stuner.app.v1:"+window.STUNER_ACTIVE_USER.id+":"+window.STUNER_ACTIVE_USER.schoolId, IRAN_TZ="Asia/Tehran", days=["شنبه","یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه"];
 const base=()=>({student:null,tasks:[],exams:[],grades:[],plans:[],sessions:[],subjects:["ریاضی","علوم","فارسی","عربی","زبان انگلیسی","مطالعات اجتماعی","دینی","ادبیات"],preferences:{notifyTasks:true,notifyStudy:true,notifyBreak:true,taskReminderTime:"08:00",studyReminderTime:"16:00"},timer:{mode:"study",remaining:1500,running:false,subject:"ریاضی",activity:"study",activityId:""}});
 let state=read(),page="home",taskFilter="all",planDay=(dateObj(isoToday()).getUTCDay()+1)%7,calAnchor=isoToday(),calSelected=isoToday(),ticker=null,deadline=null;
 function read(){try{let s=JSON.parse(localStorage.getItem(KEY)||"null");return s?{...base(),...s,preferences:{...base().preferences,...s.preferences},timer:{...base().timer,...s.timer,running:false}}:base()}catch{return base()}}
