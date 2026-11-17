@@ -269,7 +269,7 @@ function render(){
  if(!profileIsReady(state.student)||editingStudent){app.style.display="none";on.hidden=false;populateStudentForm();return}
  app.style.display="";on.hidden=true;$("#topAvatar").textContent=initials();
  let views={home:renderHome,plan:renderPlan,timer:renderTimer,tasks:renderTasks,exams:renderExams,calendar:renderCalendar,stats:renderStats,more:renderMore,profile:renderProfile,books:renderBooks};
- $("#mainContent").innerHTML=(views[page]||renderHome)();
+ $("#mainContent").innerHTML=(views[page]||renderHome)()+(window.STUNER_SCHOOL_WORK?.render(page)||"");
  $("[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
  if(state.timer.running)tickerStart();else if(ticker){clearInterval(ticker);ticker=null}
 }
@@ -372,5 +372,6 @@ document.addEventListener("submit",e=>{
  if(f.id==="profileForm"){e.preventDefault();let d=new FormData(f);state.student={firstName:String(d.get("firstName")).trim(),lastName:String(d.get("lastName")).trim(),grade:d.get("grade"),age:+d.get("age")};save();closeModal();render();toast("مشخصاتت به‌روزرسانی شد.")}
 });
 if("serviceWorker"in navigator&&location.protocol!=="file:")addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+document.addEventListener("stuner-school-work-updated",()=>render());
 if(profileIsReady(state.student))syncStudentSubjects();render();reminderCheck();setInterval(reminderCheck,60000);
 })();

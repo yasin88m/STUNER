@@ -35,3 +35,22 @@
 .portal-invite{display:grid;gap:9px;background:#f1f8f2;border:1px dashed #b4d3bd;border-radius:12px;padding:12px;font-size:12px}
 .portal-invite code{font-size:11px;direction:ltr;text-align:left;overflow-wrap:anywhere;user-select:all}
 @media(max-width:450px){#schoolPortal{padding:14px 12px 100px}.portal-head h1{font-size:20px}.portal-stats{gap:6px}.portal-stats div{padding:11px}.portal-stats strong{font-size:20px}.portal-roles button{font-size:10px}.portal-card{padding:16px}}
+
+/* Classroom tasks and exams */
+.stuner-schoolwork{margin-top:16px}
+.school-work-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+.school-work-head h2{font-size:16px;margin:0 0 4px}
+.school-work-head p{font-size:11px;color:#6a8475;margin:0}
+.school-work-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px 0;border-top:1px solid #e7efeb}
+.school-work-text{display:grid;gap:6px;min-width:0}
+.school-work-text strong{font-size:13px}
+.school-work-text span,.school-work-label{font-size:11px;color:#628070}
+.school-work-text p{font-size:11px;line-height:1.9;white-space:pre-line;margin:0}
+.school-work-done{white-space:nowrap;background:#e3f3e7;border:1px solid #b4d9bf;border-radius:10px;color:#176444;padding:9px;font:inherit;font-size:11px;cursor:pointer}
+.school-work-done.is-done{background:#136b4d;color:#fff}
+.school-work-done:disabled{opacity:.5}
+.school-work-error{color:#ac3b42}
+.school-assignment-record>div{display:grid;gap:6px}
+.school-assignment-record small{font-size:11px;color:#718575}
+.portal-form textarea{width:100%;min-height:84px;padding:11px;border:1px solid #d7e8dc;border-radius:12px;font-family:inherit}
+@media(max-width:480px){.school-work-row{align-items:flex-start;flex-direction:column}.school-work-done{align-self:flex-start}}

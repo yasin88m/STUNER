@@ -5,7 +5,7 @@ const cfg=window.STUNER_SUPABASE_CONFIG||{};
 const el=document.getElementById("portalRoot"),cover=document.getElementById("schoolPortal");
 const app=document.getElementById("app"),on=document.getElementById("onboarding");
 const ready=/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(cfg.url||"")&&/^(sb_publishable_|eyJ)/.test(cfg.publishableKey||"");
-let client=null,user=null,role="student",members=[],current=null,classes=[],people=[],teacherLinks=[],school=null;
+let client=null,user=null,role="student",members=[],current=null,classes=[],people=[],teacherLinks=[],school=null,assignments=[];
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function show(){cover.hidden=false;app.style.display="none";on.hidden=true}
 function message(v){const x=document.getElementById("portalMessage");if(x)x.textContent=v}
@@ -47,17 +47,19 @@ async function enter(member){
   cover.hidden=true;app.style.display="";on.hidden=true;
   window.STUNER_ACTIVE_USER={id:user.id,schoolId:member.school_id};
   if(!document.getElementById("stunerStudentLogout")){const logout=document.createElement("button");logout.id="stunerStudentLogout";logout.type="button";logout.textContent="خروج از حساب";logout.className="secondary-button small-button";logout.addEventListener("click",async()=>{await client.auth.signOut();location.reload()});document.querySelector(".topbar-actions")?.appendChild(logout);}
+  window.STUNER_SCHOOL_WORK?.init(client,user,member);
   const src=document.createElement("script");src.src="./app.js";document.body.appendChild(src);return;
  }
  const sid=current.school_id;
- const [s,c,p,t]=await Promise.all([
+ const [s,c,p,t,w]=await Promise.all([
   client.from("schools").select("id,name,kind").eq("id",sid).single(),
   client.from("school_classes").select("id,name,grade,school_id").eq("school_id",sid),
   client.from("school_memberships").select("user_id,role,display_name,grade,class_id").eq("school_id",sid),
-  client.from("class_teachers").select("class_id,teacher_id").eq("school_id",sid)
+  client.from("class_teachers").select("class_id,teacher_id").eq("school_id",sid),
+  client.from("school_assignments").select("id,school_id,class_id,teacher_id,kind,title,subject,description,due_date,created_at").eq("school_id",sid).order("due_date",{ascending:true})
  ]);
- for(const r of [s,c,p,t])if(r.error)throw r.error;
- school=s.data;classes=c.data||[];people=p.data||[];teacherLinks=t.data||[];dashboard();
+ for(const r of [s,c,p,t,w])if(r.error)throw r.error;
+ school=s.data;classes=c.data||[];people=p.data||[];teacherLinks=t.data||[];assignments=w.data||[];dashboard();
 }
 function dashboard(){
  show();
@@ -71,6 +73,25 @@ function dashboard(){
   body+='<section class="portal-card"><h2>ساخت کلاس</h2><form id="classForm" class="portal-form"><label>عنوان کلاس<input name="name" required></label><label>پایه<input name="grade" required></label><button class="portal-primary">ایجاد کلاس</button></form></section>';
   body+='<section class="portal-card"><h2>دعوت معلم یا دانش‌آموز</h2><form id="inviteForm" class="portal-form"><label>نقش<select name="role"><option value="student">دانش‌آموز</option><option value="teacher">معلم</option></select></label><label>نام کامل<input name="name" required></label><label>ایمیل<input name="email" type="email" dir="ltr" required></label><label>پایه (فقط دانش‌آموز)<input name="grade" placeholder="مثلاً هفتم"></label><label>کلاس<select name="classid"><option value="">بدون کلاس</option>'+opts+'</select></label><button class="portal-primary">ایجاد کد دعوت</button></form><div id="inviteOutput"></div><p class="portal-note">کد دعوت فقط برای ایمیل مشخص‌شده و به مدت ۱۴ روز معتبر است.</p></section>';
  }
+
+ if(teacher){
+  const options=visible.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+' · '+esc(c.grade)+'</option>').join("");
+  body+='<section class="portal-card"><h2>تعیین تکلیف یا امتحان</h2>'+(visible.length?
+   '<form id="assignmentForm" class="portal-form"><label>نوع<select name="kind" required><option value="task">تکلیف</option><option value="exam">امتحان</option></select></label><label>کلاس<select name="class_id" required>'+options+'</select></label><label>درس<input name="subject" placeholder="مثلاً ریاضی" required maxlength="100"></label><label>عنوان<input name="title" placeholder="مثلاً تمرین فصل سوم" required maxlength="150" minlength="2"></label><label>تاریخ تحویل یا امتحان<input name="due_date" type="date" required></label><label>شرح فعالیت<textarea name="description" rows="3" maxlength="3000" placeholder="مباحث یا صفحه‌های کتاب"></textarea></label><button class="portal-primary">ثبت و ارسال به کلاس</button></form>':
+   '<p>ابتدا مدیر مدرسه باید کلاسی را به شما اختصاص دهد.</p>')+'</section>';
+ }
+ if(teacher||director){
+  const visibleIds=new Set(visible.map(c=>c.id));
+  const list=assignments.filter(x=>director||visibleIds.has(x.class_id));
+  body+='<section class="portal-card"><h2>تکالیف و امتحانات مدرسه</h2>'+(list.map(x=>
+   '<div class="portal-record school-assignment-record"><div><small>'+esc(x.kind==="task"?"تکلیف":"امتحان")+' · '+esc(x.subject)+' · '+esc(classes.find(c=>c.id===x.class_id)?.name||"")+'</small><strong>'+esc(x.title)+'</strong><small>'+esc(x.due_date)+'</small></div>'+
+   (teacher&&x.teacher_id===user.id?'<button class="portal-secondary" data-delete-assignment="'+esc(x.id)+'">حذف</button>':'')+'</div>'
+  ).join("")||'<p>هنوز تکلیف یا امتحانی ثبت نشده است.</p>')+'</section>';
+ }
+ if(director&&classes.length&&people.some(x=>x.role==="teacher")){
+  const teachers=people.filter(x=>x.role==="teacher");
+  body+='<section class="portal-card"><h2>اختصاص معلم به کلاس</h2><form class="portal-form" id="assignTeacherForm"><label>معلم<select name="teacher_id">'+teachers.map(t=>'<option value="'+esc(t.user_id)+'">'+esc(t.display_name)+'</option>').join("")+'</select></label><label>کلاس<select name="class_id">'+classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+' · '+esc(c.grade)+'</option>').join("")+'</select></label><button class="portal-primary">ثبت انتساب</button></form></section>';
+ }
  body+='<section class="portal-card"><h2>'+(director?'اعضای مدرسه':'دانش‌آموزان کلاس‌های من')+'</h2>'+( (director?people:students).map(p=>'<div class="portal-record"><strong>'+esc(p.display_name)+'</strong><span>'+esc(p.role==="principal"?"مدیر":p.role==="teacher"?"معلم":"دانش‌آموز")+' · '+esc(p.grade||"")+'</span></div>').join("")||'<p>عضوی ثبت نشده است.</p>')+'</section>';
  el.innerHTML=head(school.name)+'<div class="portal-context"><span>'+esc(director?"پنل مدیر": "پنل معلم")+'</span><button data-action="picker">تغییر مدرسه</button></div>'+body+'<p id="portalMessage" class="portal-error"></p>';
 }
@@ -83,6 +104,24 @@ async function handle(form){
   if(form.id==="forgotForm"){r=await client.auth.resetPasswordForEmail(String(d.get("email")).trim(),{redirectTo:location.origin+location.pathname});if(r.error)throw r.error;message("اگر حساب وجود داشته باشد، لینک بازیابی ارسال می‌شود.");return}
   if(form.id==="schoolForm"){r=await client.rpc("create_school",{p_name:d.get("name"),p_kind:d.get("kind"),p_manager:d.get("manager")});if(r.error)throw r.error;role="principal";sessionStorage.setItem("stuner.school",r.data);await sync();return}
   if(form.id==="redeemForm"){r=await client.rpc("redeem_school_invite",{p_token:String(d.get("code")).trim()});if(r.error)throw r.error;sessionStorage.setItem("stuner.school",r.data);await sync();return}
+
+  if(form.id==="assignmentForm"){
+   const classId=String(d.get("class_id")||"");
+   if(!teacherLinks.some(x=>x.teacher_id===user.id&&x.class_id===classId))throw Error("به این کلاس دسترسی نداری.");
+   r=await client.from("school_assignments").insert({
+    school_id:school.id,class_id:classId,teacher_id:user.id,
+    kind:d.get("kind"),subject:String(d.get("subject")||"").trim(),
+    title:String(d.get("title")||"").trim(),description:String(d.get("description")||"").trim(),
+    due_date:d.get("due_date")
+   });
+   if(r.error)throw r.error;await enter(current);message("تکلیف یا امتحان به کلاس ارسال شد.");return;
+  }
+  if(form.id==="assignTeacherForm"){
+   const classId=String(d.get("class_id")||""),teacherId=String(d.get("teacher_id")||"");
+   if(!people.some(x=>x.role==="teacher"&&x.user_id===teacherId)||!classes.some(x=>x.id===classId))throw Error("معلم یا کلاس معتبر نیست.");
+   r=await client.from("class_teachers").upsert({school_id:school.id,class_id:classId,teacher_id:teacherId},{onConflict:"class_id,teacher_id",ignoreDuplicates:true});
+   if(r.error)throw r.error;await enter(current);message("معلم به کلاس اختصاص یافت.");return;
+  }
   if(form.id==="classForm"){r=await client.from("school_classes").insert({school_id:school.id,name:String(d.get("name")).trim(),grade:String(d.get("grade")).trim()});if(r.error)throw r.error;await enter(current);return}
   if(form.id==="inviteForm"){
    const isStudent=d.get("role")==="student";const cls=classes.find(c=>c.id===d.get("classid"));
@@ -97,6 +136,16 @@ async function handle(form){
 el.addEventListener("click",async e=>{
  const r=e.target.closest("[data-role]");if(r){role=r.dataset.role;updateRole();return}
  const s=e.target.closest("[data-school]");if(s){const m=members.find(x=>x.school_id===s.dataset.school&&x.role===role);if(m)try{await enter(m)}catch(ex){message(ex.message)}return}
+
+ const deletion=e.target.closest("[data-delete-assignment]");
+ if(deletion){
+  const row=assignments.find(x=>x.id===deletion.dataset.deleteAssignment&&x.teacher_id===user?.id);
+  if(!row)return;
+  if(!confirm("این مورد از صفحه تمام دانش‌آموزان این کلاس حذف شود؟"))return;
+  const r=await client.from("school_assignments").delete().eq("id",row.id).eq("teacher_id",user.id);
+  if(r.error){message(r.error.message);return}
+  await enter(current);message("مورد حذف شد.");return;
+ }
  const a=e.target.closest("[data-action]")?.dataset.action;
  if(a==="logout"){await client.auth.signOut();location.reload()}
  if(a==="signup")signup();if(a==="forgot")forgot();if(a==="back")login();
