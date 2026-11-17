@@ -20,8 +20,8 @@ function normalized(value:unknown){
   .replace(/[\u064b-\u065f\u0670\u200c\u200d\s_\-–—():.،,]/g,"").toLowerCase();
 }
 function normalizedGrade(value:unknown){
- const original=normalized(value);
- const map:Record<string,string>={"1":"اول","2":"دوم","3":"سوم","4":"چهارم","5":"پنجم","6":"ششم","7":"هفتم","8":"نهم","9":"نهم","10":"دهم","11":"یازدهم","12":"دوازدهم"};
+ const original=normalized(String(value??"").replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776)).replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632)).replace(/^پایه\s*/,"").replace(/\s*ابتدایی$/,""));
+ const map:Record<string,string>={"1":"اول","2":"دوم","3":"سوم","4":"چهارم","5":"پنجم","6":"ششم","7":"هفتم","8":"هشتم","9":"نهم","10":"دهم","11":"یازدهم","12":"دوازدهم"};
  return normalized(map[original]||original);
 }
 async function importMembers(req:Request,admin:ReturnType<typeof createClient>,body:Record<string,unknown>){
@@ -57,7 +57,7 @@ async function importMembers(req:Request,admin:ReturnType<typeof createClient>,b
   }else if(raw.class_id)return {created:false,error:"انتساب کلاس معلم باید توسط مدیر انجام شود."};
   const created=await admin.auth.admin.createUser({
    email:authAddress(username),password,email_confirm:true,
-   app_metadata:{stuner_account:true,created_from_excel:true}
+   app_metadata:{stuner_account:true,created_from_excel:true,stuner_initial_password_change:true}
   });
   if(created.error||!created.data.user)return {created:false,error:"این کد ملی قبلاً ثبت شده یا ایجاد حساب ممکن نیست."};
   const userId=created.data.user.id;
@@ -82,6 +82,24 @@ async function importMembers(req:Request,admin:ReturnType<typeof createClient>,b
  return respond(200,{ok:true,results});
 }
 
+/* The phone number is an initial credential only. Mandatory first-login replacement. */
+async function changeInitialPassword(req:Request,admin:ReturnType<typeof createClient>,payload:Record<string,unknown>){
+ const token=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"");
+ if(!token)return respond(401,{error:"ابتدا وارد حساب شوید."});
+ const auth=await admin.auth.getUser(token);
+ if(auth.error||!auth.data.user)return respond(401,{error:"نشست معتبر نیست."});
+ const user=auth.data.user;
+ if(user.app_metadata?.stuner_initial_password_change!==true)return respond(403,{error:"این عملیات برای این حساب لازم نیست."});
+ const password=payload.password;
+ if(typeof password!=="string"||password.length<12||password.length>128||!/[\p{L}]/u.test(password)||!/[0-9]/.test(password))
+  return respond(400,{error:"رمز جدید باید حداقل ۱۲ کاراکتر و شامل حروف و عدد باشد."});
+ const changed=await admin.auth.admin.updateUserById(user.id,{
+  password,app_metadata:{...user.app_metadata,stuner_initial_password_change:false}
+ });
+ if(changed.error)return respond(503,{error:"تغییر رمز انجام نشد؛ دوباره تلاش کنید."});
+ return respond(200,{ok:true,updated:true});
+}
+
 Deno.serve(async(req:Request)=>{
  if(req.method==="OPTIONS")return new Response(null,{status:204,headers:originHeaders});
  if(req.method!=="POST")return respond(405,{error:"Method not allowed"});
@@ -95,6 +113,7 @@ Deno.serve(async(req:Request)=>{
  try{data=await req.json();if(!data||typeof data!=="object"||Array.isArray(data))throw Error()}catch{return respond(400,{error:"Invalid request"})}
  const mode=data.mode;
  if(mode==="import_members")return await importMembers(req,admin,data);
+ if(mode==="change_initial_password")return await changeInitialPassword(req,admin,data);
  const username=String(data.username||"").trim().toLowerCase();
  const name=String(data.display_name||"").trim();
  const password=data.password;
