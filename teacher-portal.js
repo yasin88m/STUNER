@@ -1,7 +1,7 @@
 /* Dedicated multi-school teacher workspace for STUNER. All reads respect Supabase RLS. */
 (function(){
 "use strict";
-const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],page:"home",menu:false,schoolId:"",classId:"",busy:false};
+const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],page:"home",joinNote:"",menu:false,schoolId:"",classId:"",busy:false};
 const esc=x=>String(x??"").replace(/[&<>"']/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[a]));
 const icon=n=>'<i data-lucide="'+n+'"></i>';
 const schoolName=id=>state.schools.find(x=>x.school_id===id)?.schools?.name||"مدرسه";
@@ -38,7 +38,8 @@ function schoolCard(s){
  return '<button class="teacher-school-card" data-teacher-school="'+esc(id)+'"><span class="teacher-school-icon">'+icon("school")+'</span><strong>'+displaySchool(id)+'</strong><small>'+esc(schoolClasses(id).length)+' کلاس · '+esc(schoolStudents(id).length)+' دانش‌آموز</small><span>مشاهده کلاس‌ها '+icon("arrow-left")+'</span></button>';
 }
 function schoolsPage(){
- return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>مدارس من</h2><p>همه مدارسی که حساب معلم شما در آن‌ها عضو است.</p></div><span class="portal-kind">'+state.schools.length+' مدرسه</span></div><div class="teacher-school-grid">'+state.schools.map(s=>schoolCard(s)).join("")+'</div></section>';
+ return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>مدارس من</h2><p>همه مدارسی که با همین حساب معلم در آن‌ها تدریس می‌کنید.</p></div><span class="portal-kind">'+state.schools.length+' مدرسه</span></div><div class="teacher-school-grid">'+state.schools.map(s=>schoolCard(s)).join("")+'</div></section>'+
+ '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+icon("plus")+' عضویت در مدرسه جدید</h2><p>مدیر مدرسه جدید کد دعوت مخصوص نام کاربری شما را می‌سازد.</p></div></div><form id="teacherJoinSchoolForm" class="portal-form"><label>کد دعوت ۴۸ کاراکتری<input type="text" name="invite" dir="ltr" autocomplete="off" spellcheck="false" minlength="48" maxlength="48" pattern="[0-9a-fA-F]{48}" placeholder="کد ارسال‌شده توسط مدیر مدرسه" required></label><button class="portal-primary" type="submit">'+icon("check")+' تأیید عضویت در مدرسه</button></form><p id="teacherJoinMessage" class="portal-error" role="status" aria-live="polite">'+esc(state.joinNote)+'</p></section>';
 }
 function classesPage(){
  const list=schoolClasses(state.schoolId);
@@ -113,6 +114,25 @@ function onChange(e){
  }
 }
 async function onSubmit(e){
+ const join=e.target.closest("#teacherJoinSchoolForm");
+ if(join){
+  e.preventDefault();if(state.busy)return;
+  const code=String(new FormData(join).get("invite")||"").trim().toLowerCase();
+  const msg=state.root.querySelector("#teacherJoinMessage");
+  if(!/^[0-9a-f]{48}$/.test(code)){msg.textContent="کد دعوت معتبر نیست.";return}
+  state.busy=true;const btn=join.querySelector('button[type="submit"]');btn.disabled=true;
+  try{
+   const redeemed=await state.client.rpc("redeem_school_invite",{p_token:code});
+   if(redeemed.error)throw redeemed.error;
+   const linked=await state.client.from("school_memberships").select("school_id,user_id,role,display_name,grade,class_id,schools(name,kind)").eq("user_id",state.user.id).eq("role","teacher");
+   if(linked.error)throw linked.error;
+   state.schools=linked.data||[];
+   state.schoolId=redeemed.data;state.page="schools";state.joinNote="عضویت در مدرسه جدید با موفقیت ثبت شد.";
+   await refresh();
+  }catch(err){msg.textContent=err.message||"عضویت انجام نشد.";btn.disabled=false}
+  finally{state.busy=false}
+  return;
+ }
  const form=e.target.closest("#teacherMultiAssignmentForm");if(!form)return;
  e.preventDefault();
  if(state.busy)return;
