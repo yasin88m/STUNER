@@ -48,7 +48,7 @@ function updateSchoolPreview(){
  if(!form)return;
  const d=new FormData(form),kind=d.get("kind"),
   grades=d.getAll("grades"),
-  majors=kind==="vocational"||kind==="secondary"?[...new Set(String(d.get("majors")||"").split(/[\\n،,؛;]+/).map(x=>x.trim()).filter(Boolean))]:[];
+  majors=kind==="vocational"||kind==="secondary"?[...new Set(String(d.get("majors")||"").split(/[\n،,؛;]+/).map(x=>x.trim()).filter(Boolean))]:[];
  const result=document.getElementById("schoolClassPreview");
  if(result){
   const items=grades.flatMap(g=>majors.length?majors.map(m=>g+" - "+m):[g+" - کلاس عمومی"]);
