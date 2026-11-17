@@ -249,3 +249,51 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .timer-start{flex:none;width:31px;height:31px;background:#edf8f1;color:var(--green-800);border-color:#d9eee0;font-size:12px}
 .timer-start:hover{background:var(--green-800);color:#fff}
 .iran-time-input{direction:ltr;text-align:center;font-variant-numeric:tabular-nums}
+
+
+/* Lucide SVG system and unified homework / exam navigation */
+.stuner-icon{display:inline-block;vertical-align:middle;flex:none;width:20px;height:20px;pointer-events:none}
+.nav-icon{display:grid;place-items:center;width:24px;height:26px}
+.nav-icon .stuner-icon{width:20px;height:20px}
+.stat-icon .stuner-icon,.tile-icon .stuner-icon,.empty-icon .stuner-icon{width:21px;height:21px}
+.primary-button .stuner-icon,.secondary-button .stuner-icon,.mini-icon-button .stuner-icon{width:17px;height:17px}
+.timer-start .stuner-icon{width:15px;height:15px}
+.work-main-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;border:1px solid #e3ece5;background:#f0f6f2;border-radius:17px;padding:5px;margin:0 0 15px}
+.work-main-tabs button{display:flex;align-items:center;justify-content:center;gap:9px;border:0;min-height:47px;border-radius:13px;background:transparent;color:#658473;font-size:12px;font-weight:800;transition:background .18s,color .18s,box-shadow .18s}
+.work-main-tabs button.active{background:#fff;color:#146844;box-shadow:0 3px 11px rgba(21,83,51,.08)}
+.work-main-tabs button span{min-width:25px;padding:2px 6px;border-radius:30px;font-size:10px;background:#e4efe8;color:#5b7f6b}
+.work-main-tabs button.active span{background:#e0f4e6;color:#15734c}
+.work-main-tabs .stuner-icon{width:18px;height:18px}
+.work-subfilter{margin:0 0 14px}
+.work-exam-stats{margin:0 0 14px!important}
+.school-inline-item{min-height:72px}
+.school-inline-item .school-source{display:inline-block;font-size:10px;background:#e7f4e9;color:#226e47;padding:2px 8px;margin:7px 0 0;border-radius:8px;white-space:normal}
+.school-inline-item .timer-start{background:#e7f7ec;border:1px solid #cbe7d5;color:#176b43;min-width:33px;min-height:33px}
+.school-inline-item .timer-start:focus-visible{outline:3px solid rgba(20,129,73,.3)}
+#mainContent .page-heading .primary-button{white-space:nowrap}
+#mainContent .page-heading .primary-button .stuner-icon{width:16px;height:16px}
+@media(max-width:760px){
+ .bottom-nav{padding:6px 10px calc(7px + env(safe-area-inset-bottom));align-items:stretch;gap:4px}
+ .bottom-nav .bottom-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:59px;padding:5px 1px;border-radius:14px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:color .15s,background-color .15s;outline-offset:-2px}
+ .bottom-nav .bottom-item>span{width:40px;height:30px;display:grid;place-items:center;border-radius:11px;flex:none;transition:background-color .15s;line-height:1}
+ .bottom-nav .bottom-item .stuner-icon{width:20px;height:20px}
+ .bottom-nav .bottom-item.active{color:var(--green-800)}
+ .bottom-nav .bottom-item.active>span{width:40px;height:30px;background:var(--mint-150)}
+ .bottom-nav .bottom-item:not(.active)>span{background:transparent}
+ .bottom-nav .bottom-item small{line-height:1.3;font-size:10px}
+ .bottom-nav .bottom-item:focus-visible{outline:2px solid var(--green-600)}
+ #mainContent .page-heading{align-items:flex-start;flex-wrap:wrap}
+ #mainContent .page-heading .primary-button{min-height:39px}
+ .work-main-tabs{margin-top:4px}
+ .work-main-tabs button{font-size:11px;min-height:45px}
+ .list-card .school-inline-item{flex-wrap:wrap;gap:8px}
+ .list-card .school-inline-item .task-main{flex-basis:calc(100% - 66px)}
+ .list-card .school-inline-item .timer-start{order:3}
+}
+@media(hover:hover) and (pointer:fine){
+ .bottom-nav .bottom-item:not(.active):hover{background:#f1f8f3;color:#2a7651}
+ .work-main-tabs button:hover:not(.active){background:#e9f3ec;color:#206c4a}
+}
+@media(hover:none){
+ .bottom-nav .bottom-item:not(.active):hover{background:transparent;color:#9aa69f}
+}
