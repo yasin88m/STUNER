@@ -99,6 +99,7 @@ async function sync(){
  if(last)await enter(last);else picker();
 }
 async function enter(member){
+ if(current?.school_id!==member.school_id){directorSection="home";viewClassId=null;directorMenu=false}
  current=member;sessionStorage.setItem("stuner.school",member.school_id);
  if(member.role==="student"){
   cover.hidden=true;app.style.display="";on.hidden=true;
@@ -241,8 +242,9 @@ async function handle(form){
   if(form.id==="newMemberForm"){
    const username=String(d.get("username")||"").trim().toLowerCase();
    const modeRole=d.get("role"),classId=String(d.get("class_id")||"");
+   const classIds=modeRole==="teacher"?d.getAll("class_ids").map(String):[];
    if(modeRole==="student"&&!classId)throw Error("ابتدا کلاس دانش‌آموز را انتخاب کن.");
-   const result=await provision({mode:"create_member",school_id:school.id,role:modeRole,class_id:classId||null,display_name:String(d.get("display_name")||"").trim(),username,password:String(d.get("password")||"")},true);
+   const result=await provision({mode:"create_member",school_id:school.id,role:modeRole,class_id:modeRole==="student"?classId:null,class_ids:classIds,display_name:String(d.get("display_name")||"").trim(),username,password:String(d.get("password")||"")},true);
    await enter(current);
    message("حساب "+(modeRole==="teacher"?"معلم":"دانش‌آموز")+" با نام کاربری "+result.username+" ساخته شد.");
    return;
@@ -269,6 +271,11 @@ async function handle(form){
  }catch(e){message(e.message||"خطا در ثبت اطلاعات")}
 }
 el.addEventListener("click",async e=>{
+  const nav=e.target.closest("[data-director-page]");if(nav){directorSection=nav.dataset.directorPage;viewClassId=null;directorMenu=false;dashboard();return}
+  const c=e.target.closest("[data-class-detail]");if(c){viewClassId=c.dataset.classDetail;directorSection="classes";dashboard();return}
+  if(e.target.closest("[data-class-back]")){viewClassId=null;dashboard();return}
+  const ui=e.target.closest("[data-director-action]")?.dataset.directorAction;
+  if(ui==="menu"||ui==="close"){directorMenu=ui==="menu"?!directorMenu:false;dashboard();return}
  const r=e.target.closest("[data-role]");if(r){role=r.dataset.role;updateRole();return}
  const s=e.target.closest("[data-school]");if(s){const m=members.find(x=>x.school_id===s.dataset.school&&x.role===role);if(m)try{await enter(m)}catch(ex){message(ex.message)}return}
 
@@ -284,7 +291,7 @@ el.addEventListener("click",async e=>{
  const a=e.target.closest("[data-action]")?.dataset.action;
  if(a==="logout"){await client.auth.signOut();location.reload()}
  if(a==="signup")signup();if(a==="back")login();
- if(a==="create")newSchool();if(a==="picker")picker();
+ if(a==="create")newSchool();if(a==="picker"){directorMenu=false;viewClassId=null;directorSection="home";picker()}
 });
 el.addEventListener("change",e=>{if(e.target.id==="schoolKind"){renderSchoolFields();return}if(e.target.closest("#schoolForm"))updateSchoolPreview()});
 el.addEventListener("input",e=>{if(e.target.closest("#schoolForm"))updateSchoolPreview()});
