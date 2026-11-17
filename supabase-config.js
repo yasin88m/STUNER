@@ -1,6 +1,6 @@
-// Fill in ONLY the Supabase project URL and publishable/anon key.
-// Never put a secret key or service_role key in this public file.
+// Public Supabase project settings. This contains ONLY a publishable key.
+// Never put a secret key or service_role key in a public web repository.
 window.STUNER_SUPABASE_CONFIG = {
-  url: "",
-  publishableKey: ""
+  url: "https://oaknqlkvagjjjloytmau.supabase.co",
+  publishableKey: "sb_publishable_aq73PbMPujAnJGVrpjut_A_LwOshzUS"
 };
