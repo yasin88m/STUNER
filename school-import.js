@@ -105,7 +105,7 @@ function view(){
  return '<p class="school-import-filename">'+esc(state.fileName)+'</p>'+summary+
  '<div class="school-import-scroll"><table class="school-import-table"><thead><tr><th>ردیف</th><th>نام و نام خانوادگی</th><th>کد ملی</th><th>کلاس</th><th>وضعیت</th></tr></thead><tbody>'+sample+'</tbody></table></div>'+
  (rows.length>18?'<p class="portal-note">۱۸ ردیف نخست نشان داده می‌شود؛ بررسی و ثبت برای همه '+rows.length+' ردیف انجام می‌شود.</p>':"")+
- (errors?'<div class="school-import-errors"><strong>ردیف‌های نیازمند بررسی</strong><ul>'+errors+'</ul></div>':"")+
+ (errors?'<div class="school-import-errors"><strong>ردیف‌های نیازمند بررسی</strong><ul>'+errors+'</ul><button type="button" class="portal-secondary school-import-report" data-import-report>دریافت گزارش همه خطاها (CSV)</button></div>':"")+
  '<div class="school-import-actions">'+(valid.length?'<button type="button" class="portal-primary" data-import-start '+(state.running?'disabled':"")+'><i data-lucide="plus"></i> '+(state.running?"در حال ثبت…":"ثبت "+valid.length+" حساب معتبر")+'</button>':"")+
  (state.running?'<button type="button" class="portal-secondary" data-import-stop>توقف پس از گروه جاری</button>':"")+'</div>'+
  '<p class="school-import-result" role="status">'+esc(state.note||"فقط ردیف‌های معتبر ثبت می‌شوند. سایر ردیف‌ها نیاز به اصلاح فایل دارند.")+'</p>';
@@ -148,7 +148,22 @@ async function startImport(){
  }catch(e){state.note="اشکال ارتباطی: "+(e.message||"درخواست انجام نشد.")+" — ممکن است برخی حساب‌ها ساخته شده باشند؛ پیش از تلاش دوباره فهرست کاربران را بررسی کنید.";}
  finally{state.running=false;redraw()}
 }
+function exportReport(){
+ const items=state.rows.filter(r=>r.error||r.serverError);
+ if(!items.length)return;
+ const cell=x=>{
+  let value=String(x??"");
+  if(/^[=+\-@\t\r]/.test(value))value="'"+value;
+  return '"'+value.replace(/"/g,'""')+'"';
+ };
+ const result=[["ردیف اکسل","نام و نام خانوادگی","کد ملی","وضعیت","شرح خطا"],...items.map(r=>[r.line,r.first+" "+r.last,r.username,r.status,r.error||r.serverError])];
+ const csv="\ufeff"+result.map(row=>row.map(cell).join(",")).join("\r\n");
+ const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+ const a=document.createElement("a");a.href=url;a.download="stuner-import-errors.csv";document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),250);
+}
 document.addEventListener("click",e=>{
+ if(e.target.closest("[data-import-report]")){e.preventDefault();exportReport();return}
  const download=e.target.closest("[data-import-template]");if(download){e.preventDefault();template(download.dataset.importTemplate);return}
  if(e.target.closest("[data-import-stop]")){state.stop=true;state.note="درخواست توقف ثبت شد.";redraw();return}
  if(e.target.closest("[data-import-start]")){startImport()}
