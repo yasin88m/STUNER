@@ -289,7 +289,7 @@ function render(){
  $("#mainContent").innerHTML=(views[page]||renderHome)();
  $("[data-page]",document.querySelector(".sidebar")).concat($("[data-page]",document.querySelector(".bottom-nav"))).forEach(x=>x.classList.toggle("active",x.dataset.page===page));
  window.STUNER_ICONS?.refresh?.();
- if(state.timer.running)tickerStart();else if(ticker){clearInterval(ticker);ticker=null}
+ if(state.timer.running){tickerStart();paintTimer()}else if(ticker){clearInterval(ticker);ticker=null}
 }
 function openModal(title,body){$("#modalRoot").innerHTML=`<div class="modal-backdrop" data-modal-backdrop><section class="modal-card" role="dialog" aria-modal="true"><div class="modal-head"><h2>${title}</h2><button class="close-button" data-close-modal>×</button></div>${body}</section></div>`;let f=$("input,select,textarea",$("#modalRoot"));if(f)setTimeout(()=>f.focus(),50)}
 function closeModal(){$("#modalRoot").innerHTML=""}
@@ -306,7 +306,19 @@ async function enableNotifications(){if(!("Notification"in window)){toast("ای�
 function reminderCheck(){if(!("Notification"in window)||Notification.permission!=="granted")return;let clock=iranClock();if(state.preferences.notifyTasks&&clock>=(state.preferences.taskReminderTime||"08:00")){let key="stuner.remind.tasks."+isoToday();if(!sessionStorage.getItem(key)){let today=state.tasks.filter(x=>activeSubject(x.subject)&&x.due===isoToday()&&!x.done),tomorrow=state.tasks.filter(x=>activeSubject(x.subject)&&x.due===isoAdd(1)&&!x.done);if(today.length||tomorrow.length){notify("یادآوری تکالیف استیونر",`${fa(today.length)} تکلیف برای امروز و ${fa(tomorrow.length)} تکلیف برای فردا داری.`);sessionStorage.setItem(key,"1")}}}if(state.preferences.notifyStudy&&clock>=(state.preferences.studyReminderTime||"16:00")){let key="stuner.remind.study."+isoToday();if(!sessionStorage.getItem(key)){notify("وقت مطالعه در استیونر", "زمان پیشنهادی مطالعه‌ات رسیده؛ یک جلسه ۲۵ دقیقه‌ای شروع کن.");sessionStorage.setItem(key,"1")}}}
 function duration(){return state.timer.mode==="study"?1500:300}
 function paintTimer(){if(page!=="timer")return;let r=state.timer.remaining,digits=$("#timerDigits");if(digits)digits.textContent=fa(String(Math.floor(r/60)).padStart(2,"0")+":"+String(r%60).padStart(2,"0"))}
-function tickerStart(){if(!state.timer.running||ticker)return;if(!deadline)deadline=Date.now()+state.timer.remaining*1000;paintTimer();ticker=setInterval(()=>{if(!state.timer.running||!deadline)return;state.timer.remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));paintTimer();if(state.timer.remaining<=0)timerComplete()},100)}
+function timerTick(){
+ if(!state.timer.running||!deadline)return;
+ state.timer.remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));
+ paintTimer();
+ if(state.timer.remaining<=0)timerComplete();
+}
+function tickerStart(){
+ if(!state.timer.running)return;
+ if(!deadline)deadline=Date.now()+state.timer.remaining*1000;
+ if(ticker){timerTick();return}
+ timerTick();
+ ticker=setInterval(timerTick,100);
+}
 function timerStart(){
  if(state.timer.running)return;
  if(state.timer.mode==="study"&&state.timer.activity==="task"&&!timerTarget()){toast("ابتدا تکلیف مورد نظرت را انتخاب کن.");return}
@@ -336,6 +348,7 @@ function timerComplete(){
 }
 function timerSkip(){if(state.timer.running)state.timer.remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));if(ticker)clearInterval(ticker);ticker=null;deadline=null;state.timer.mode=state.timer.mode==="study"?"break":"study";state.timer.remaining=duration();state.timer.running=false;save();render()}
 
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&state.timer.running)timerTick()});
 $("#onboardingForm").addEventListener("submit",e=>{e.preventDefault();let d=new FormData(e.currentTarget),f=String(d.get("firstName")||"").trim(),l=String(d.get("lastName")||"").trim(),a=Number(d.get("age")),level=d.get("educationLevel"),grade=d.get("grade"),track=d.get("track")||"",fieldGroup=d.get("fieldGroup")||"",major=d.get("major")||"";if(!f||!l||a<6||a>30||!level||!grade||(level==="secondary"&&(!track||!major||(track!=="نظری"&&!fieldGroup)))){$("#onboardingError").textContent="لطفاً دوره، پایه و رشته تحصیلی را کامل انتخاب کن.";return}state.student={...(state.student||{}),firstName:f,lastName:l,age:a,educationLevel:level,grade,track:level==="secondary"?track:"",fieldGroup:level==="secondary"&&track!=="نظری"?fieldGroup:"",major:level==="secondary"?major:""};editingStudent=false;syncStudentSubjects();state.timer.subject=state.subjects[0]||"";save();page="home";render();toast(`اطلاعات تحصیلی ذخیره شد، ${f}!`)});
 document.addEventListener("click",e=>{
  let p=e.target.closest("[data-page]");if(p){e.preventDefault();go(p.dataset.page);return}
