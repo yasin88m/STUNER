@@ -287,7 +287,7 @@ function render(){
  app.style.display="";on.hidden=true;$("#topAvatar").textContent=initials();
  let views={home:renderHome,plan:renderPlan,timer:renderTimer,tasks:renderTasks,exams:renderExams,calendar:renderCalendar,stats:renderStats,more:renderMore,profile:renderProfile,books:renderBooks};
  $("#mainContent").innerHTML=(views[page]||renderHome)();
- $("[data-page]",document.querySelector(".sidebar")).concat($("[data-page]",document.querySelector(".bottom-nav"))).forEach(x=>x.classList.toggle("active",x.dataset.page===page));
+ document.querySelectorAll(".sidebar [data-page], .bottom-nav [data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
  window.STUNER_ICONS?.refresh?.();
  if(state.timer.running){tickerStart();paintTimer()}else if(ticker){clearInterval(ticker);ticker=null}
 }
