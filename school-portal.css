@@ -114,3 +114,9 @@
 .portal-hamburger>.stuner-icon{width:23px;height:23px}
 .portal-invite code{background:#fff;padding:10px 12px;border-radius:10px;border:1px solid #d5ebdd;font-size:11px;user-select:all}
 .portal-invite p{line-height:1.9}
+
+
+.principal-list-accordion{margin-top:12px;border:1px solid var(--border,#dce7df);border-radius:14px;padding:12px;background:var(--surface,#fff)}
+.principal-list-accordion>summary{cursor:pointer;font-weight:700;color:var(--primary,#176b4b);padding:4px;list-style:none}
+.principal-list-accordion>summary::-webkit-details-marker{display:none}
+.principal-list-accordion[open]>summary{margin-bottom:10px}
