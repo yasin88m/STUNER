@@ -10,3 +10,12 @@
 .school-delete-ack span{font-size:11px;line-height:1.9}
 .school-delete-button{background:#b32f3b!important;color:#fff!important}
 .school-delete-button:hover{background:#8e1b28!important}
+
+/* Explicit subject -> teacher mapping from the imported school timetable. */
+.school-course-teachers{margin-top:16px}
+.school-course-teachers .school-subject-teacher{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;background:#f4faf5;border:1px solid #e2eee4;margin:8px 0}
+.school-course-teachers .school-subject-teacher strong{font-weight:700;color:#164f39;font-size:13px}
+.school-course-teachers .school-subject-teacher span{color:#4c6b5b;font-size:12px}
+.stuner-db-mapping{min-width:0}
+.stuner-db-mapping>small{font-size:11px;color:#648876}
+@media(max-width:550px){.school-course-teachers .school-subject-teacher{flex-wrap:wrap}}
