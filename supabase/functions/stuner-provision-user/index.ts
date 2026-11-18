@@ -38,7 +38,7 @@ async function importMembers(req:Request,admin:ReturnType<typeof createClient>,b
  const list=body.rows as Record<string,unknown>[];
  if(list.some(x=>!x||typeof x!=="object"||Array.isArray(x)))return respond(400,{error:"ساختار ردیف‌های ورودی معتبر نیست."});
  const isStudent=role==="student";
- const cls=isStudent?await admin.from("school_classes").select("id,grade,major").eq("school_id",schoolId):null;
+ const cls=await admin.from("school_classes").select("id,grade,major").eq("school_id",schoolId);
  if(cls?.error)return respond(503,{error:"امکان بررسی کلاس‌های مدرسه نیست."});
  const classes=cls?.data||[];
  async function createRow(raw:Record<string,unknown>){
@@ -46,7 +46,7 @@ async function importMembers(req:Request,admin:ReturnType<typeof createClient>,b
   if(!/^\d{10}$/.test(username))return {created:false,error:"کد ملی باید ده رقم باشد."};
   if(!/^0[1-9]\d{9}$/.test(password))return {created:false,error:"شماره تماس معتبر نیست."};
   if(!validName(displayName))return {created:false,error:"نام و نام خانوادگی معتبر نیست."};
-  let classId:string|null=null,grade:string|null=null;
+  let classId:string|null=null,grade:string|null=null,teacherClassIds:string[]=[];
   if(isStudent){
    classId=String(raw.class_id||"");
    const classroom=classes.find(c=>c.id===classId);
@@ -54,7 +54,13 @@ async function importMembers(req:Request,admin:ReturnType<typeof createClient>,b
    if(normalizedGrade(classroom.grade)!==normalizedGrade(raw.grade)||normalized(classroom.major||"")!==normalized(raw.major||""))
     return {created:false,error:"پایه یا رشته با کلاس انتخابی هماهنگ نیست."};
    grade=classroom.grade;
-  }else if(raw.class_id)return {created:false,error:"انتساب کلاس معلم باید توسط مدیر انجام شود."};
+   }else{
+   if(raw.class_id)return {created:false,error:"برای معلم باید فهرست کلاس‌ها را ارسال کنید."};
+   if(raw.class_ids!==undefined && (!Array.isArray(raw.class_ids) || raw.class_ids.length>100 ||
+       raw.class_ids.some((x:unknown)=>typeof x!=="string")))return {created:false,error:"فهرست کلاس‌های معلم معتبر نیست."};
+   teacherClassIds=[...new Set((raw.class_ids as string[]||[]))];
+   if(teacherClassIds.some(id=>!classes.some(c=>c.id===id)))return {created:false,error:"بعضی از کلاس‌های معلم در این مدرسه وجود ندارند."};
+  }
   const created=await admin.auth.admin.createUser({
    email:authAddress(username),password,email_confirm:true,
    app_metadata:{stuner_account:true,created_from_excel:true,stuner_initial_password_change:true}
@@ -68,6 +74,10 @@ async function importMembers(req:Request,admin:ReturnType<typeof createClient>,b
     user_id:userId,school_id:schoolId,role,display_name:displayName,grade,class_id:classId
    });
    if(member.error)throw member.error;
+   if(!isStudent && teacherClassIds.length){
+    const assigned=await admin.from("class_teachers").insert(teacherClassIds.map(id=>({school_id:schoolId,class_id:id,teacher_id:userId})));
+    if(assigned.error)throw assigned.error;
+   }
    return {created:true};
   }catch{
    await admin.auth.admin.deleteUser(userId);
@@ -155,6 +165,37 @@ async function updateStudentProfile(req:Request,admin:ReturnType<typeof createCl
  return respond(200,{ok:true,username,display_name:displayName,age});
 }
 
+
+/* School deletion uses a single atomic database procedure, followed by removal of orphan Auth accounts. */
+async function deleteSchool(req:Request,admin:ReturnType<typeof createClient>,body:Record<string,unknown>){
+ const token=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"");
+ if(!token)return respond(401,{error:"برای حذف باید وارد حساب مدیر شوید."});
+ const auth=await admin.auth.getUser(token);
+ if(auth.error||!auth.data.user)return respond(401,{error:"نشست مدیر معتبر نیست."});
+ const schoolId=String(body.school_id||""),name=String(body.confirm_name||"");
+ if(!/^[0-9a-f-]{36}$/i.test(schoolId)||!name||body.confirm_delete!==true)
+  return respond(400,{error:"شناسه مدرسه و تأیید نهایی ضروری است."});
+ const result=await admin.rpc("delete_school_records",{
+  p_school:schoolId,p_actor:auth.data.user.id,p_confirmation:name
+ });
+ if(result.error){
+  const failure=String(result.error.message||"");
+  return respond(failure.includes("may delete")?403:409,{error:"حذف مدرسه انجام نشد. نام مدرسه، مالکیت حساب و مجوز مدیر را بررسی کنید."});
+ }
+ const userIds:Array<string>=Array.isArray(result.data?.orphan_users)?result.data.orphan_users:[];
+ const failed:string[]=[];
+ for(const id of userIds){
+  if(id===auth.data.user.id)continue; // Never remove principal account.
+  try{
+   const removed=await admin.auth.admin.deleteUser(id);
+   if(removed.error)failed.push(id);
+  }catch{failed.push(id)}
+ }
+ return respond(200,{ok:true,deleted:true,member_count:result.data?.member_count||0,removed_accounts:userIds.length-failed.length,
+  remaining_orphan_accounts:failed.length,
+  warning:failed.length?"مدرسه و تمام اطلاعات وابسته حذف شدند، ولی پاکسازی تعدادی حساب بدون مدرسه کامل نشد.":null});
+}
+
 Deno.serve(async(req:Request)=>{
  if(req.method==="OPTIONS")return new Response(null,{status:204,headers:originHeaders});
  if(req.method!=="POST")return respond(405,{error:"Method not allowed"});
@@ -168,6 +209,7 @@ Deno.serve(async(req:Request)=>{
  try{data=await req.json();if(!data||typeof data!=="object"||Array.isArray(data))throw Error()}catch{return respond(400,{error:"Invalid request"})}
  const mode=data.mode;
  if(mode==="import_members")return await importMembers(req,admin,data);
+ if(mode==="delete_school")return await deleteSchool(req,admin,data);
  if(mode==="change_initial_password")return await changeInitialPassword(req,admin,data);
  if(mode==="update_student_profile")return await updateStudentProfile(req,admin,data);
  const username=String(data.username||"").trim().toLowerCase();
