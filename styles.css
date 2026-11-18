@@ -332,3 +332,10 @@ button:disabled{opacity:.5;cursor:not-allowed}
  .profile-hero{padding:19px}
  .profile-edit-actions button{width:100%}
 }
+
+
+/* Reliable study registration feedback and compatibility with cached legacy header. */
+#app #topAvatar{display:none!important}
+.timer-saved-total{margin:14px auto 0;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;max-width:385px;border:1px solid #d1e9da;border-radius:13px;background:#f1faf4;color:#547361;font-size:11px;font-weight:700}
+.timer-saved-total strong{font-size:15px;color:var(--green-900);font-weight:900;font-variant-numeric:tabular-nums;direction:ltr}
+@media(max-width:480px){.timer-saved-total{gap:6px}.timer-saved-total strong{font-size:14px}}
