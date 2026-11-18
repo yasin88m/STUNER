@@ -477,7 +477,22 @@ document.addEventListener("submit",async e=>{
   finally{profileSubmitting=false;if(button?.isConnected)button.disabled=false}
  }
 });
-if("serviceWorker"in navigator&&location.protocol!=="file:")addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+if("serviceWorker"in navigator&&location.protocol!=="file:"){
+ let reloadingAfterUpdate=false;
+ navigator.serviceWorker.addEventListener("controllerchange",()=>{
+  if(reloadingAfterUpdate)return;
+  reloadingAfterUpdate=true;
+  location.reload();
+ });
+ const registerCurrentWorker=()=>{
+  navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"})
+   .then(reg=>reg.update())
+   .catch(()=>{});
+ };
+ // app.js is injected after Supabase student login, possibly AFTER window.load.
+ if(document.readyState==="complete")registerCurrentWorker();
+ else addEventListener("load",registerCurrentWorker,{once:true});
+}
 document.addEventListener("stuner-school-work-updated",()=>render());
 if(profileIsReady(state.student))syncStudentSubjects();render();reminderCheck();setInterval(reminderCheck,60000);
 })();
