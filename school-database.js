@@ -70,7 +70,39 @@ function render(){return '<section class="portal-card stuner-db-card"><h2>ورو
 function view(){let html='<p class="stuner-db-status">'+esc(st.msg||"فایل پایگاه داده مدرسه را انتخاب کنید (حداکثر ۳۵ مگابایت).")+'</p>';if(!st.db)return html;html+='<p><b>'+esc(st.file)+'</b> — '+st.db.length+' جدول شناسایی شد.</p><div class="stuner-db-tables">'+st.db.map(t=>'<span>'+esc(t.name)+' ('+t.rows.length+')</span>').join("")+'</div><h3>تطبیق جدول‌ها و ستون‌ها</h3>'+map("majors")+map("subjects")+map("classes")+map("students")+map("teachers")+map("links")+map("teaching")+'<button class="portal-secondary" type="button" data-db-preview '+(st.busy?"disabled":"")+'>پیش‌نمایش و اعتبارسنجی</button>';
  if(st.plan)html+='<div class="stuner-db-summary"><h3>پیش‌نمایش انتقال</h3><div class="school-import-stats"><span>کلاس‌ها <b>'+st.plan.classes.length+'</b></span><span>رشته‌ها <b>'+st.plan.majors.length+'</b></span><span>دانش‌آموزان <b>'+st.plan.students.length+'</b></span><span>معلمان <b>'+st.plan.teachers.length+'</b></span><span>انتساب کلاس <b>'+st.plan.teacherLinks+'</b></span><span>دبیر-درس <b>'+st.plan.subjectLinks+'</b></span><span>خطاها <b>'+st.plan.errors.length+'</b></span></div><details open><summary>فهرست رشته‌های پیدا‌شده</summary><div class="stuner-db-tables">'+st.plan.majors.map(v=>'<span>'+esc(v)+'</span>').join("")+'</div></details><p>اطلاعات رشته‌ها، کلاس‌ها و دبیران درس‌ها از جدول‌های مستقل و روابط بین جدول‌ها استخراج می‌شوند؛ موارد مبهم در خطاها مشخص می‌شوند.</p>'+(st.plan.errors.length?'<details><summary>مشاهده '+st.plan.errors.length+' خطا</summary><div class="stuner-db-errors">'+st.plan.errors.slice(0,60).map(e=>'<p>'+esc(e)+'</p>').join("")+'</div></details>':"")+(st.staging?'<p>اطلاعات آماده است؛ برای ادامه از دکمه ساخت مدرسه در انتهای فرم استفاده کنید.</p>':'<button type="button" class="portal-primary" data-db-submit '+(st.busy?"disabled":"")+'>تأیید نهایی و ثبت اطلاعات</button>')+'</div>';
  if(st.log.length)html+='<details open><summary>گزارش ثبت ('+st.log.length+')</summary><div class="stuner-db-errors">'+st.log.slice(-80).map(e=>'<p>'+esc(e)+'</p>').join("")+'</div></details>';return html}
-function draw(){let r=document.getElementById("stunerDbRoot");if(r){r.innerHTML=view();window.STUNER_ICONS?.refresh?.()}}
+function draw(){let r=document.getElementById("stunerDbRoot");if(r){r.innerHTML=view();window.STUNER_ICONS?.refresh?.()}if(st.busy){const p=document.getElementById("stunerDbImportProgress");if(p)p.textContent=st.msg||"در حال انتقال اطلاعات…"}}
+
+function showImportOverlay(){
+ let node=document.getElementById("stunerDbImportOverlay");
+ if(!node){
+  node=document.createElement("div");
+  node.id="stunerDbImportOverlay";
+  node.className="stuner-db-import-overlay";
+  node.setAttribute("role","dialog");
+  node.setAttribute("aria-modal","true");
+  node.setAttribute("aria-labelledby","stunerDbImportTitle");
+  node.innerHTML='<div class="stuner-db-import-panel">'+
+   '<div class="stuner-db-import-scene" aria-hidden="true">'+
+    '<span class="stuner-db-import-orbit"></span>'+
+    '<div class="stuner-db-import-folder"><svg viewBox="0 0 100 82" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 20a8 8 0 0 1 8-8h25l9 9h34a8 8 0 0 1 8 8v36a8 8 0 0 1-8 8H16a8 8 0 0 1-8-8V20Z" fill="#E5B65A" stroke="#A97723" stroke-width="3"/><path d="M8 32h84v33a8 8 0 0 1-8 8H16a8 8 0 0 1-8-8V32Z" fill="#F7CF7D" stroke="#B98537" stroke-width="3"/><rect x="31" y="40" width="38" height="5" rx="2.5" fill="#C18A3D"/><rect x="38" y="50" width="24" height="5" rx="2.5" fill="#C18A3D"/></svg></div>'+
+    '<div class="stuner-db-import-box"><svg viewBox="0 0 180 118" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M28 47h124l-11 56H39L28 47Z" fill="#137352"/><path d="M29 47h123l-11 21H40L29 47Z" fill="#289C70"/><path d="M29 47 13 30l30-12 47 18-61 11Z" fill="#75CCA0"/><path d="m152 47 15-17-30-12-47 18 62 11Z" fill="#61B98C"/><path d="M40 68h101l-5 35H45l-5-35Z" fill="#126448"/><path d="M70 82h40" stroke="#A9E8CA" stroke-width="5" stroke-linecap="round"/></svg></div>'+
+   '</div>'+
+   '<h2 id="stunerDbImportTitle">در حال وارد کردن دیتابیس ...</h2>'+
+   '<p id="stunerDbImportProgress">در حال تطبیق و ثبت اطلاعات مدرسه</p>'+
+   '<div class="stuner-db-import-bar" aria-hidden="true"><span></span></div>'+
+   '<small>لطفاً تا تکمیل انتقال اطلاعات، این صفحه را نبندید.</small>'+
+  '</div>';
+  document.body.appendChild(node);
+ }
+ node.hidden=false;
+ const progress=document.getElementById("stunerDbImportProgress");
+ if(progress)progress.textContent=st.msg||"در حال تطبیق و ثبت اطلاعات مدرسه";
+}
+function hideImportOverlay(){
+ const node=document.getElementById("stunerDbImportOverlay");
+ if(node)node.remove();
+}
+
 async function access(bytes){const [mdb,bf]=await Promise.all([import("https://esm.sh/mdb-reader@3.2.0?bundle&target=es2022"),import("https://esm.sh/buffer@6.0.3?bundle")]);const reader=new mdb.default(bf.Buffer.from(bytes)),list=reader.getTableNames().filter(n=>!/^msys/i.test(n));if(list.length>80)throw Error("پایگاه داده بیش از ۸۰ جدول دارد.");let count=0;return list.map(name=>{const t=reader.getTable(name);count+=t.rowCount;if(count>30000)throw Error("پایگاه داده بیش از ۳۰ هزار ردیف دارد و باید به صورت مرحله‌ای منتقل شود.");const cols=t.getColumns().filter(x=>!["binary","ole","complex"].includes(x.type)).map(x=>x.name);return {name,columns:cols,rows:t.getData({columns:cols}).map(r=>Object.fromEntries(cols.map(c=>[c,r[c]??""])))}})}
 async function sqlite(bytes){if(!window.initSqlJs)await new Promise((ok,bad)=>{let t=document.createElement("script");t.src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js";t.onload=ok;t.onerror=()=>bad(Error("موتور SQLite بارگذاری نشد."));document.head.appendChild(t)});const SQL=await window.initSqlJs({locateFile:()=> "https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.wasm"}),db=new SQL.Database(bytes);const q=s=>'"'+s.replace(/"/g,'""')+'"';try{const result=db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");const tables=result[0]?.values.map(row=>String(row[0]))||[];if(tables.length>80)throw Error("پایگاه داده بیش از ۸۰ جدول دارد.");let count=0;return tables.map(name=>{const info=db.exec("SELECT * FROM "+q(name)+" LIMIT 30001")[0],columns=info?.columns||db.exec("PRAGMA table_info("+q(name)+")")[0]?.values.map(v=>String(v[1]))||[],values=info?.values||[];count+=values.length;if(count>30000)throw Error("تعداد رکوردها بیش از ۳۰ هزار است.");return {name,columns,rows:values.map(v=>Object.fromEntries(columns.map((c,i)=>[c,v[i] instanceof Uint8Array?"":v[i]??""])))}})}finally{db.close()}}
 async function load(file){if(st.busy)return;st.db=null;st.plan=null;st.log=[];st.file=file.name;st.msg="در حال خواندن جدول‌ها…";draw();try{if(file.size>35*1024*1024)throw Error("حجم پایگاه داده نباید بیش از ۳۵ مگابایت باشد.");const ext=file.name.toLowerCase().split(".").pop(),bytes=new Uint8Array(await file.arrayBuffer());if(["accdb","mdb"].includes(ext))st.db=await access(bytes);else if(["db","sqlite","sqlite3"].includes(ext))st.db=await sqlite(bytes);else throw Error("این فرمت پشتیبانی نمی‌شود.");if(!st.db.length)throw Error("هیچ جدول قابل خواندن وجود ندارد.");function likely(t,k){
@@ -325,7 +357,7 @@ async function saveTeachingLinks(teachers){
 }
 async function submit(){
  if(st.busy||!st.plan||!st.ctx)return false;
- st.busy=true;const plan=st.plan;st.msg="در حال ثبت کلاس‌ها و رشته‌ها…";draw();
+ st.busy=true;const plan=st.plan;st.msg="در حال ثبت کلاس‌ها و رشته‌ها…";showImportOverlay();draw();
  try{
   const existing=new Map(st.ctx.classes.map(c=>[norm(c.name)+"|"+grade(c.grade)+"|"+norm(c.major),c]));
   const existingByName=new Map();
@@ -376,7 +408,7 @@ async function submit(){
   st.msg="فرایند ناتمام است: "+(err.message||"خطای نامشخص")+
    "؛ ممکن است بخشی از داده‌ها ثبت شده باشد. پیش از تکرار، گزارش و کاربران موجود را بررسی کنید.";
   return false;
- }finally{st.busy=false;draw()}
+ }finally{st.busy=false;hideImportOverlay();draw()}
 }
 async function importCreatedSchool(ctx){
  if(!canCreate())throw Error("ابتدا فایل را بارگذاری و پیش‌نمایش را بررسی کنید.");
