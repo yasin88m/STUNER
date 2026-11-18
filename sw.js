@@ -1,1 +1,50 @@
-const CACHE="stuner-static-v28";const FILES=["./","./index.html","./styles.css","./school-portal.css","./teacher-portal.css","./school-import.css","./supabase-config.js","./school-portal.js","./teacher-portal.js","./school-import.js","./stuner-icons.js","./stuner-jalali.js","./school-work.js","./app.js","./chap-catalog.js","./curriculum.js","./manifest.webmanifest","./icon.svg"];self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));self.addEventListener("fetch",e=>{if(e.request.method!=="GET"||new URL(e.request.url).origin!==location.origin)return;e.respondWith(caches.match(e.request).then(cached=>cached||fetch(e.request).then(res=>{if(res.ok){const copy=res.clone();caches.open(CACHE).then(c=>c.put(e.request,copy))}return res}).catch(()=>caches.match("./index.html"))))});self.addEventListener("notificationclick",e=>{e.notification.close();e.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(clients=>{if(clients.length)return clients[0].focus();return self.clients.openWindow("./")}))});
+/* STUNER PWA: fresh pages/scripts/styles online, reliable cached fallback offline. */
+const CACHE="stuner-static-v29";
+const FILES=["./","./index.html","./styles.css","./school-portal.css","./teacher-portal.css","./school-import.css","./supabase-config.js","./school-portal.js","./teacher-portal.js","./school-import.js","./stuner-icons.js","./stuner-jalali.js","./school-work.js","./app.js","./chap-catalog.js","./curriculum.js","./manifest.webmanifest","./icon.svg"];
+self.addEventListener("install",event=>{
+ event.waitUntil(
+  caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting())
+ );
+});
+self.addEventListener("activate",event=>{
+ event.waitUntil(
+  caches.keys()
+   .then(keys=>Promise.all(keys.filter(key=>key.startsWith("stuner-static-")&&key!==CACHE).map(key=>caches.delete(key))))
+   .then(()=>self.clients.claim())
+ );
+});
+self.addEventListener("fetch",event=>{
+ const request=event.request;
+ if(request.method!=="GET")return;
+ const url=new URL(request.url);
+ if(url.origin!==self.location.origin)return;
+ const needsFresh=request.mode==="navigate"||/\.(?:html|js|css)$/.test(url.pathname);
+ event.respondWith((async()=>{
+  const cache=await caches.open(CACHE);
+  if(needsFresh){
+   try{
+    const response=await fetch(request,{cache:"no-store"});
+    if(response.ok)await cache.put(request,response.clone());
+    return response;
+   }catch{
+    return (await cache.match(request,{ignoreSearch:true}))||
+      (request.mode==="navigate"?(await cache.match("./index.html"))||(await cache.match("./")):undefined)||
+      Response.error();
+   }
+  }
+  const cached=await cache.match(request,{ignoreSearch:true});
+  if(cached)return cached;
+  try{
+   const response=await fetch(request);
+   if(response.ok)await cache.put(request,response.clone());
+   return response;
+  }catch{
+   return Response.error();
+  }
+ })());
+});
+self.addEventListener("notificationclick",event=>{
+ event.notification.close();
+ event.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true})
+  .then(clients=>clients.length?clients[0].focus():self.clients.openWindow("./")));
+});
