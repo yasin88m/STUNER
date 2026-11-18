@@ -24,7 +24,7 @@ self.addEventListener("fetch",event=>{
   if(needsFresh){
    try{
     const response=await fetch(request,{cache:"no-store"});
-    if(response.ok)await cache.put(request,response.clone());
+    if(response.ok){try{await cache.put(request,response.clone())}catch{}}
     return response;
    }catch{
     return (await cache.match(request,{ignoreSearch:true}))||
@@ -36,7 +36,7 @@ self.addEventListener("fetch",event=>{
   if(cached)return cached;
   try{
    const response=await fetch(request);
-   if(response.ok)await cache.put(request,response.clone());
+   if(response.ok){try{await cache.put(request,response.clone())}catch{}}
    return response;
   }catch{
    return Response.error();
