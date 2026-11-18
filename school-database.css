@@ -19,3 +19,26 @@
 .stuner-db-mapping{min-width:0}
 .stuner-db-mapping>small{font-size:11px;color:#648876}
 @media(max-width:550px){.school-course-teachers .school-subject-teacher{flex-wrap:wrap}}
+
+
+/* Blocking, accessible database import progress: folder flies into an archive box. */
+.stuner-db-import-overlay[hidden]{display:none!important}
+.stuner-db-import-overlay{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;padding:22px;background:rgba(8,34,24,.42);-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);direction:rtl;font-family:Vazirmatn,Tahoma,sans-serif}
+.stuner-db-import-panel{width:min(100%,390px);padding:24px 25px 27px;border-radius:26px;background:linear-gradient(150deg,#fff 12%,#f2faf5 100%);border:1px solid rgba(255,255,255,.9);box-shadow:0 28px 75px rgba(3,37,22,.28);text-align:center;display:flex;align-items:center;flex-direction:column}
+.stuner-db-import-scene{height:210px;width:230px;position:relative;isolation:isolate;flex:none;overflow:hidden}
+.stuner-db-import-orbit{position:absolute;inset:31px 12px 0;background:radial-gradient(ellipse at 50% 76%,rgba(41,167,109,.2),rgba(41,167,109,0) 69%);border-radius:50%;animation:stuner-db-orbit 3.2s ease-in-out infinite}
+.stuner-db-import-folder{position:absolute;z-index:1;width:90px;top:6px;left:50%;margin-left:-45px;filter:drop-shadow(0 9px 8px rgba(108,77,19,.19));transform-origin:50% 60%;animation:stuner-db-folder-drop 2.4s cubic-bezier(.4,0,.3,1) infinite}
+.stuner-db-import-folder svg{display:block;width:100%;height:auto}
+.stuner-db-import-box{position:absolute;z-index:2;bottom:2px;left:50%;width:180px;margin-left:-90px;filter:drop-shadow(0 11px 11px rgba(19,107,74,.2));animation:stuner-db-box-pulse 2.4s ease-in-out infinite}
+.stuner-db-import-box svg{display:block;width:100%;height:auto}
+.stuner-db-import-panel h2{margin:3px 0 7px;color:#155c42;font-size:19px;font-weight:900;line-height:1.8}
+.stuner-db-import-panel p{margin:0;color:#537766;font-size:12px;line-height:2;min-height:25px;overflow-wrap:anywhere}
+.stuner-db-import-panel small{margin-top:12px;color:#7b9285;font-size:10px;line-height:1.9}
+.stuner-db-import-bar{margin-top:16px;width:100%;height:6px;border-radius:20px;overflow:hidden;background:#e1eee5;position:relative}
+.stuner-db-import-bar span{position:absolute;inset:0 auto 0 0;width:38%;border-radius:20px;background:linear-gradient(90deg,#4ac590,#17794e);animation:stuner-db-progress 1.65s ease-in-out infinite}
+@keyframes stuner-db-folder-drop{0%{transform:translateY(-35px) scale(.93) rotate(-8deg);opacity:0}14%{transform:translateY(-7px) scale(1) rotate(0);opacity:1}55%{transform:translateY(67px) scale(.78);opacity:1}76%,100%{transform:translateY(95px) scale(.52);opacity:0}}
+@keyframes stuner-db-box-pulse{0%,40%,100%{transform:scale(1)}65%{transform:scale(1.04)}}
+@keyframes stuner-db-orbit{0%,100%{opacity:.7;transform:scale(.97)}50%{opacity:1;transform:scale(1.05)}}
+@keyframes stuner-db-progress{0%{transform:translateX(-115%)}100%{transform:translateX(365%)}}
+@media(max-width:430px){.stuner-db-import-panel{padding:18px 17px 24px}.stuner-db-import-panel h2{font-size:17px}}
+@media(prefers-reduced-motion:reduce){.stuner-db-import-folder,.stuner-db-import-box,.stuner-db-import-orbit,.stuner-db-import-bar span{animation:none!important}.stuner-db-import-folder{transform:translateY(40px) scale(.75)}.stuner-db-import-bar span{width:60%;transform:none}}
