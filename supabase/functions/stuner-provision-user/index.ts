@@ -14,6 +14,32 @@ const validName=(x:unknown)=>typeof x==="string"&&x.trim().length>=2&&x.trim().l
 const validPassword=(x:unknown)=>typeof x==="string"&&x.length>=10&&x.length<=128;
 function authAddress(username:string){return username+"@accounts.stuner.invalid"}
 
+/* The selected login tab is an authorization boundary, not merely a UI preference. */
+async function verifyLoginRole(req:Request,admin:ReturnType<typeof createClient>,body:Record<string,unknown>){
+ const token=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"");
+ const requested=String(body.role||"");
+ if(!["student","teacher","principal"].includes(requested))return respond(400,{error:"نقش ورود معتبر نیست."});
+ if(!token)return respond(401,{error:"نشست ورود معتبر نیست."});
+ const auth=await admin.auth.getUser(token);
+ if(auth.error||!auth.data.user)return respond(401,{error:"نشست ورود معتبر نیست."});
+ const account=auth.data.user;
+ const memberships=await admin.from("school_memberships").select("user_id")
+  .eq("user_id",account.id).eq("role",requested).limit(1);
+ if(memberships.error)return respond(503,{error:"بررسی نقش حساب فعلاً ممکن نیست."});
+ let authorized=!!memberships.data?.length;
+ // Principals may sign up before creating their very first school.
+ if(requested==="principal"&&!authorized){
+  authorized=account.app_metadata?.stuner_role==="principal";
+  if(!authorized){
+   const owned=await admin.from("schools").select("id").eq("created_by",account.id).limit(1);
+   if(owned.error)return respond(503,{error:"بررسی حساب مدیر فعلاً ممکن نیست."});
+   authorized=!!owned.data?.length;
+  }
+ }
+ return authorized?respond(200,{ok:true,role:requested}):
+  respond(403,{error:"این حساب متعلق به تب انتخاب‌شده نیست. از تب نقش خود وارد شوید."});
+}
+
 /* Excel onboarding: authenticate principal on the server and check every class assignment. */
 function normalized(value:unknown){
  return String(value??"").replace(/فتوگرافیگ/g,"فتوگرافیک").normalize("NFKC").replace(/ي/g,"ی").replace(/ك/g,"ک")
@@ -63,7 +89,7 @@ async function importMembers(req:Request,admin:ReturnType<typeof createClient>,b
   }
   const created=await admin.auth.admin.createUser({
    email:authAddress(username),password,email_confirm:true,
-   app_metadata:{stuner_account:true,created_from_excel:true,stuner_initial_password_change:true}
+   app_metadata:{stuner_account:true,stuner_role:role,created_from_excel:true,stuner_initial_password_change:true}
   });
   if(created.error||!created.data.user)return {created:false,error:"این کد ملی قبلاً ثبت شده یا ایجاد حساب ممکن نیست."};
   const userId=created.data.user.id;
@@ -213,6 +239,7 @@ Deno.serve(async(req:Request)=>{
  let data:Record<string,unknown>;
  try{data=await req.json();if(!data||typeof data!=="object"||Array.isArray(data))throw Error()}catch{return respond(400,{error:"Invalid request"})}
  const mode=data.mode;
+ if(mode==="verify_login_role")return await verifyLoginRole(req,admin,data);
  if(mode==="import_members")return await importMembers(req,admin,data);
  if(mode==="delete_school")return await deleteSchool(req,admin,data);
  if(mode==="change_initial_password")return await changeInitialPassword(req,admin,data);
@@ -278,7 +305,7 @@ Deno.serve(async(req:Request)=>{
  // Email is an internal Supabase Auth identifier; no user email is requested or sent.
  const created=await admin.auth.admin.createUser({
   email:authAddress(username),password:String(password),email_confirm:true,
-  app_metadata:{stuner_account:true}
+  app_metadata:{stuner_account:true,stuner_role:role}
  });
  if(created.error||!created.data.user){
   return respond(409,{error:"این نام کاربری قبلاً ثبت شده یا ایجاد حساب ممکن نیست."});
