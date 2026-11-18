@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-let db=null,user=null,member=null,assignments=[],completed=new Set(),loading=false,loaded=false,loadError="";
+let db=null,user=null,member=null,assignments=[],completed=new Set(),teacherSubjects=[],loading=false,loaded=false,loadError="";
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fa=v=>String(v).replace(/[0-9]/g,n=>"۰۱۲۳۴۵۶۷۸۹"[+n]);
 const when=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium",timeZone:"Asia/Tehran"}).format(new Date(v+"T12:00:00Z"))}catch{return v||"—"}};
@@ -16,6 +16,12 @@ async function refresh(){
   if(c.error)throw c.error;
   assignments=a.data||[];
   completed=new Set((c.data||[]).map(x=>x.assignment_id));
+  teacherSubjects=[];
+  if(member.class_id){
+   const teachers=await db.rpc("list_student_class_subjects",{p_school:member.school_id,p_class:member.class_id});
+   if(teachers.error)throw teachers.error;
+   teacherSubjects=(teachers.data||[]).filter(x=>x.subject&&x.teacher_name);
+  }
   loaded=true;
  }catch(e){loadError=e.message||"ارتباط با مدرسه برقرار نشد."}
  finally{loading=false;update()}
@@ -31,6 +37,12 @@ function render(page){
  }).join(""):"<p>هنوز موردی از طرف معلم برای کلاس شما ثبت نشده است.</p>";
  const title=page==="tasks"?"تکالیف ارسالی معلم":page==="exams"?"امتحانات تعیین‌شده مدرسه":"برنامه ارسالی معلمان";
  return '<section class="card panel stuner-schoolwork"><div class="school-work-head"><div><h2>'+title+'</h2><p>مربوط به کلاس شما · همگام با مدرسه</p></div><button class="secondary-button small-button" data-refresh-school-work type="button">به‌روزرسانی</button></div>'+content+'</section>';
+}
+function renderTeachers(){
+ if(!db||!member||!member.class_id)return "";
+ const items=teacherSubjects.map(x=>'<div class="school-subject-teacher"><strong>'+esc(x.subject)+'</strong><span>'+esc(x.teacher_name)+'</span></div>').join("");
+ return '<section class="card panel stuner-schoolwork school-course-teachers"><div class="school-work-head"><div><h2>درس‌ها و دبیران کلاس من</h2><p>اطلاعات ثبت‌شده توسط هنرستان</p></div></div>'+
+ (items||'<p>هنوز اطلاعات دبیران درس‌های این کلاس ثبت نشده است.</p>')+'</section>';
 }
 async function toggle(id,button){
  if(!db||!user||!assignments.some(a=>a.id===id&&a.kind==="task"))return;
@@ -48,8 +60,9 @@ document.addEventListener("click",e=>{
  if(e.target.closest("[data-refresh-school-work]")){e.preventDefault();refresh()}
 });
 window.STUNER_SCHOOL_WORK={
- init(client,account,m){db=client;user=account;member=m;assignments=[];completed=new Set();loaded=false;refresh()},
- render,refresh,
+ init(client,account,m){db=client;user=account;member=m;assignments=[];teacherSubjects=[];completed=new Set();loaded=false;refresh()},
+ render,refresh,renderTeachers,
+ teacherSubjects(){return teacherSubjects.map(x=>({subject:x.subject,teacher:x.teacher_name}))},
  snapshot(){
   return {tasks:assignments.filter(a=>a.kind==="task").map(a=>({
    id:"school-"+a.id,schoolId:a.id,title:a.title,subject:a.subject,due:a.due_date,
