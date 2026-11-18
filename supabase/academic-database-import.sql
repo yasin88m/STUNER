@@ -47,7 +47,7 @@ BEGIN
   UPDATE public.school_classes SET major=v_major WHERE id=v_id AND school_id=p_school AND nullif(trim(major),'') IS NULL;
   GET DIAGNOSTICS v_count = ROW_COUNT; -- overwritten for status only
  END LOOP;
- IF cardinality(coalesce(p_majors,'{}'::text[]))>200 OR EXISTS(SELECT 1 FROM unnest(coalesce(p_majors,'{}'::text[])) m WHERE char_length(trim(m)) NOT BETWEEN 2 AND 90)
+ IF cardinality(coalesce(p_majors,'{}'::text[]))>300 OR EXISTS(SELECT 1 FROM unnest(coalesce(p_majors,'{}'::text[])) m WHERE char_length(trim(m)) NOT BETWEEN 2 AND 90)
  THEN RAISE EXCEPTION 'Invalid major catalogue'; END IF;
  IF v_kind NOT IN ('vocational','secondary') AND cardinality(coalesce(p_majors,'{}'::text[]))>0
  THEN RAISE EXCEPTION 'Majors are not available for this school level'; END IF;
@@ -56,7 +56,7 @@ BEGIN
  UNION SELECT trim(x) FROM public.schools s,unnest(s.majors) x WHERE s.id=p_school
  UNION SELECT trim(major) FROM public.school_classes WHERE school_id=p_school AND nullif(trim(major),'') IS NOT NULL) z
  WHERE m<>'';
- IF cardinality(v_majors)>60 THEN RAISE EXCEPTION 'Too many majors'; END IF;
+ IF cardinality(v_majors)>350 THEN RAISE EXCEPTION 'Too many majors'; END IF;
  UPDATE public.schools SET majors=v_majors WHERE id=p_school;
  RETURN jsonb_build_object('majors',cardinality(v_majors),'updated_class_last',v_count);
 END
