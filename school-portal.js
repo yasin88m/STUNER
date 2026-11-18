@@ -299,12 +299,13 @@ async function handle(form){
   if(r.error)throw r.error;
   const schoolId=r.data;
   sessionStorage.setItem("stuner.school",schoolId);
+  const skipped=dbImport.summary()?.errors||0;
   const completed=await dbImport.importCreatedSchool({
    school:{id:schoolId,name,kind,branch,grades:[],majors:[]},classes:[],known:[],client,
    submitBatch:payload=>provision(payload,true),onComplete:async()=>{}
   });
   role="principal";await sync();
-  message(completed?"هنرستان ساخته شد و اطلاعات دیتابیس وارد شدند.":"هنرستان ساخته شد ولی ورود بخشی از اطلاعات تکمیل نشد؛ صفحه ورود پایگاه داده را بررسی کنید.");
+  message(completed?"هنرستان ساخته شد و اطلاعات معتبر دیتابیس ثبت شدند."+(skipped?" "+skipped+" ردیف نامعتبر یا نیازمند بررسی شناسایی شد.":""):"هنرستان ساخته شد ولی ورود بخشی از اطلاعات تکمیل نشد؛ صفحه ورود پایگاه داده را بررسی کنید.");
   return;
  }
  if(!grades.length)throw Error("حداقل یک پایه یا فایل دیتابیس انتخاب کنید.");
