@@ -184,12 +184,17 @@ async function deleteSchool(req:Request,admin:ReturnType<typeof createClient>,bo
  }
  const userIds:Array<string>=Array.isArray(result.data?.orphan_users)?result.data.orphan_users:[];
  const failed:string[]=[];
- for(const id of userIds){
-  if(id===auth.data.user.id)continue; // Never remove principal account.
-  try{
-   const removed=await admin.auth.admin.deleteUser(id);
-   if(removed.error)failed.push(id);
-  }catch{failed.push(id)}
+ // Bounded concurrency avoids long-running cleanup for 250+ person schools.
+ for(let at=0;at<userIds.length;at+=5){
+  const group=userIds.slice(at,at+5);
+  await Promise.all(group.map(async id=>{
+   if(id===auth.data.user!.id)return;
+   let success=false;
+   for(let attempt=0;attempt<2&&!success;attempt++){
+    try{const removed=await admin.auth.admin.deleteUser(id);success=!removed.error}catch{success=false}
+   }
+   if(!success)failed.push(id);
+  }));
  }
  return respond(200,{ok:true,deleted:true,member_count:result.data?.member_count||0,removed_accounts:userIds.length-failed.length,
   remaining_orphan_accounts:failed.length,
