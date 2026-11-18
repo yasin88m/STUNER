@@ -265,10 +265,95 @@ function parsePlan(){
   subjectLinks:teachers.reduce((sum,t)=>sum+t.subjects.length,0),errors};
 }
 function preview(){try{st.plan=parsePlan();st.msg="پیش‌نمایش آماده است. پیش از تأیید فهرست خطاها را بررسی کنید."}catch(e){st.plan=null;st.msg=e.message}draw()}
-async function batch(list,role){for(let at=0;at<list.length;at+=20){let items=list.slice(at,at+20),rows=items.map(r=>({username:r.username,password:r.password,display_name:r.first+" "+r.last,grade:r.classroom?.grade||"",major:r.classroom?.major||"",class_id:role==="student"?r.classroom.id:null,...(role==="teacher"?{class_ids:(r.classrooms||[]).map(c=>c.id)}:{})}));let response=await st.ctx.submitBatch({mode:"import_members",school_id:st.ctx.school.id,role,rows});if(!Array.isArray(response.results)||response.results.length!==rows.length)throw Error("پاسخ سرور ناقص است. حساب‌ها را بررسی کنید.");response.results.forEach((x,i)=>{st.log.push((x.created?"ثبت شد: ":"ثبت نشد: ")+items[i].first+" "+items[i].last+(x.error?" — "+x.error:""));items[i].password=""});st.msg="تکمیل "+Math.min(at+20,list.length)+" از "+list.length+" حساب "+(role==="student"?"دانش‌آموز":"معلم");draw()}}
-async function submit(){if(st.busy||!st.plan||!st.ctx)return false;st.busy=true;const plan=st.plan;st.msg="در حال ثبت کلاس‌ها…";draw();try{let existing=new Map(st.ctx.classes.map(c=>[norm(c.name)+"|"+grade(c.grade)+"|"+norm(c.major),c]));for(const c of plan.classes){let key=norm(c.name)+"|"+grade(c.grade)+"|"+norm(c.major),item=existing.get(key);if(!item){let res=await st.ctx.client.from("school_classes").insert({school_id:st.ctx.school.id,name:c.name,grade:c.grade,major:c.major||null}).select("id,name,grade,major").single();if(res.error)throw res.error;item=res.data;existing.set(key,item);st.log.push("کلاس ثبت شد: "+c.name)}c.id=item.id}
- const refreshed=await st.ctx.client.rpc("refresh_school_import_structure",{p_school:st.ctx.school.id});if(refreshed.error)throw refreshed.error;
- if(plan.students.length)await batch(plan.students,"student");if(plan.teachers.length)await batch(plan.teachers,"teacher");st.plan=null;st.msg="ثبت به پایان رسید. "+st.log.filter(x=>x.startsWith("ثبت شد:")).length+" حساب ایجاد شد.";await st.ctx.onComplete?.();return true}catch(e){st.msg="فرایند ناتمام است: "+(e.message||"خطای نامشخص")+"؛ احتمال ثبت بخشی از حساب‌ها وجود دارد. پیش از تکرار فهرست کاربران را بررسی کنید.";return false}finally{st.busy=false;draw()}}
+async function batch(list,role){
+ for(let at=0;at<list.length;at+=20){
+  const items=list.slice(at,at+20),rows=items.map(r=>({
+   username:r.username,password:r.password,display_name:r.first+" "+r.last,
+   grade:r.classroom?.grade||"",major:r.classroom?.major||"",
+   class_id:role==="student"?r.classroom.id:null,
+   ...(role==="teacher"?{class_ids:(r.classrooms||[]).map(c=>c.id)}:{})
+  }));
+  const response=await st.ctx.submitBatch({mode:"import_members",school_id:st.ctx.school.id,role,rows});
+  if(!Array.isArray(response.results)||response.results.length!==rows.length)throw Error("پاسخ سرور ناقص است.");
+  response.results.forEach((result,i)=>{
+   const row=items[i];
+   row.created=!!result.created;
+   st.log.push((result.created?"حساب ثبت شد: ":"حساب ثبت نشد: ")+row.first+" "+row.last+(result.error?" — "+result.error:""));
+   row.password="";
+  });
+  st.msg="تکمیل "+Math.min(at+20,list.length)+" از "+list.length+" حساب "+(role==="student"?"دانش‌آموز":"معلم");draw();
+ }
+}
+async function saveTeachingLinks(teachers){
+ const rows=teachers.filter(x=>x.existing||x.created).flatMap(teacher=>
+  teacher.subjects.filter(x=>x.classroom?.id).map(x=>({
+   username:teacher.username,class_id:x.classroom.id,subject:x.subject
+  }))
+ );
+ for(let i=0;i<rows.length;i+=100){
+  const result=await st.ctx.client.rpc("import_school_subject_links",{
+   p_school:st.ctx.school.id,p_rows:rows.slice(i,i+100)
+  });
+  if(result.error)throw result.error;
+  st.log.push("انتساب دبیر به درس: "+(result.data?.linked||0)+" ثبت شد"+
+   (result.data?.skipped?"، "+result.data.skipped+" مورد یافت نشد":""));
+ }
+}
+async function submit(){
+ if(st.busy||!st.plan||!st.ctx)return false;
+ st.busy=true;const plan=st.plan;st.msg="در حال ثبت کلاس‌ها و رشته‌ها…";draw();
+ try{
+  const existing=new Map(st.ctx.classes.map(c=>[norm(c.name)+"|"+grade(c.grade)+"|"+norm(c.major),c]));
+  const existingByName=new Map();
+  for(const c of st.ctx.classes){
+   const key=norm(c.name)+"|"+grade(c.grade),list=existingByName.get(key)||[];
+   list.push(c);existingByName.set(key,list);
+  }
+  const updates=[];
+  for(const c of plan.classes){
+   const key=norm(c.name)+"|"+grade(c.grade)+"|"+norm(c.major);
+   let item=existing.get(key);
+   if(!item){
+    const sameName=existingByName.get(norm(c.name)+"|"+grade(c.grade))||[];
+    if(sameName.length===1){
+     const older=sameName[0];
+     if(!older.major&&c.major){item=older;updates.push({id:older.id,major:c.major})}
+     else if(norm(older.major)!==norm(c.major))
+      throw Error("برای کلاس «"+c.name+"» دو رشته متفاوت ثبت شده است؛ لطفاً اصلاح کنید.");
+    }
+   }
+   if(!item){
+    const result=await st.ctx.client.from("school_classes").insert({
+     school_id:st.ctx.school.id,name:c.name,grade:c.grade,major:c.major||null
+    }).select("id,name,grade,major").single();
+    if(result.error)throw result.error;
+    item=result.data;existing.set(key,item);
+    st.log.push("کلاس ثبت شد: "+c.name);
+   }
+   c.id=item.id;
+  }
+  const refreshed=await st.ctx.client.rpc("refresh_school_import_structure",{p_school:st.ctx.school.id});
+  if(refreshed.error)throw refreshed.error;
+  const metadata=await st.ctx.client.rpc("apply_imported_school_academics",{
+   p_school:st.ctx.school.id,p_majors:plan.majors,p_class_updates:updates
+  });
+  if(metadata.error)throw metadata.error;
+  st.log.push("فهرست رشته‌های مدرسه: "+(metadata.data?.majors||0)+" رشته");
+  const newStudents=plan.students.filter(x=>!x.existing),newTeachers=plan.teachers.filter(x=>!x.existing);
+  if(newStudents.length)await batch(newStudents,"student");
+  if(newTeachers.length)await batch(newTeachers,"teacher");
+  if(plan.subjectLinks)await saveTeachingLinks(plan.teachers);
+  st.plan=null;
+  const created=newStudents.filter(x=>x.created).length+newTeachers.filter(x=>x.created).length;
+  st.msg="ثبت به پایان رسید. "+created+" حساب جدید ایجاد شد؛ اطلاعات رشته‌ها و دبیران درس‌ها پردازش شد.";
+  await st.ctx.onComplete?.();
+  return true;
+ }catch(err){
+  st.msg="فرایند ناتمام است: "+(err.message||"خطای نامشخص")+
+   "؛ ممکن است بخشی از داده‌ها ثبت شده باشد. پیش از تکرار، گزارش و کاربران موجود را بررسی کنید.";
+  return false;
+ }finally{st.busy=false;draw()}
+}
 async function importCreatedSchool(ctx){
  if(!canCreate())throw Error("ابتدا فایل را بارگذاری و پیش‌نمایش را بررسی کنید.");
  st.ctx=ctx;st.staging=false;return await submit();
