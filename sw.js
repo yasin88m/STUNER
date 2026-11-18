@@ -1,6 +1,6 @@
 /* STUNER PWA: fresh pages/scripts/styles online, reliable cached fallback offline. */
-const CACHE="stuner-static-v29";
-const FILES=["./","./index.html","./styles.css","./school-portal.css","./teacher-portal.css","./school-import.css","./supabase-config.js","./school-portal.js","./teacher-portal.js","./school-import.js","./stuner-icons.js","./stuner-jalali.js","./school-work.js","./app.js","./chap-catalog.js","./curriculum.js","./manifest.webmanifest","./icon.svg"];
+const CACHE="stuner-static-v32";
+const FILES=["./","./index.html","./styles.css","./school-portal.css","./teacher-portal.css","./school-import.css","./school-database.css","./supabase-config.js","./school-portal.js","./teacher-portal.js","./school-import.js","./school-database.js","./stuner-icons.js","./stuner-jalali.js","./school-work.js","./app.js","./chap-catalog.js","./curriculum.js","./manifest.webmanifest","./icon.svg"];
 self.addEventListener("install",event=>{
  event.waitUntil(
   caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting())
