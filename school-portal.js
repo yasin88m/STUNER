@@ -5,7 +5,7 @@ const cfg=window.STUNER_SUPABASE_CONFIG||{};
 const el=document.getElementById("portalRoot"),cover=document.getElementById("schoolPortal");
 const app=document.getElementById("app"),on=document.getElementById("onboarding");
 const ready=/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(cfg.url||"")&&/^(sb_publishable_|eyJ)/.test(cfg.publishableKey||"");
-let client=null,user=null,role="student",members=[],current=null,classes=[],people=[],teacherLinks=[],subjectLinks=[],school=null,assignments=[],accountNames=[];
+let client=null,user=null,role=["student","teacher","principal"].includes(sessionStorage.getItem("stuner.login.role"))?sessionStorage.getItem("stuner.login.role"):"student",members=[],current=null,classes=[],people=[],teacherLinks=[],subjectLinks=[],school=null,assignments=[],accountNames=[];
 let directorSection="home",directorMenu=false,viewClassId=null;
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -15,7 +15,7 @@ async function provision(payload,authenticated=false){
  const headers={"Content-Type":"application/json","apikey":cfg.publishableKey};
  if(authenticated){
   const {data:{session}}=await client.auth.getSession();
-  if(!session?.access_token)throw Error("ابتدا با حساب مدیر وارد شو.");
+  if(!session?.access_token)throw Error("ابتدا وارد حساب خود شوید.");
   headers.Authorization="Bearer "+session.access_token;
  }
  const response=await fetch(cfg.url+"/functions/v1/stuner-provision-user",{
@@ -100,11 +100,13 @@ async function sync(){
  const {data,error}=await client.from("school_memberships").select("school_id,user_id,role,display_name,grade,class_id,schools(name,kind)").eq("user_id",user.id);
  if(error)throw error;members=data||[];
  if(members.length&&!members.some(m=>m.role===role))role=members[0].role;
+  if(!members.length&&user.app_metadata?.stuner_role==="principal")role="principal";
  const old=sessionStorage.getItem("stuner.school");
  const last=members.find(m=>m.school_id===old&&m.role===role);
  if(last)await enter(last);else picker();
 }
 async function enter(member){
+  if(member.role!==role)throw Error("این حساب به نقش انتخاب‌شده دسترسی ندارد.");
  if(current?.school_id!==member.school_id){directorSection="home";viewClassId=null;directorMenu=false}
  current=member;sessionStorage.setItem("stuner.school",member.school_id);
  if(member.role==="student"){
@@ -284,13 +286,33 @@ async function handle(form){
    const password=String(d.get("password")||""),confirmPassword=String(d.get("confirm")||"");
    if(password!==confirmPassword)throw Error("تکرار رمز با رمز جدید یکسان نیست.");
    if(password.length<12||!/[0-9]/.test(password)||!/\p{L}/u.test(password))throw Error("رمز جدید باید حداقل ۱۲ کاراکتر و شامل حروف و عدد باشد.");
+   const email=user?.email;
+   if(!email)throw Error("شناسه حساب یافت نشد؛ دوباره وارد شوید.");
    await provision({mode:"change_initial_password",password},true);
-   const refreshed=await client.auth.refreshSession();
-   if(refreshed.error){await client.auth.signOut();login();message("رمز تغییر کرد؛ با رمز جدید دوباره وارد شو.");return}
+   // A password change may revoke the old refresh token. Open a new session directly.
+   const fresh=await client.auth.signInWithPassword({email,password});
+   if(fresh.error){
+    await client.auth.signOut();
+    login();message("رمز ذخیره شد، اما اتصال مجدد برقرار نشد. با رمز جدید وارد شوید.");return;
+   }
    await sync();return;
   }
-  if(form.id==="loginForm"){const username=String(d.get("username")||"").trim().toLowerCase();if(!usernameRx.test(username))throw Error("نام کاربری معتبر نیست.");r=await client.auth.signInWithPassword({email:loginEmail(username),password:String(d.get("password")||"")});if(r.error)throw Error("نام کاربری یا رمز عبور نادرست است.");await sync();return}
-  if(form.id==="signupForm"){const username=String(d.get("username")||"").trim().toLowerCase(),password=String(d.get("password")||"");await provision({mode:"register_manager",username,password,display_name:String(d.get("display_name")||"").trim()});r=await client.auth.signInWithPassword({email:loginEmail(username),password});if(r.error)throw r.error;role="principal";await sync();return}
+  if(form.id==="loginForm"){
+   const selectedRole=role,username=String(d.get("username")||"").trim().toLowerCase();
+   if(!usernameRx.test(username))throw Error("نام کاربری معتبر نیست.");
+   r=await client.auth.signInWithPassword({email:loginEmail(username),password:String(d.get("password")||"")});
+   if(r.error)throw Error("نام کاربری یا رمز عبور نادرست است.");
+   try{
+    // Server verifies school memberships / principal status using the authenticated token.
+    await provision({mode:"verify_login_role",role:selectedRole},true);
+   }catch(error){
+    await client.auth.signOut();
+    login();message(error.message||"حساب برای این تب مجاز نیست.");return;
+   }
+   sessionStorage.setItem("stuner.login.role",selectedRole);
+   await sync();return;
+  }
+  if(form.id==="signupForm"){const username=String(d.get("username")||"").trim().toLowerCase(),password=String(d.get("password")||"");await provision({mode:"register_manager",username,password,display_name:String(d.get("display_name")||"").trim()});r=await client.auth.signInWithPassword({email:loginEmail(username),password});if(r.error)throw r.error;role="principal";sessionStorage.setItem("stuner.login.role","principal");await sync();return}
   if(form.id==="schoolForm"){
  const kind=String(d.get("kind")||""),grades=d.getAll("grades"),
   majors=(kind==="vocational"||kind==="secondary")?[...new Set(String(d.get("majors")||"").split(/[\n،,؛;]+/).map(x=>x.trim()).filter(Boolean))]:[],
@@ -385,7 +407,7 @@ el.addEventListener("click",async e=>{
   if(e.target.closest("[data-class-back]")){viewClassId=null;dashboard();return}
   const ui=e.target.closest("[data-director-action]")?.dataset.directorAction;
   if(ui==="menu"||ui==="close"){directorMenu=ui==="menu"?!directorMenu:false;dashboard();return}
- const r=e.target.closest("[data-role]");if(r){role=r.dataset.role;updateRole();return}
+ const r=e.target.closest("[data-role]");if(r){role=r.dataset.role;sessionStorage.setItem("stuner.login.role",role);updateRole();return}
  const s=e.target.closest("[data-school]");if(s){const m=members.find(x=>x.school_id===s.dataset.school&&x.role===role);if(m)try{await enter(m)}catch(ex){message(ex.message)}return}
 
  const deletion=e.target.closest("[data-delete-assignment]");
@@ -410,7 +432,7 @@ async function start(){
  if(!ready){el.innerHTML=head("اتصال Supabase لازم است")+'<section class="portal-card"><p>برای فعال‌سازی سه نوع ورود، ابتدا پروژه Supabase بساز؛ فایل <code>supabase/schema.sql</code> را در SQL Editor اجرا کن و آدرس پروژه و Publishable Key را در <code>supabase-config.js</code> قرار بده.</p><p>ورود نمایشی یا حساب مدیر بدون بررسی سرور فعال نشده است.</p></section>';return}
  if(!window.supabase?.createClient){el.innerHTML=head("کتابخانه Supabase بارگذاری نشد")+'<p>اتصال اینترنت را بررسی کن.</p>';return}
  client=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
- await sync();client.auth.onAuthStateChange(event=>{if(event==="SIGNED_OUT")location.reload()});
+ await sync();client.auth.onAuthStateChange(event=>{if(event==="SIGNED_OUT"&&!el.querySelector("#loginForm")&&!el.querySelector("#initialPasswordForm"))location.reload()});
 }
 start().catch(e=>{show();el.innerHTML=head("خطای اتصال")+'<section class="portal-card">'+esc(e.message)+'</section>'});
 })();
