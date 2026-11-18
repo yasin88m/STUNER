@@ -1,1 +1,12 @@
 .stuner-db-card{display:grid;gap:14px}.stuner-db-card h2{font-size:17px}.stuner-db-card h3{font-size:14px;color:#155a3b}.stuner-db-card .school-import-file{min-width:0}.stuner-db-card button{min-height:44px}.stuner-db-status{font-size:12px;color:#256b48}.stuner-db-tables{display:flex;gap:7px;flex-wrap:wrap}.stuner-db-tables span{font-size:11px;padding:6px 9px;background:#eef7f0;color:#276b49;border-radius:7px}.stuner-db-mapping{border:1px solid #d9eadc;border-radius:13px;padding:13px;display:grid;gap:12px}.stuner-db-mapping label{display:grid;gap:6px;font-size:11px;font-weight:700;color:#386851}.stuner-db-mapping select{border:1px solid #d6e5db;border-radius:9px;padding:10px;background:#f8fcf8;font:inherit;width:100%;color:#204e36}.stuner-db-field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.stuner-db-summary{display:grid;gap:13px;border-top:1px solid #d9eadc;padding-top:14px}.stuner-db-errors{max-height:220px;overflow:auto;background:#fff9f4;border:1px solid #f0d9ce;border-radius:12px;padding:12px}.stuner-db-errors p{font-size:11px;color:#975341}@media(max-width:580px){.stuner-db-field-grid{grid-template-columns:1fr}}
+.school-db-create-helper{background:#eff9f3;border:1px solid #c8e7d3;padding:14px 16px;border-radius:13px;display:grid;gap:5px}
+.school-db-create-helper strong{color:#145d3f;font-size:13px}
+.school-db-create-helper p{color:#527a62;font-size:11px;line-height:1.9}
+.school-danger-card{border:1px solid #f0c6bf!important;background:#fff9f7!important}
+.school-danger-card>summary{color:#9d3433!important}
+.school-danger-card>p{font-size:12px;line-height:2;color:#8a443f}
+.school-delete-ack{display:flex!important;flex-direction:row!important;align-items:flex-start;gap:10px!important;color:#853a39!important}
+.school-delete-ack input{width:18px!important;min-height:18px!important;accent-color:#b73135;flex:none}
+.school-delete-ack span{font-size:11px;line-height:1.9}
+.school-delete-button{background:#b32f3b!important;color:#fff!important}
+.school-delete-button:hover{background:#8e1b28!important}
