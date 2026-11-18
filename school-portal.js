@@ -5,7 +5,7 @@ const cfg=window.STUNER_SUPABASE_CONFIG||{};
 const el=document.getElementById("portalRoot"),cover=document.getElementById("schoolPortal");
 const app=document.getElementById("app"),on=document.getElementById("onboarding");
 const ready=/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(cfg.url||"")&&/^(sb_publishable_|eyJ)/.test(cfg.publishableKey||"");
-let client=null,user=null,role="student",members=[],current=null,classes=[],people=[],teacherLinks=[],school=null,assignments=[],accountNames=[];
+let client=null,user=null,role="student",members=[],current=null,classes=[],people=[],teacherLinks=[],subjectLinks=[],school=null,assignments=[],accountNames=[];
 let directorSection="home",directorMenu=false,viewClassId=null;
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -164,16 +164,17 @@ async function enter(member){
   return;
  }
  const sid=current.school_id;
- const [s,c,p,t,w,n]=await Promise.all([
+ const [s,c,p,t,w,n,ts]=await Promise.all([
   client.from("schools").select("id,name,kind,branch,majors,grades,created_by").eq("id",sid).single(),
   client.from("school_classes").select("id,name,grade,major,school_id").eq("school_id",sid),
   client.from("school_memberships").select("user_id,role,display_name,grade,class_id").eq("school_id",sid),
   client.from("class_teachers").select("class_id,teacher_id").eq("school_id",sid),
   client.from("school_assignments").select("id,school_id,class_id,teacher_id,kind,title,subject,description,due_date,created_at").eq("school_id",sid).order("due_date",{ascending:true}),
-  client.from("account_usernames").select("user_id,username")
+  client.from("account_usernames").select("user_id,username"),
+  client.from("class_subject_teachers").select("class_id,teacher_id,subject").eq("school_id",sid)
  ]);
- for(const r of [s,c,p,t,w,n])if(r.error)throw r.error;
- school=s.data;classes=c.data||[];people=p.data||[];teacherLinks=t.data||[];assignments=w.data||[];accountNames=n.data||[];dashboard();
+ for(const r of [s,c,p,t,w,n,ts])if(r.error)throw r.error;
+ school=s.data;classes=c.data||[];people=p.data||[];teacherLinks=t.data||[];subjectLinks=ts.data||[];assignments=w.data||[];accountNames=n.data||[];dashboard();
 }
 
 const principalNav=[
@@ -190,7 +191,10 @@ const principalClass=id=>classes.find(c=>c.id===id);
 const principalUsername=id=>accountNames.find(a=>a.user_id===id)?.username||"—";
 function principalPerson(p,teacher=false){
  const classroom=teacher?teacherLinks.filter(x=>x.teacher_id===p.user_id).map(x=>principalClass(x.class_id)?.name).filter(Boolean).join("، ")||"هنوز کلاسی ندارد":principalClass(p.class_id)?.name||"بدون کلاس";
- return '<div class="portal-person principal-person"><span class="portal-person-avatar">'+esc(p.display_name?.trim()?.charAt(0)||"؟")+'</span><div><strong>'+esc(p.display_name)+'</strong><small>نام کاربری: <b dir="ltr">'+esc(principalUsername(p.user_id))+'</b></small><small>'+(teacher?"کلاس‌ها: ":"کلاس: ")+esc(classroom)+'</small></div></div>';
+ const lessons=teacher?[...new Set(subjectLinks.filter(x=>x.teacher_id===p.user_id).map(x=>x.subject))].join("، "):"";
+ const major=!teacher?principalClass(p.class_id)?.major||"":"";
+ return '<div class="portal-person principal-person"><span class="portal-person-avatar">'+esc(p.display_name?.trim()?.charAt(0)||"؟")+'</span><div><strong>'+esc(p.display_name)+'</strong><small>نام کاربری: <b dir="ltr">'+esc(principalUsername(p.user_id))+'</b></small><small>'+(teacher?"کلاس‌ها: ":"کلاس: ")+esc(classroom)+'</small>'+
+ (teacher&&lessons?'<small>درس‌ها: '+esc(lessons)+'</small>':major?'<small>رشته: '+esc(major)+'</small>':"")+'</div></div>';
 }
 function principalOptions(){
  return classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("");
@@ -226,7 +230,7 @@ function principalClasses(){
  if(selected){
   const students=people.filter(p=>p.role==="student"&&p.class_id===selected.id);
   const teachers=people.filter(p=>p.role==="teacher"&&teacherLinks.some(x=>x.class_id===selected.id&&x.teacher_id===p.user_id));
-  return '<button class="portal-secondary teacher-back" type="button" data-class-back>'+principalIcon("arrow-right")+' بازگشت به کلاس‌ها</button><section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("school")+' '+esc(selected.name)+'</h2><p>پایه '+esc(selected.grade)+'</p></div><span class="portal-kind">'+students.length+' دانش‌آموز</span></div><div class="principal-teachers-note"><strong>معلمان کلاس:</strong> '+esc(teachers.map(t=>t.display_name).join("، ")||"هنوز معلمی اختصاص نیافته")+'</div><h3 class="teacher-subtitle">دانش‌آموزان این کلاس</h3><div class="principal-list">'+(students.map(p=>principalPerson(p)).join("")||'<p class="teacher-empty">هنوز دانش‌آموزی در این کلاس ثبت نشده است.</p>')+'</div></section>';
+  return '<button class="portal-secondary teacher-back" type="button" data-class-back>'+principalIcon("arrow-right")+' بازگشت به کلاس‌ها</button><section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("school")+' '+esc(selected.name)+'</h2><p>پایه '+esc(selected.grade)+'</p></div><span class="portal-kind">'+students.length+' دانش‌آموز</span></div><div class="principal-teachers-note"><strong>معلمان کلاس:</strong> '+esc(teachers.map(t=>t.display_name).join("، ")||"هنوز معلمی اختصاص نیافته")+'</div><div class="principal-teachers-note"><strong>دبیران درس‌های کلاس:</strong> '+(subjectLinks.filter(x=>x.class_id===selected.id).map(link=>esc(link.subject)+": "+esc(people.find(t=>t.user_id===link.teacher_id)?.display_name||"—")).join("، ")||"هنوز دبیر درس ثبت نشده")+'</div><h3 class="teacher-subtitle">دانش‌آموزان این کلاس</h3><div class="principal-list">'+(students.map(p=>principalPerson(p)).join("")||'<p class="teacher-empty">هنوز دانش‌آموزی در این کلاس ثبت نشده است.</p>')+'</div></section>';
  }
  return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("school")+' کلاس‌های مدرسه</h2><p>برای مشاهده اطلاعات و دانش‌آموزان، یک کلاس انتخاب کنید.</p></div><span class="portal-kind">'+classes.length+' کلاس</span></div><div class="teacher-class-grid">'+(classes.map(c=>'<button type="button" class="teacher-class-card" data-class-detail="'+esc(c.id)+'"><span class="teacher-school-icon">'+principalIcon("book-open")+'</span><strong>'+esc(c.name)+'</strong><small>'+esc(c.grade)+' · '+people.filter(p=>p.role==="student"&&p.class_id===c.id).length+' دانش‌آموز</small><span>نمایش دانش‌آموزان '+principalIcon("arrow-left")+'</span></button>').join("")||'<p class="teacher-empty">کلاسی ثبت نشده است.</p>')+'</div></section>'+
  '<details class="portal-card principal-disclosure"><summary>'+principalIcon("plus")+' ایجاد کلاس جدید</summary><form id="classForm" class="portal-form"><div class="teacher-fields-grid"><label>عنوان کلاس<input name="name" minlength="2" maxlength="120" required></label><label>پایه'+(school.grades?.length?'<select name="grade" required>'+school.grades.map(g=>'<option value="'+esc(g)+'">'+esc(g)+'</option>').join("")+'</select>':'<input name="grade" required maxlength="40">')+'</label></div><button class="portal-primary" type="submit">ایجاد کلاس</button></form></details>';
