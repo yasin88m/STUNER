@@ -40,7 +40,7 @@ function schoolChoices(kind){
  const gradeOptions=(gradeSets[kind]||[]).map(g=>'<label class="portal-grade"><input type="checkbox" name="grades" value="'+g+'" checked><span>'+g+'</span></label>').join("");
  return branch+
    '<fieldset class="portal-grade-set"><legend>پایه‌های موجود در مدرسه</legend><div class="portal-grade-options">'+gradeOptions+'</div></fieldset>'+
-   (advanced?'<label>رشته‌های موجود (هر رشته در یک خط)<textarea name="majors" rows="4" required maxlength="2500" placeholder="شبکه و نرم‌افزار\\nمعماری داخلی\\nفتوگرافیک"></textarea></label>':
+   (advanced?'<label>رشته‌های موجود (هر رشته در یک خط)<textarea name="majors" rows="4" maxlength="2500" placeholder="شبکه و نرم‌افزار\\nمعماری داخلی\\nفتوگرافیک"></textarea></label>':
       '<p class="portal-note">برای این مقطع به ازای هر پایه یک کلاس ساخته می‌شود.</p>')+
    '<div class="portal-preview" id="schoolClassPreview"></div>';
 }
@@ -81,8 +81,8 @@ function picker(){
  el.innerHTML=head("انتخاب مدرسه")+'<section class="portal-card">'+(options||'<p>هنوز مدرسه‌ای برای این نقش ثبت نشده است.</p>')+(role==="principal"?'<button data-action="create" class="portal-primary">ایجاد مدرسه جدید</button>':'<p class="portal-note">اگر به مدرسه دسترسی نداری از مدیر بخواه حساب و کلاس تو را تعیین کند.</p>')+'<button data-action="back" class="portal-secondary">بازگشت به انتخاب نقش</button><p id="portalMessage" class="portal-error"></p></section>';
 }
 function newSchool(){
- show();
- el.innerHTML=head("ثبت مدرسه و ساخت خودکار کلاس‌ها")+'<section class="portal-card"><form id="schoolForm" class="portal-form"><label>نام مدرسه<input name="name" required minlength="3" maxlength="160" placeholder="مثلاً هنرستان محمدیان"></label><label>نوع مدرسه<select name="kind" id="schoolKind"><option value="vocational">هنرستان</option><option value="secondary">دبیرستان</option><option value="middle">متوسطه اول</option><option value="elementary">دبستان</option></select></label><label>نام مدیر<input name="manager" required minlength="2" maxlength="120" value="'+esc(user?.user_metadata?.name||"")+'"></label><div id="schoolChoices"></div><button class="portal-primary">ساخت مدرسه و تمام کلاس‌ها</button></form><button data-action="picker" class="portal-secondary">بازگشت</button><p id="portalMessage" class="portal-error"></p></section>';
+ show();window.STUNER_SCHOOL_DB_IMPORT?.startCreation?.();
+ el.innerHTML=head("ثبت مدرسه و ساخت خودکار کلاس‌ها")+'<section class="portal-card"><form id="schoolForm" class="portal-form"><label>نام مدرسه<input name="name" required minlength="3" maxlength="160" placeholder="مثلاً هنرستان محمدیان"></label><label>نوع مدرسه<select name="kind" id="schoolKind"><option value="vocational">هنرستان</option><option value="secondary">دبیرستان</option><option value="middle">متوسطه اول</option><option value="elementary">دبستان</option></select></label><label>نام مدیر<input name="manager" required minlength="2" maxlength="120" value="'+esc(user?.user_metadata?.name||"")+'"></label><div id="schoolChoices"></div><div class="school-db-create-helper"><strong>ساخت هنرستان با اطلاعات دستی یا دیتابیس</strong><p>می‌توانید رشته‌ها و پایه‌ها را دستی وارد کنید؛ یا پایگاه داده را انتخاب کنید تا کلاس‌ها و انتساب معلمان شناسایی شوند.</p></div>'+window.STUNER_SCHOOL_DB_IMPORT.render()+'<button class="portal-primary">ساخت هنرستان و ثبت اطلاعات</button></form><button data-action="picker" class="portal-secondary">بازگشت</button><p id="portalMessage" class="portal-error"></p></section>';
  renderSchoolFields();
 }
 function renderSchoolFields(){
@@ -164,7 +164,7 @@ async function enter(member){
  }
  const sid=current.school_id;
  const [s,c,p,t,w,n]=await Promise.all([
-  client.from("schools").select("id,name,kind,branch,majors,grades").eq("id",sid).single(),
+  client.from("schools").select("id,name,kind,branch,majors,grades,created_by").eq("id",sid).single(),
   client.from("school_classes").select("id,name,grade,major,school_id").eq("school_id",sid),
   client.from("school_memberships").select("user_id,role,display_name,grade,class_id").eq("school_id",sid),
   client.from("class_teachers").select("class_id,teacher_id").eq("school_id",sid),
@@ -275,7 +275,32 @@ async function handle(form){
   }
   if(form.id==="loginForm"){const username=String(d.get("username")||"").trim().toLowerCase();if(!usernameRx.test(username))throw Error("نام کاربری معتبر نیست.");r=await client.auth.signInWithPassword({email:loginEmail(username),password:String(d.get("password")||"")});if(r.error)throw Error("نام کاربری یا رمز عبور نادرست است.");await sync();return}
   if(form.id==="signupForm"){const username=String(d.get("username")||"").trim().toLowerCase(),password=String(d.get("password")||"");await provision({mode:"register_manager",username,password,display_name:String(d.get("display_name")||"").trim()});r=await client.auth.signInWithPassword({email:loginEmail(username),password});if(r.error)throw r.error;role="principal";await sync();return}
-  if(form.id==="schoolForm"){const kind=String(d.get("kind")||""),grades=d.getAll("grades"),majors=(kind==="vocational"||kind==="secondary")?[...new Set(String(d.get("majors")||"").split(/[\n،,؛;]+/).map(x=>x.trim()).filter(Boolean))]:[];if(!grades.length)throw Error("حداقل یک پایه انتخاب کن.");if((kind==="vocational"||kind==="secondary")&&!majors.length)throw Error("حداقل یک رشته وارد کن.");r=await client.rpc("create_school_with_classes",{p_name:String(d.get("name")||"").trim(),p_kind:kind,p_branch:kind==="vocational"?d.get("branch"):kind==="secondary"?"نظری":null,p_manager:String(d.get("manager")||"").trim(),p_grades:grades,p_majors:majors});if(r.error)throw r.error;role="principal";sessionStorage.setItem("stuner.school",r.data);await sync();return}
+  if(form.id==="schoolForm"){
+ const kind=String(d.get("kind")||""),grades=d.getAll("grades"),
+  majors=(kind==="vocational"||kind==="secondary")?[...new Set(String(d.get("majors")||"").split(/[\n،,؛;]+/).map(x=>x.trim()).filter(Boolean))]:[],
+  name=String(d.get("name")||"").trim(),manager=String(d.get("manager")||"").trim(),
+  branch=kind==="vocational"?d.get("branch"):kind==="secondary"?"نظری":null,
+  dbImport=window.STUNER_SCHOOL_DB_IMPORT;
+ if(dbImport?.hasFile()){
+  if(!dbImport.canCreate())throw Error("ابتدا فایل دیتابیس را پیش‌نمایش و بررسی کنید.");
+  r=await client.rpc("create_school_from_database",{p_name:name,p_kind:kind,p_branch:branch,p_manager:manager});
+  if(r.error)throw r.error;
+  const schoolId=r.data;
+  sessionStorage.setItem("stuner.school",schoolId);
+  const completed=await dbImport.importCreatedSchool({
+   school:{id:schoolId,name,kind,branch,grades:[],majors:[]},classes:[],known:[],client,
+   submitBatch:payload=>provision(payload,true),onComplete:async()=>{}
+  });
+  role="principal";await sync();
+  message(completed?"هنرستان ساخته شد و اطلاعات دیتابیس وارد شدند.":"هنرستان ساخته شد ولی ورود بخشی از اطلاعات تکمیل نشد؛ صفحه ورود پایگاه داده را بررسی کنید.");
+  return;
+ }
+ if(!grades.length)throw Error("حداقل یک پایه یا فایل دیتابیس انتخاب کنید.");
+ if((kind==="vocational"||kind==="secondary")&&!majors.length)throw Error("رشته‌های مدرسه یا فایل دیتابیس را وارد کنید.");
+ r=await client.rpc("create_school_with_classes",{p_name:name,p_kind:kind,p_branch:branch,p_manager:manager,p_grades:grades,p_majors:majors});
+ if(r.error)throw r.error;
+ role="principal";sessionStorage.setItem("stuner.school",r.data);await sync();return;
+}
   if(form.id==="inviteExistingTeacherForm"){
    const username=String(d.get("username")||"").trim().toLowerCase(),name=String(d.get("display_name")||"").trim();
    if(!usernameRx.test(username))throw Error("نام کاربری معلم معتبر نیست.");
@@ -346,7 +371,7 @@ el.addEventListener("click",async e=>{
  if(a==="signup")signup();if(a==="back")login();
  if(a==="create")newSchool();if(a==="picker"){directorMenu=false;viewClassId=null;directorSection="home";picker()}
 });
-el.addEventListener("change",e=>{if(e.target.id==="schoolKind"){renderSchoolFields();return}if(e.target.closest("#schoolForm"))updateSchoolPreview()});
+el.addEventListener("change",e=>{if(e.target.id==="schoolKind"){window.STUNER_SCHOOL_DB_IMPORT?.invalidate?.();renderSchoolFields();return}if(e.target.closest("#schoolForm"))updateSchoolPreview()});
 el.addEventListener("input",e=>{if(e.target.closest("#schoolForm"))updateSchoolPreview()});
 el.addEventListener("submit",async e=>{if(!e.target.matches("form"))return;e.preventDefault();const btn=e.target.querySelector("button");if(btn)btn.disabled=true;await handle(e.target);if(btn?.isConnected)btn.disabled=false});
 async function start(){
