@@ -179,6 +179,7 @@ const principalNav=[
  ["home","داشبورد","layout-dashboard"],
  ["students","دانش‌آموزان","users-round"],
  ["teachers","معلمان","graduation-cap"],
+ ["database","ورود پایگاه داده","database"],
  ["classes","کلاس‌ها","school"],
  ["work","تکالیف و امتحانات","clipboard-check"],
  ["security","مدیریت رمز عبور","shield-check"]
@@ -236,14 +237,21 @@ function principalWork(){
 function principalSecurity(){
  return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("shield-check")+' مدیریت رمز عبور</h2><p>تنظیم رمز جدید برای حساب معلم یا دانش‌آموز همین مدرسه</p></div></div><form id="resetMemberForm" class="portal-form"><label>نام کاربری حساب<input name="username" dir="ltr" pattern="(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})" required></label><label>رمز عبور جدید (حداقل ۱۰ کاراکتر)<input name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label><button type="submit" class="portal-primary">'+principalIcon("shield-check")+' تغییر رمز عبور</button></form></section>';
 }
+function principalDatabase(){return window.STUNER_SCHOOL_DB_IMPORT?.render?.()||'<p>بخش ورود پایگاه داده بارگذاری نشد؛ صفحه را تازه‌سازی کنید.</p>';}
 function dashboard(){show();directorUi()}
 function directorUi(){
- const views={home:principalSummary,students:principalStudents,teachers:principalTeachers,classes:principalClasses,work:principalWork,security:principalSecurity};
+ const views={home:principalSummary,students:principalStudents,teachers:principalTeachers,classes:principalClasses,database:principalDatabase,work:principalWork,security:principalSecurity};
  if(!views[directorSection])directorSection="home";
  const title=principalNav.find(x=>x[0]===directorSection)?.[1]||"داشبورد";
  const drawer=directorMenu?'<div class="portal-director-nav"><button class="portal-nav-scrim" type="button" data-director-action="close" aria-label="بستن منو"></button><nav class="portal-nav-menu" aria-label="منوی مدیریت مدرسه"><div class="portal-nav-title"><strong>'+principalIcon("school")+' '+esc(school.name)+'</strong><button type="button" data-director-action="close" aria-label="بستن">×</button></div>'+principalNav.map(x=>'<button type="button" data-director-page="'+x[0]+'" class="'+(directorSection===x[0]?"active":"")+'">'+principalIcon(x[2])+' '+x[1]+'</button>').join("")+'<button data-action="picker">'+principalIcon("repeat")+' تغییر مدرسه</button><button data-action="logout">'+principalIcon("log-out")+' خروج از حساب</button></nav></div>':"";
  el.innerHTML='<div class="teacher-shell principal-shell"><header class="teacher-appbar"><button type="button" class="portal-hamburger" data-director-action="menu" aria-label="منوی مدیر مدرسه" aria-expanded="'+directorMenu+'">'+principalIcon("menu")+'</button><div class="teacher-page-title"><small>STUNER · پنل مدیر مدرسه</small><h1>'+esc(title)+'</h1></div><span class="teacher-appbar-school">'+principalIcon("school")+' '+esc(school.name)+'</span></header>'+drawer+'<main class="teacher-page principal-page">'+views[directorSection]()+'<p id="portalMessage" class="portal-error" role="status" aria-live="polite"></p></main></div>';
- window.STUNER_SCHOOL_IMPORT?.configure({
+ window.STUNER_SCHOOL_DB_IMPORT?.configure({
+   client,school,classes,
+   known:people.map(p=>accountNames.find(a=>a.user_id===p.user_id)?.username).filter(Boolean),
+   submitBatch:payload=>provision(payload,true),
+   onComplete:async()=>enter(current)
+  });
+  window.STUNER_SCHOOL_IMPORT?.configure({
   client,school,classes,
   known:people.map(p=>accountNames.find(a=>a.user_id===p.user_id)?.username).filter(Boolean),
   submitBatch:payload=>provision(payload,true),
