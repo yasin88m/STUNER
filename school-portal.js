@@ -52,6 +52,7 @@ function updateSchoolPreview(){
   majors=kind==="vocational"||kind==="secondary"?[...new Set(String(d.get("majors")||"").split(/[\n،,؛;]+/).map(x=>x.trim()).filter(Boolean))]:[];
  const result=document.getElementById("schoolClassPreview");
  if(result){
+  if(window.STUNER_SCHOOL_DB_IMPORT?.hasFile()){result.innerHTML='<strong>کلاس‌ها و رشته‌ها از فایل پایگاه داده استخراج می‌شوند.</strong>';return}
   const items=grades.flatMap(g=>majors.length?majors.map(m=>g+" - "+m):[g+" - کلاس عمومی"]);
   result.innerHTML='<strong>پیش‌نمایش کلاس‌های خودکار: '+items.length+' کلاس</strong>'+
    (items.length?'<div class="portal-class-chips">'+items.slice(0,70).map(x=>'<span>'+esc(x)+'</span>').join("")+'</div>':"<p>حداقل یک پایه انتخاب کن.</p>");
@@ -235,7 +236,18 @@ function principalWork(){
  (assignments.map(a=>'<div class="teacher-work-row"><span class="teacher-work-icon">'+principalIcon(a.kind==="exam"?"graduation-cap":"clipboard-check")+'</span><div><strong>'+esc(a.title)+'</strong><small>'+esc(a.kind==="exam"?"امتحان":"تکلیف")+' · '+esc(a.subject)+' · '+esc(principalClass(a.class_id)?.name||"—")+'</small></div><span class="teacher-work-date">'+esc(window.STUNER_JALALI?.formatted(a.due_date)||a.due_date)+'</span></div>').join("")||'<p class="teacher-empty">هنوز تکلیف یا امتحانی برای مدرسه ثبت نشده است.</p>')+'</section>';
 }
 function principalSecurity(){
- return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("shield-check")+' مدیریت رمز عبور</h2><p>تنظیم رمز جدید برای حساب معلم یا دانش‌آموز همین مدرسه</p></div></div><form id="resetMemberForm" class="portal-form"><label>نام کاربری حساب<input name="username" dir="ltr" pattern="(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})" required></label><label>رمز عبور جدید (حداقل ۱۰ کاراکتر)<input name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label><button type="submit" class="portal-primary">'+principalIcon("shield-check")+' تغییر رمز عبور</button></form></section>';
+ return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("shield-check")+' مدیریت رمز عبور</h2><p>تنظیم رمز جدید برای حساب معلم یا دانش‌آموز همین مدرسه</p></div></div><form id="resetMemberForm" class="portal-form"><label>نام کاربری حساب<input name="username" dir="ltr" pattern="(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})" required></label><label>رمز عبور جدید (حداقل ۱۰ کاراکتر)<input name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label><button type="submit" class="portal-primary">'+principalIcon("shield-check")+' تغییر رمز عبور</button></form></section>'+principalDeleteSchool();
+}
+
+function principalDeleteSchool(){
+ if(!school||school.created_by!==user?.id)return "";
+ return '<details class="portal-card principal-disclosure school-danger-card">'+
+ '<summary>'+principalIcon("trash-2")+' حذف کامل هنرستان و اطلاعات آن '+principalIcon("chevron-down")+'</summary>'+
+ '<p>این اقدام غیرقابل بازگشت است. کلاس‌ها، افراد عضو این مدرسه، تکالیف، امتحانات و انتساب معلمان حذف می‌شوند. حساب مدیر و حساب‌هایی که در مدارس دیگر عضو هستند حفظ می‌شوند.</p>'+
+ '<form id="deleteSchoolForm" class="portal-form"><label>نام دقیق هنرستان را برای تأیید وارد کنید: <strong>'+esc(school.name)+'</strong>'+
+ '<input name="school_name" required autocomplete="off" placeholder="'+esc(school.name)+'"></label>'+
+ '<label class="school-delete-ack"><input name="ack" type="checkbox" value="yes" required><span>می‌دانم این حذف دائمی است و امکان بازگشت ندارد.</span></label>'+
+ '<button type="submit" class="school-delete-button">'+principalIcon("trash-2")+' حذف قطعی این هنرستان</button></form></details>';
 }
 function principalDatabase(){return window.STUNER_SCHOOL_DB_IMPORT?.render?.()||'<p>بخش ورود پایگاه داده بارگذاری نشد؛ صفحه را تازه‌سازی کنید.</p>';}
 function dashboard(){show();directorUi()}
@@ -312,6 +324,20 @@ async function handle(form){
    if(result)result.innerHTML='<div class="portal-invite"><strong>کد دعوت معلم ساخته شد.</strong><p>این کد را فقط به همان معلم بده تا در صفحه «مدارس من» وارد کند. کد تا ۱۴ روز معتبر است.</p><code dir="ltr">'+esc(invite.data)+'</code></div>';
    return;
   }
+  if(form.id==="deleteSchoolForm"){
+ if(!school||school.created_by!==user?.id)throw Error("مجوز حذف این هنرستان را ندارید.");
+ const name=String(d.get("school_name")||"").trim();
+ if(name!==school.name)throw Error("نام واردشده با نام هنرستان مطابقت ندارد.");
+ if(d.get("ack")!=="yes")throw Error("ابتدا تأیید حذف را انتخاب کنید.");
+ if(!window.confirm("آیا از حذف دائمی «"+school.name+"» و همه اطلاعات وابسته به آن اطمینان دارید؟"))return;
+ const deleted=await provision({mode:"delete_school",school_id:school.id,confirm_name:name,confirm_delete:true},true);
+ sessionStorage.removeItem("stuner.school");
+ await sync();
+ message(deleted.remaining_orphan_accounts?
+ "مدرسه و اطلاعات آن حذف شد؛ پاکسازی "+deleted.remaining_orphan_accounts+" حساب بدون مدرسه کامل نشد.":
+ "هنرستان و تمام اطلاعات وابسته به آن حذف شدند.");
+ return;
+}
   if(form.id==="resetMemberForm"){
    const username=String(d.get("username")||"").trim().toLowerCase();
    await provision({mode:"reset_member",school_id:school.id,username,password:String(d.get("password")||"")},true);
