@@ -73,7 +73,23 @@ function view(){let html='<p class="stuner-db-status">'+esc(st.msg||"فایل پ
 function draw(){let r=document.getElementById("stunerDbRoot");if(r){r.innerHTML=view();window.STUNER_ICONS?.refresh?.()}}
 async function access(bytes){const [mdb,bf]=await Promise.all([import("https://esm.sh/mdb-reader@3.2.0?bundle&target=es2022"),import("https://esm.sh/buffer@6.0.3?bundle")]);const reader=new mdb.default(bf.Buffer.from(bytes)),list=reader.getTableNames().filter(n=>!/^msys/i.test(n));if(list.length>80)throw Error("پایگاه داده بیش از ۸۰ جدول دارد.");let count=0;return list.map(name=>{const t=reader.getTable(name);count+=t.rowCount;if(count>30000)throw Error("پایگاه داده بیش از ۳۰ هزار ردیف دارد و باید به صورت مرحله‌ای منتقل شود.");const cols=t.getColumns().filter(x=>!["binary","ole","complex"].includes(x.type)).map(x=>x.name);return {name,columns:cols,rows:t.getData({columns:cols}).map(r=>Object.fromEntries(cols.map(c=>[c,r[c]??""])))}})}
 async function sqlite(bytes){if(!window.initSqlJs)await new Promise((ok,bad)=>{let t=document.createElement("script");t.src="https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.js";t.onload=ok;t.onerror=()=>bad(Error("موتور SQLite بارگذاری نشد."));document.head.appendChild(t)});const SQL=await window.initSqlJs({locateFile:()=> "https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/sql-wasm.wasm"}),db=new SQL.Database(bytes);const q=s=>'"'+s.replace(/"/g,'""')+'"';try{const result=db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");const tables=result[0]?.values.map(row=>String(row[0]))||[];if(tables.length>80)throw Error("پایگاه داده بیش از ۸۰ جدول دارد.");let count=0;return tables.map(name=>{const info=db.exec("SELECT * FROM "+q(name)+" LIMIT 30001")[0],columns=info?.columns||db.exec("PRAGMA table_info("+q(name)+")")[0]?.values.map(v=>String(v[1]))||[],values=info?.values||[];count+=values.length;if(count>30000)throw Error("تعداد رکوردها بیش از ۳۰ هزار است.");return {name,columns,rows:values.map(v=>Object.fromEntries(columns.map((c,i)=>[c,v[i] instanceof Uint8Array?"":v[i]??""])))}})}finally{db.close()}}
-async function load(file){if(st.busy)return;st.db=null;st.plan=null;st.log=[];st.file=file.name;st.msg="در حال خواندن جدول‌ها…";draw();try{if(file.size>35*1024*1024)throw Error("حجم پایگاه داده نباید بیش از ۳۵ مگابایت باشد.");const ext=file.name.toLowerCase().split(".").pop(),bytes=new Uint8Array(await file.arrayBuffer());if(["accdb","mdb"].includes(ext))st.db=await access(bytes);else if(["db","sqlite","sqlite3"].includes(ext))st.db=await sqlite(bytes);else throw Error("این فرمت پشتیبانی نمی‌شود.");if(!st.db.length)throw Error("هیچ جدول قابل خواندن وجود ندارد.");for(const k of Object.keys(names))st.tables[k]=st.db.find(t=>names[k].some(n=>norm(t.name)===norm(n)))?.name||st.db.find(t=>names[k].some(n=>norm(t.name).includes(norm(n))))?.name||"";auto();st.msg="جدول‌ها شناسایی شدند؛ ستون‌ها را بررسی و سپس پیش‌نمایش بگیرید."}catch(e){st.db=null;st.msg=e.message||"فایل پایگاه داده قابل خواندن نیست."}draw()}
+async function load(file){if(st.busy)return;st.db=null;st.plan=null;st.log=[];st.file=file.name;st.msg="در حال خواندن جدول‌ها…";draw();try{if(file.size>35*1024*1024)throw Error("حجم پایگاه داده نباید بیش از ۳۵ مگابایت باشد.");const ext=file.name.toLowerCase().split(".").pop(),bytes=new Uint8Array(await file.arrayBuffer());if(["accdb","mdb"].includes(ext))st.db=await access(bytes);else if(["db","sqlite","sqlite3"].includes(ext))st.db=await sqlite(bytes);else throw Error("این فرمت پشتیبانی نمی‌شود.");if(!st.db.length)throw Error("هیچ جدول قابل خواندن وجود ندارد.");function likely(t,k){
+  const has=f=>!!col(t.columns,f);
+  if(k==="majors")return has("majorId")&&has("majorName")&&!has("classId");
+  if(k==="subjects")return has("subjectId")&&has("subjectName")&&!has("teacherId");
+  if(k==="teaching")return has("teacherId")&&has("classId")&&(has("subject")||has("subjectId"));
+  if(k==="links")return has("teacherId")&&has("classId")&&!has("subject")&&!has("subjectId");
+  if(k==="classes")return (has("className")||has("grade"))&&has("grade")&&!has("national");
+  if(k==="students")return has("national")&&has("classId");
+  if(k==="teachers")return has("national")&&has("mobile")&&!has("classId");
+  return false;
+ }
+ for(const k of Object.keys(names)){
+  const found=st.db.find(t=>names[k].some(n=>norm(t.name)===norm(n)))||
+   st.db.find(t=>names[k].some(n=>norm(t.name).includes(norm(n))))||
+   st.db.find(t=>likely(t,k));
+  st.tables[k]=found?.name||"";
+ }auto();st.msg="جدول‌ها شناسایی شدند؛ ستون‌ها را بررسی و سپس پیش‌نمایش بگیرید."}catch(e){st.db=null;st.msg=e.message||"فایل پایگاه داده قابل خواندن نیست."}draw()}
 const value=(r,m,k)=>m[k]?String(r[m[k]]??"").trim():"";
 function parsePlan(){
  if(!st.db)throw Error("فایل پایگاه داده آماده نیست.");
@@ -200,7 +216,15 @@ function parsePlan(){
   });
   return out;
  }
- const students=roster("students"),teachers=roster("teachers");
+ const rawStudents=roster("students"),teachers=roster("teachers");
+ const students=rawStudents.filter(row=>{
+  if(["secondary","vocational"].includes(school.kind)&&!row.classroom?.major){
+   errors.push("رشته تحصیلی برای دانش‌آموز "+row.first+" "+row.last+" و کلاس "+(row.classroom?.name||"")+
+    " شناسایی نشد؛ تا تکمیل ارتباط رشته و کلاس، حساب ناقص ساخته نمی‌شود.");
+   return false;
+  }
+  return true;
+ });
  if(!cl&&!selected("students")&&!selected("teachers")&&!majorTable)throw Error("هیچ جدول رشته، کلاس یا عضو پیدا نشد.");
  const teachersById=new Map(),teachersByNational=new Map();
  for(const teacher of teachers){
