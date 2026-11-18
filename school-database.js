@@ -76,94 +76,193 @@ async function sqlite(bytes){if(!window.initSqlJs)await new Promise((ok,bad)=>{l
 async function load(file){if(st.busy)return;st.db=null;st.plan=null;st.log=[];st.file=file.name;st.msg="در حال خواندن جدول‌ها…";draw();try{if(file.size>35*1024*1024)throw Error("حجم پایگاه داده نباید بیش از ۳۵ مگابایت باشد.");const ext=file.name.toLowerCase().split(".").pop(),bytes=new Uint8Array(await file.arrayBuffer());if(["accdb","mdb"].includes(ext))st.db=await access(bytes);else if(["db","sqlite","sqlite3"].includes(ext))st.db=await sqlite(bytes);else throw Error("این فرمت پشتیبانی نمی‌شود.");if(!st.db.length)throw Error("هیچ جدول قابل خواندن وجود ندارد.");for(const k of Object.keys(names))st.tables[k]=st.db.find(t=>names[k].some(n=>norm(t.name)===norm(n)))?.name||st.db.find(t=>names[k].some(n=>norm(t.name).includes(norm(n))))?.name||"";auto();st.msg="جدول‌ها شناسایی شدند؛ ستون‌ها را بررسی و سپس پیش‌نمایش بگیرید."}catch(e){st.db=null;st.msg=e.message||"فایل پایگاه داده قابل خواندن نیست."}draw()}
 const value=(r,m,k)=>m[k]?String(r[m[k]]??"").trim():"";
 function parsePlan(){
- if(!st.db)throw Error("فایل پایگاه داده هنوز آماده نشده است.");
+ if(!st.db)throw Error("فایل پایگاه داده آماده نیست.");
  const school=st.staging?draftSchool():st.ctx?.school;
- if(!school)throw Error("مدرسه مشخص نیست.");
- const classes=[],errors=[],byId=new Map(),byName=new Map(),byKey=new Map();
- const gradeLabels={"1":"اول","2":"دوم","3":"سوم","4":"چهارم","5":"پنجم","6":"ششم","7":"هفتم","8":"هشتم","9":"نهم","10":"دهم","11":"یازدهم","12":"دوازدهم"};
- const canonicalGrade=v=>gradeLabels[norm(digits(v).replace(/^پایه\s*/,""))]||String(v||"").trim();
+ if(!school)throw Error("هنرستان انتخاب نشده است.");
+ const errors=[],classes=[],byId=new Map(),byName=new Map(),byKey=new Map(),catalogMajors=new Map(),catalogSubjects=new Map(),majorSet=new Map();
  const validGrades={vocational:["دهم","یازدهم","دوازدهم"],secondary:["دهم","یازدهم","دوازدهم"],middle:["هفتم","هشتم","نهم"],elementary:["اول","دوم","سوم","چهارم","پنجم","ششم"]};
+ const standardGrades={"1":"اول","2":"دوم","3":"سوم","4":"چهارم","5":"پنجم","6":"ششم","7":"هفتم","8":"هشتم","9":"نهم","10":"دهم","11":"یازدهم","12":"دوازدهم"};
+ const canonicalGrade=v=>{
+  const raw=norm(digits(v).replace(/^پایه\s*/,""));
+  if(standardGrades[raw])return standardGrades[raw];
+  return (validGrades[school.kind]||[]).find(x=>grade(x)===raw)||String(v||"").trim();
+ };
+ function fromName(name){
+  const text=digits(name);
+  const named=(validGrades[school.kind]||[]).find(g=>text.includes(g));
+  if(named)return named;
+  const match=text.match(/(?:^|[^\d])([1-9]|1[012])(?:[^\d]|$)/);
+  return match?canonicalGrade(match[1]):"";
+ }
+ function rememberMajor(name){
+  const value=String(name||"").trim();
+  if(value.length>=2&&value.length<=90&&school.kind!=="middle"&&school.kind!=="elementary")majorSet.set(norm(value),value);
+  return value;
+ }
+ const majorTable=selected("majors"),mm=st.cols.majors||{};
+ if(majorTable)majorTable.rows.forEach((row,i)=>{
+  const code=value(row,mm,"id"),name=value(row,mm,"majorName");
+  if(!name){errors.push("فهرست رشته‌ها، ردیف "+(i+1)+": عنوان رشته مشخص نیست.");return}
+  if(name.trim().length<2||name.length>90){errors.push("عنوان رشته در ردیف "+(i+1)+" معتبر نیست.");return}
+  rememberMajor(name);
+  if(code)catalogMajors.set(norm(code),name.trim());
+  catalogMajors.set(norm(name),name.trim());
+ });
+ function majorName(raw,foreign){
+  for(const key of [foreign,raw]){
+   if(key&&catalogMajors.has(norm(key)))return rememberMajor(catalogMajors.get(norm(key)));
+  }
+  const v=String(raw||"").trim();
+  if(v&&!/^\d+$/.test(digits(v)))return rememberMajor(v);
+  if(foreign||v)errors.push("شناسه رشته «"+(foreign||v)+"» به عنوان رشته مرتبط نشد؛ ستون‌های فهرست رشته‌ها را بررسی کنید.");
+  return "";
+ }
+ const subjectTable=selected("subjects"),sm=st.cols.subjects||{};
+ if(subjectTable)subjectTable.rows.forEach((row,i)=>{
+  const id=value(row,sm,"id"),name=value(row,sm,"subjectName");
+  if(!name){errors.push("فهرست درس‌ها، ردیف "+(i+1)+": نام درس مشخص نیست.");return}
+  if(id)catalogSubjects.set(norm(id),name);
+  catalogSubjects.set(norm(name),name);
+ });
+ function subjectName(raw,foreign){
+  for(const candidate of [foreign,raw])if(candidate&&catalogSubjects.has(norm(candidate)))return catalogSubjects.get(norm(candidate));
+  const title=String(raw||"").trim();
+  if(title&&!/^\d+$/.test(digits(title))&&title.length<=120)return title;
+  if(foreign||title)errors.push("شناسه درس «"+(foreign||title)+"» به نام درس تبدیل نشد.");
+  return "";
+ }
  function add(raw){
-  const name=String(raw.name||"").trim(),normalizedGrade=canonicalGrade(raw.grade);
-  const g=school.grades?.find(x=>grade(x)===grade(normalizedGrade))||normalizedGrade;
+  const name=String(raw.name||"").trim();
+  const g=school.grades?.find(x=>grade(x)===grade(canonicalGrade(raw.grade)))||canonicalGrade(raw.grade);
   const m=school.majors?.find(x=>norm(x)===norm(raw.major))||String(raw.major||"").trim();
-  if(!name||!g){errors.push("کلاس فاقد عنوان یا پایه است.");return null}
-  if(school.kind&&!(validGrades[school.kind]||[]).includes(g)){errors.push("پایه "+g+" با مقطع مدرسه سازگار نیست.");return null}
+  if(!name||!g){errors.push("کلاس فاقد عنوان یا پایه است: "+(name||"—"));return null}
+  if(!(validGrades[school.kind]||[]).includes(g)){errors.push("پایه «"+g+"» با نوع مدرسه سازگار نیست.");return null}
   if(school.grades?.length&&!school.grades.some(x=>grade(x)===grade(g))){errors.push("پایه "+g+" در مدرسه تعریف نشده است.");return null}
-  if(m&&school.majors?.length&&!school.majors.some(x=>norm(x)===norm(m))){errors.push("رشته "+m+" در مدرسه تعریف نشده است.");return null}
-  const key=norm(name)+"|"+grade(g)+"|"+norm(m);
+  const key=norm(name)+"|"+grade(g);
   let item=byKey.get(key);
-  if(!item){item={name,grade:g,major:m,id:null};byKey.set(key,item);classes.push(item)}
-  byName.set(norm(item.name),item);
+  if(item&&m&&item.major&&norm(item.major)!==norm(m)){errors.push("رشته‌های متناقض برای کلاس "+name+"؛ "+item.major+" / "+m);return null}
+  if(!item){
+   item={name,grade:g,major:m,id:null};
+   byKey.set(key,item);classes.push(item);
+   if(!byName.has(norm(name)))byName.set(norm(name),[]);
+   byName.get(norm(name)).push(item);
+  }else if(m&&!item.major)item.major=m;
+  if(item.major)rememberMajor(item.major);
   return item;
  }
- const cls=selected("classes"),cm=st.cols.classes;
- if(cls)cls.rows.forEach((r,i)=>{
-  const name=value(r,cm,"className"),g=value(r,cm,"grade"),m=value(r,cm,"major"),id=value(r,cm,"id");
-  const item=add({name:name||[g,m].filter(Boolean).join(" - "),grade:g,major:m});
-  if(item&&id)byId.set(norm(id),item);
+ const cl=selected("classes"),cm=st.cols.classes||{};
+ if(cl)cl.rows.forEach((r,i)=>{
+  const className=value(r,cm,"className"),g=value(r,cm,"grade")||fromName(className);
+  const major=majorName(value(r,cm,"major"),value(r,cm,"majorId"));
+  const name=className||[g,major].filter(Boolean).join(" - ");
+  const item=add({name,grade:g,major});
+  const classCode=value(r,cm,"id");
+  if(item&&classCode)byId.set(norm(classCode),item);
  });
- const seen=new Set(),known=new Set(st.ctx?.known||[]);
+ function findClass(code,name,gradeHint){
+  if(code&&byId.has(norm(code)))return byId.get(norm(code));
+  const options=byName.get(norm(name))||[];
+  if(options.length===1)return options[0];
+  if(gradeHint)return options.find(c=>grade(c.grade)===grade(gradeHint))||null;
+  return null;
+ }
+ const known=new Set(st.ctx?.known||[]),seen=new Set();
  function roster(kind){
-  const table=selected(kind);
-  if(!table)return [];
+  const tab=selected(kind);if(!tab)return [];
   const map=st.cols[kind],out=[];
-  table.rows.forEach((r,i)=>{
+  tab.rows.forEach((r,i)=>{
    let f=value(r,map,"first"),l=value(r,map,"last");
-   if((!f||!l)&&map.full){const parts=value(r,map,"full").split(/\s+/).filter(Boolean);if(parts.length>1){f=parts[0];l=parts.slice(1).join(" ")}}
-   const rawCode=digits(value(r,map,"national")).replace(/\s/g,"");
-   const code=/^\d{9}$/.test(rawCode)?"0"+rawCode:rawCode;
-   const password=phone(value(r,map,"mobile"));
+   if((!f||!l)&&map.full){const names=value(r,map,"full").split(/\s+/).filter(Boolean);if(names.length>1){f=names[0];l=names.slice(1).join(" ")}}
+   const rawId=digits(value(r,map,"national")).replace(/\s/g,""),username=/^\d{9}$/.test(rawId)?"0"+rawId:rawId;
+   const mobile=phone(value(r,map,"mobile")),existing=kind==="teachers"&&known.has(username);
+   const err=[];
+   if(!f||l.length<2||f.length+l.length>118)err.push("نام و نام خانوادگی نامعتبر");
+   if(!/^\d{10}$/.test(username))err.push("کد ملی ده‌رقمی نیست");
+   if(!existing&&!/^0[1-9]\d{9}$/.test(mobile))err.push("شماره تماس معتبر نیست");
+   if(seen.has(username))err.push("شناسه ملی تکراری در فایل");
+   if(known.has(username)&&!existing)err.push("این حساب در مدرسه موجود است");
    let classroom=null;
    if(kind==="students"){
-    const ref=value(r,map,"classId"),cn=value(r,map,"className");
-    classroom=byId.get(norm(ref))||byName.get(norm(cn))||null;
-    if(!classroom){const g=value(r,map,"grade"),m=value(r,map,"major");if(g)classroom=add({name:cn||[g,m].filter(Boolean).join(" - "),grade:g,major:m})}
+    const id=value(r,map,"classId"),name=value(r,map,"className"),g=value(r,map,"grade");
+    const major=majorName(value(r,map,"major"),value(r,map,"majorId"));
+    classroom=findClass(id,name,g);
+    if(!classroom&&g)classroom=add({name:name||[canonicalGrade(g),major].filter(Boolean).join(" - "),grade:g,major});
+    if(classroom&&major){
+     if(!classroom.major){classroom.major=major;rememberMajor(major)}
+     else if(norm(classroom.major)!==norm(major))err.push("رشته هنرجو با رشته کلاس یکسان نیست");
+    }
+    if(classroom&&g&&grade(g)!==grade(classroom.grade))err.push("پایه دانش‌آموز با کلاس تطابق ندارد");
+    if(!classroom)err.push("کلاس دانش‌آموز شناسایی نشد");
    }
-   const rowErrors=[];
-   if(!f||l.length<2||f.length+l.length>118)rowErrors.push("نام نامعتبر");
-   if(!/^\d{10}$/.test(code))rowErrors.push("شناسه ملی ده‌رقمی نیست");
-   if(!/^0[1-9]\d{9}$/.test(password))rowErrors.push("شماره تماس معتبر نیست");
-   if(known.has(code))rowErrors.push("این حساب در مدرسه ثبت شده است");
-   if(seen.has(code))rowErrors.push("کد ملی تکراری است");
-   if(kind==="students"&&!classroom)rowErrors.push("کلاس دانش‌آموز شناسایی نشد");
-   if(rowErrors.length)errors.push((kind==="students"?"دانش‌آموز":"معلم")+" ردیف "+(i+1)+": "+rowErrors.join("، "));
-   else out.push({first:f,last:l,username:code,password,classroom,dbId:value(r,map,"id"),source:r,classrooms:[]});
-   if(code)seen.add(code);
+   if(err.length)errors.push((kind==="students"?"دانش‌آموز":"معلم")+" ردیف "+(i+1)+": "+err.join("، "));
+   else out.push({first:f,last:l,username,password:mobile,existing,dbId:value(r,map,"id"),source:r,classroom,classrooms:[],subjects:[]});
+   if(username)seen.add(username);
   });
   return out;
  }
  const students=roster("students"),teachers=roster("teachers");
- if(!selected("students")&&!selected("teachers")&&!cls)throw Error("حداقل یک جدول کلاس، دانش‌آموز یا معلم انتخاب کنید.");
- const byTeacherId=new Map(),byNational=new Map();
+ if(!cl&&!selected("students")&&!selected("teachers")&&!majorTable)throw Error("هیچ جدول رشته، کلاس یا عضو پیدا نشد.");
+ const teachersById=new Map(),teachersByNational=new Map();
  for(const teacher of teachers){
-  if(teacher.dbId)byTeacherId.set(norm(teacher.dbId),teacher);
-  byNational.set(norm(teacher.username),teacher);
+  if(teacher.dbId)teachersById.set(norm(teacher.dbId),teacher);
+  teachersByNational.set(norm(teacher.username),teacher);
  }
- function attach(teacher,reference,source){
-  const ref=String(reference||"").trim();
-  if(!ref)return;
-  const classroom=byId.get(norm(ref))||byName.get(norm(ref));
-  if(!classroom){errors.push("کلاس تدریس "+ref+" برای "+teacher.first+" "+teacher.last+" در "+source+" شناسایی نشد.");return}
+ function getTeacher(id,national){
+  const n=digits(String(national||""));
+  return teachersById.get(norm(id))||teachersByNational.get(norm(n))||teachersByNational.get(norm(id))||null;
+ }
+ function attachClass(teacher,id,name,source){
+  const classroom=findClass(id,name);
+  if(!classroom){errors.push("ارتباط تدریس: کلاس «"+(id||name)+"» برای "+teacher.first+" "+teacher.last+" در "+source+" پیدا نشد.");return null}
   if(!teacher.classrooms.includes(classroom))teacher.classrooms.push(classroom);
+  return classroom;
  }
- const teacherMap=st.cols.teachers;
- teachers.forEach(t=>{
-  for(const key of ["classId","className","classIds","classNames"]){
-   const raw=value(t.source,teacherMap,key);
-   if(raw)raw.split(/[|,،;؛\n]+/).map(x=>x.trim()).filter(Boolean).forEach(ref=>attach(t,ref,"جدول معلمان"));
+ function attachSubject(teacher,classroom,title,source){
+  if(!title)return;
+  if(!classroom){errors.push("دبیرِ درس «"+title+"» در "+source+" کلاس مشخصی ندارد؛ ثبت نشد.");return}
+  if(!teacher.subjects.some(x=>x.classroom===classroom&&norm(x.subject)===norm(title)))teacher.subjects.push({classroom,subject:title});
+ }
+ const tmap=st.cols.teachers;
+ for(const teacher of teachers)for(const k of ["classId","className","classIds","classNames"]){
+  const valueList=value(teacher.source,tmap,k);
+  if(!valueList)continue;
+  valueList.split(/[|,،;؛\n]+/).map(x=>x.trim()).filter(Boolean).forEach(ref=>attachClass(teacher,k==="classId"||k==="classIds"?ref:"",k==="className"||k==="classNames"?ref:"","جدول معلمان"));
+ }
+ function linkedTable(tableName,source){
+  const table=selected(tableName),map=st.cols[tableName];
+  if(!table)return;
+  table.rows.forEach((row,i)=>{
+   const teacher=getTeacher(value(row,map,"teacherId"),value(row,map,"teacherNational"));
+   if(!teacher){errors.push(source+" ردیف "+(i+1)+": شناسه معلم شناسایی نشد.");return}
+   const cid=value(row,map,"classId"),cname=value(row,map,"className");
+   let classroom=null;
+   if(cid||cname)classroom=attachClass(teacher,cid,cname,source);
+   const subject=subjectName(value(row,map,"subject"),value(row,map,"subjectId"));
+   if(subject){
+    if(!classroom&&teacher.classrooms.length===1)classroom=teacher.classrooms[0];
+    attachSubject(teacher,classroom,subject,source);
+   }
+  });
+ }
+ linkedTable("links","رابط معلم/کلاس");
+ // Some exports use one table for both class links and subject links.
+ if(st.tables.teaching!==st.tables.links)linkedTable("teaching","انتساب دبیر/درس");
+ for(const teacher of teachers){
+  const name=value(teacher.source,tmap,"subject"),id=value(teacher.source,tmap,"subjectId");
+  if(!name&&!id)continue;
+  const titles=String(name||id).split(/[|,،;؛\n]+/).map(x=>x.trim()).filter(Boolean);
+  for(const title of titles){
+   const resolved=subjectName(name?title:"",name?"":title);
+   if(!resolved)continue;
+   // A subject declared for a teacher and explicit class list is usable for each listed class.
+   if(!teacher.classrooms.length){errors.push("درس "+resolved+" برای "+teacher.first+" "+teacher.last+" کلاس معین ندارد.");continue}
+   for(const classroom of teacher.classrooms)attachSubject(teacher,classroom,resolved,"جدول معلمان");
   }
- });
- const links=selected("links"),lm=st.cols.links;
- if(links)links.rows.forEach((r,i)=>{
-  const id=value(r,lm,"teacherId"),national=digits(value(r,lm,"teacherNational"));
-  const teacher=byTeacherId.get(norm(id))||byNational.get(norm(national))||byNational.get(norm(id));
-  if(!teacher){errors.push("ارتباط معلم و کلاس، ردیف "+(i+1)+": معلم ناشناخته است.");return}
-  const ref=value(r,lm,"classId")||value(r,lm,"className");
-  if(!ref){errors.push("ارتباط معلم و کلاس، ردیف "+(i+1)+": کلاس مشخص نیست.");return}
-  attach(teacher,ref,"جدول انتساب");
- });
- return {classes,students,teachers,teacherLinks:teachers.reduce((n,t)=>n+t.classrooms.length,0),errors};
+ }
+ // Include all program names, even if no student has yet enrolled in that major.
+ for(const c of classes)if(c.major)rememberMajor(c.major);
+ return {classes,students,teachers,majors:[...majorSet.values()],teacherLinks:teachers.reduce((sum,t)=>sum+t.classrooms.length,0),
+  subjectLinks:teachers.reduce((sum,t)=>sum+t.subjects.length,0),errors};
 }
 function preview(){try{st.plan=parsePlan();st.msg="پیش‌نمایش آماده است. پیش از تأیید فهرست خطاها را بررسی کنید."}catch(e){st.plan=null;st.msg=e.message}draw()}
 async function batch(list,role){for(let at=0;at<list.length;at+=20){let items=list.slice(at,at+20),rows=items.map(r=>({username:r.username,password:r.password,display_name:r.first+" "+r.last,grade:r.classroom?.grade||"",major:r.classroom?.major||"",class_id:role==="student"?r.classroom.id:null,...(role==="teacher"?{class_ids:(r.classrooms||[]).map(c=>c.id)}:{})}));let response=await st.ctx.submitBatch({mode:"import_members",school_id:st.ctx.school.id,role,rows});if(!Array.isArray(response.results)||response.results.length!==rows.length)throw Error("پاسخ سرور ناقص است. حساب‌ها را بررسی کنید.");response.results.forEach((x,i)=>{st.log.push((x.created?"ثبت شد: ":"ثبت نشد: ")+items[i].first+" "+items[i].last+(x.error?" — "+x.error:""));items[i].password=""});st.msg="تکمیل "+Math.min(at+20,list.length)+" از "+list.length+" حساب "+(role==="student"?"دانش‌آموز":"معلم");draw()}}
