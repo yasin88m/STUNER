@@ -61,7 +61,7 @@ function updateSchoolPreview(){
 
 function show(){cover.hidden=false;app.style.display="none";on.hidden=true}
 function message(v){const x=document.getElementById("portalMessage");if(x)x.textContent=v}
-function head(title){return '<div class="portal-head"><strong>STUNER · استیونر</strong><h1>'+esc(title)+'</h1>'+(user?'<button data-action="logout" class="portal-secondary">خروج</button>':'')+'</div>'}
+function head(title){return '<div class="portal-head"><div class="portal-brand"><img src="./brand-logo.svg" alt="لوگوی استیونر"><div><strong>STUNER</strong><small>استیونر | همراه مسیر پیشرفت</small></div></div><div class="portal-head-title"><h1>'+esc(title)+'</h1></div>'+(user?'<button data-action="logout" class="portal-secondary">خروج</button>':'')+'</div>'}
 function login(){
  show();current=null;
  el.innerHTML=head("ورود به سامانه مدارس")+'<section class="portal-card"><div class="portal-roles"><button data-role="student">دانش‌آموز</button><button data-role="teacher">معلم</button><button data-role="principal">مدیر مدرسه</button></div><form id="loginForm" class="portal-form"><label>نام کاربری<input name="username" type="text" autocomplete="username" dir="ltr" required minlength="4" maxlength="32" pattern="(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})" placeholder="navid_1405"></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" dir="ltr" required></label><button class="portal-primary">ورود به استیونر</button></form><div class="portal-actions"><button data-action="signup">ساخت حساب مدیر مدرسه</button></div><p class="portal-note">حساب معلم و دانش‌آموز توسط مدیر مدرسه ساخته می‌شود؛ ایمیل نیاز نیست. دسترسی هر نقش در سرور بررسی می‌شود.</p><p class="portal-error" id="portalMessage" aria-live="polite"></p></section>';
