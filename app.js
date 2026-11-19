@@ -334,6 +334,7 @@ function applyStudentTheme(){
  Object.entries(vars).forEach(([k,v])=>app.style.setProperty(k,v));
  app.style.backgroundColor=chosen.light;
  const splash=$("#stunerSplash");if(splash){Object.entries(vars).forEach(([k,v])=>splash.style.setProperty(k,v));splash.style.color=chosen.main;}
+ const onboarding=$("#onboarding");if(onboarding){Object.entries(vars).forEach(([k,v])=>onboarding.style.setProperty(k,v));}
 }
 function renderThemePicker(){
  const active=state.preferences.theme||"سبز جنگلی";
