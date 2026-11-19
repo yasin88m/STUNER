@@ -333,6 +333,7 @@ function applyStudentTheme(){
  const vars={"--green-950":chosen.dark,"--green-900":chosen.dark,"--green-800":chosen.main,"--green-700":chosen.main,"--green-600":chosen.main,"--green-500":chosen.main,"--mint-100":chosen.light,"--mint-150":chosen.light,"--mint-200":chosen.soft,"--mint-300":chosen.soft,"--bg":chosen.light,"--theme-rgb":rgb(chosen.main),"--theme-dark-rgb":rgb(chosen.dark),"--ink":chosen.dark,"--line":chosen.soft,"--shadow":"0 12px 32px rgba("+rgb(chosen.main)+",.07)","--shadow-soft":"0 5px 18px rgba("+rgb(chosen.main)+",.055)"};
  Object.entries(vars).forEach(([k,v])=>app.style.setProperty(k,v));
  app.style.backgroundColor=chosen.light;
+ const themeMeta=document.querySelector('meta[name="theme-color"]');if(themeMeta)themeMeta.setAttribute("content",chosen.main);
  const splash=$("#stunerSplash");if(splash){Object.entries(vars).forEach(([k,v])=>splash.style.setProperty(k,v));splash.style.color=chosen.main;}
  const onboarding=$("#onboarding");if(onboarding){Object.entries(vars).forEach(([k,v])=>onboarding.style.setProperty(k,v));}
 }
