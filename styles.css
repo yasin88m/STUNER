@@ -416,7 +416,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 @media(prefers-reduced-motion:reduce){.splash-brand img,.splash-loader span{animation:none}.stuner-splash{transition:none}}
 
 /* Dynamic student theme: all green accents and brand marks follow the selected palette */
-#app{--theme-rgb:18,98,70;--theme-dark-rgb:11,62,44;--green-950:var(--green-950);--green-900:var(--green-900);--green-800:var(--green-800);--green-700:var(--green-700);--green-600:var(--green-600);--green-500:var(--green-500)}
+#app{--theme-rgb:18,98,70;--theme-dark-rgb:11,62,44}
 #app .brand-mark{color:var(--green-800);background:var(--mint-150)}
 #app .brand{color:var(--green-900)}
 #app .theme-swatch.selected small{color:var(--green-800)}
@@ -426,3 +426,6 @@ button:disabled{opacity:.5;cursor:not-allowed}
 #stunerSplash .splash-loader span{background:linear-gradient(90deg,var(--green-900),var(--green-500))}
 .brand-mark svg{display:block;width:100%;height:100%;overflow:visible}
 .splash-brand svg{width:105px;height:105px;object-fit:contain;animation:splash-breathe 1.8s ease-in-out infinite}
+
+#onboarding .brand-mark{color:var(--green-800)}
+#onboarding .brand-mark svg{display:block;width:100%;height:100%}
