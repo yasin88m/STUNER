@@ -307,16 +307,20 @@ function officialBookUrl(value){
   return url.href;
  }catch{return official}
 }
+function paadarsGradeUrl(value){
+ const grade=String(value||"").trim();
+ const map={"اول ابتدایی":1,"دوم ابتدایی":2,"سوم ابتدایی":3,"چهارم ابتدایی":4,"پنجم ابتدایی":5,"ششم ابتدایی":6,"هفتم":7,"هشتم":8,"نهم":9,"دهم":10,"یازدهم":11,"دوازدهم":12};
+ const number=map[grade]||Number(grade.replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d)))||12;
+ return "https://paadars.com/class-"+number+"/";
+}
 function renderBooks(){
  const books=studentBooks(),student=state.student;
  const cards=books.length?books.map(b=>{
-  const direct=!!b.pdfUrl,downloadUrl=officialBookUrl(b.pdfUrl||b.url),bookPageUrl=officialBookUrl(b.url);
-  const paadarsQuery=encodeURIComponent((b.grade||student.grade||"")+" "+b.title+" فیلم حل تمرین");
-  const paadarsUrl="https://paadars.com/?s="+paadarsQuery;
-  return '<article class="card panel book-card"><span class="pill">کد کتاب: '+esc(b.code||"ثبت نشده")+'</span><strong>'+esc(b.title)+'</strong><small class="book-meta">پایه '+esc(b.grade)+' · چاپ '+esc(CURRICULUM.academicYear)+'</small><a class="primary-button small-button book-download" href="'+esc(downloadUrl)+'" '+'target="_blank" rel="noopener noreferrer"'+'>' +(direct?'↓ دانلود PDF کتاب':'دریافت PDF از پایگاه رسمی')+'</a>'+(direct?'':'<small class="book-meta">برای دریافت فایل، صفحه رسمی کتاب باز می‌شود.</small>')+'<a class="secondary-button small-button" href="'+esc(bookPageUrl)+'" target="_blank" rel="noopener noreferrer">مشاهده مشخصات کتاب ↗</a><a class="secondary-button small-button" href="'+esc(paadarsUrl)+'" target="_blank" rel="noopener noreferrer">▶ فیلم حل تمرین در پادرس</a></article>';
+  const paadarsUrl=paadarsGradeUrl(b.grade||student.grade);
+  return '<article class="card panel book-card"><span class="pill">کد کتاب: '+esc(b.code||"ثبت نشده")+'</span><strong>'+esc(b.title)+'</strong><small class="book-meta">پایه '+esc(b.grade)+' · چاپ '+esc(CURRICULUM.academicYear)+'</small><a class="primary-button small-button book-video-link" href="'+esc(paadarsUrl)+'" target="_blank" rel="noopener noreferrer">▶ مشاهده ویدئوهای آموزشی این پایه در پادرس</a><small class="book-meta">در پادرس، درس مربوط به این کتاب را انتخاب کن و وارد بخش ویدئوهای آموزشی شو.</small></article>';
  }).join(""):empty("کتابی برای این انتخاب پیدا نشد","برای این پایه و رشته در فهرست چاپ سال جاری کتاب ثبت نشده است. مشخصات تحصیلی را بررسی کن یا فهرست رسمی را ببین.","▤");
  const trackLine=student.educationLevel==="secondary"?(student.track+" · "+(student.fieldGroup?student.fieldGroup+" · ":"")+student.major):student.grade;
- return heading("کتابخانه درسی","کتاب‌های رسمی متناسب با پایه و رشته خودت.")+'<section class="card panel" style="margin-bottom:15px"><strong>'+esc(trackLine)+'</strong><p class="book-meta">سال تحصیلی '+esc(CURRICULUM.academicYear)+' · منبع: پایگاه رسمی کتاب‌های درسی</p></section><div class="section-title"><div><h2>کتاب‌های رسمی در chap.oerp.ir</h2><p>'+fa(books.length)+' کتاب رسمی برای این پایه و رشته</p></div></div><div class="dashboard-grid">'+cards+'</div>';
+ return heading("کتابخانه درسی","کتاب‌های رسمی متناسب با پایه و رشته خودت.")+'<section class="card panel" style="margin-bottom:15px"><strong>'+esc(trackLine)+'</strong><p class="book-meta">سال تحصیلی '+esc(CURRICULUM.academicYear)+' · کتاب‌های متناسب با پایه و رشته</p></section><div class="section-title"><div><h2>کتاب‌های درسی تو</h2><p>'+fa(books.length)+' کتاب برای این پایه و رشته</p></div></div><div class="dashboard-grid">'+cards+'</div>';
 }
 function renderInlineProfileEditor(){
  const s=state.student||{},username=window.STUNER_STUDENT_ACCOUNT?.username||s.username||"";
