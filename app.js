@@ -355,7 +355,7 @@ function render(){
  let views={home:renderHome,konkuria:renderKonkuria,plan:renderPlan,timer:renderTimer,tasks:renderTasks,exams:renderExams,calendar:renderCalendar,stats:renderStats,more:renderMore,profile:renderProfile,books:renderBooks};
  $("#mainContent").innerHTML=(views[page]||renderHome)();
  document.querySelectorAll(".sidebar [data-page], .bottom-nav [data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
- const konkNav=document.querySelector(".bottom-item[data-page=konkuria]");if(konkNav)konkNav.hidden=!isGradeTwelve();
+ const konkNav=document.querySelector(".bottom-item[data-page=konkuria]");if(konkNav)konkNav.hidden=!isGradeTwelve();document.querySelector(".bottom-nav")?.classList.toggle("has-konkuria",isGradeTwelve());
  window.STUNER_ICONS?.refresh?.();
  if(state.timer.running){tickerStart();paintTimer()}else if(ticker){clearInterval(ticker);ticker=null}
  if(page==="konkuria"&&state.konkuriaFocus.running){if(!konkuriaTicker)konkuriaTicker=setInterval(paintKonkuriaClock,250);paintKonkuriaClock()}else if(konkuriaTicker){clearInterval(konkuriaTicker);konkuriaTicker=null}
