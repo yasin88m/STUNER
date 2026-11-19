@@ -120,3 +120,14 @@
 .principal-list-accordion>summary{cursor:pointer;font-weight:700;color:var(--primary,#176b4b);padding:4px;list-style:none}
 .principal-list-accordion>summary::-webkit-details-marker{display:none}
 .principal-list-accordion[open]>summary{margin-bottom:10px}
+
+/* STUNER brand on user login and school portal pages */
+.portal-head{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;margin:6px 0 10px}
+.portal-brand{display:flex;align-items:center;justify-content:center;gap:11px}
+.portal-brand img{width:58px;height:58px;object-fit:contain;display:block}
+.portal-brand>div{display:grid;gap:2px;text-align:right}
+.portal-brand strong{font-size:23px;line-height:1.35;letter-spacing:.3px;color:#07513a;font-weight:900}
+.portal-brand small{font-size:10px;color:#789184;font-weight:600}
+.portal-head-title h1{font-size:20px;margin:0;color:#143f2e;font-weight:900}
+.portal-head>.portal-secondary{align-self:flex-end}
+@media(max-width:520px){.portal-brand img{width:52px;height:52px}.portal-brand strong{font-size:21px}.portal-head-title h1{font-size:18px}}
