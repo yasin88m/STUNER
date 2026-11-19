@@ -13,7 +13,7 @@ button{cursor:pointer}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(var(--theme-rgb, 53,183,126),.28);outline-offset:2px}
 button:disabled{opacity:.5;cursor:not-allowed}
 .app-shell{max-width:1440px;min-height:100vh;margin:auto;padding:0 36px}
-.topbar{height:88px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(222,233,226,.7)}
+.topbar{height:88px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(var(--theme-rgb, 222,233,226),.16)}
 .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--green-900)}
 .brand-mark{width:43px;height:43px;border-radius:15px;background:var(--mint-150);display:grid;place-items:center;color:var(--green-800);flex:none}
 .brand-mark svg{width:32px;height:32px}
