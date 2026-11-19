@@ -11,13 +11,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=29">
+  <link rel="stylesheet" href="./styles.css?v=31">
   <link rel="stylesheet" href="./school-portal.css?v=29">
   <link rel="stylesheet" href="./teacher-portal.css?v=29">
   <link rel="stylesheet" href="./school-import.css?v=29">
   <link rel="stylesheet" href="./school-database.css?v=35">
 </head>
 <body>
+  <div id="stunerSplash" class="stuner-splash" aria-label="در حال بارگذاری استیونر">
+    <div class="splash-brand"><img src="./brand-logo.svg" alt="لوگوی STUNER"><strong>STUNER</strong><small>استیونر</small></div>
+    <div class="splash-loader" role="status" aria-label="در حال بارگذاری"><span></span></div>
+  </div>
+  <script>window.addEventListener("load",function(){setTimeout(function(){var s=document.getElementById("stunerSplash");if(s){s.classList.add("is-hidden");setTimeout(function(){s.remove()},550)}},850)},{once:true});</script>
   <div id="app" class="app-shell">
     <header class="topbar">
       <a class="brand" href="#" aria-label="استیونر، صفحه خانه" data-page-link="home">
