@@ -329,9 +329,11 @@ function renderInlineProfileEditor(){
 function applyStudentTheme(){
  const app=$("#app");if(!app)return;
  const chosen=THEME_PALETTES.find(x=>x.name===state.preferences.theme)||THEME_PALETTES[0];
- const vars={"--green-950":chosen.dark,"--green-900":chosen.dark,"--green-800":chosen.main,"--green-700":chosen.main,"--green-600":chosen.main,"--green-500":chosen.main,"--mint-100":chosen.light,"--mint-150":chosen.light,"--mint-200":chosen.soft,"--mint-300":chosen.soft,"--bg":chosen.light};
+ const rgb=c=>{const h=c.replace("#","");return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)].join(",")};
+ const vars={"--green-950":chosen.dark,"--green-900":chosen.dark,"--green-800":chosen.main,"--green-700":chosen.main,"--green-600":chosen.main,"--green-500":chosen.main,"--mint-100":chosen.light,"--mint-150":chosen.light,"--mint-200":chosen.soft,"--mint-300":chosen.soft,"--bg":chosen.light,"--theme-rgb":rgb(chosen.main),"--theme-dark-rgb":rgb(chosen.dark)};
  Object.entries(vars).forEach(([k,v])=>app.style.setProperty(k,v));
  app.style.backgroundColor=chosen.light;
+ const splash=$("#stunerSplash");if(splash){Object.entries(vars).forEach(([k,v])=>splash.style.setProperty(k,v));splash.style.color=chosen.main;}
 }
 function renderThemePicker(){
  const active=state.preferences.theme||"سبز جنگلی";
