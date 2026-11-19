@@ -341,3 +341,34 @@ button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:480px){.timer-saved-total{gap:6px}.timer-saved-total strong{font-size:14px}}
 
 .brand-mark{background:transparent!important;padding:0;overflow:visible}.brand-mark img{width:100%;height:100%;display:block;object-fit:contain;border-radius:0}
+
+/* Konkuria: grade-12 study tracker */
+.konkuria-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 15px}
+.konkuria-summary>div{background:linear-gradient(145deg,#f0faf3,#fff);border:1px solid #dceee2;border-radius:17px;padding:14px;min-width:0}
+.konkuria-summary small{display:block;color:#718a7b;font-size:10px}
+.konkuria-summary strong{display:block;color:#124d37;font-size:17px;font-weight:900;margin-top:6px;overflow-wrap:anywhere}
+.konkuria-summary em{display:block;font-style:normal;color:#7d9586;font-size:9px;margin-top:3px}
+.konkuria-panel{margin-top:14px}
+.konkuria-start{max-width:420px;margin:auto;display:grid;gap:15px}
+.konkuria-focus{text-align:center;padding:8px 0 2px}
+.focus-orbit{width:min(270px,70vw);aspect-ratio:1;border-radius:50%;margin:10px auto 22px;padding:10px;background:conic-gradient(from 0deg,#62c98e,#0b6545,#b1e9c4,#62c98e);animation:focus-spin 14s linear infinite;box-shadow:0 12px 35px #0d69401b}
+.focus-orbit>div{height:100%;border-radius:50%;background:radial-gradient(circle,#fff,#f1faf4);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px}
+.focus-orbit small{font-size:11px;color:#6f8c7b}
+.focus-orbit strong{font-size:clamp(29px,8vw,42px);font-variant-numeric:tabular-nums;direction:ltr;color:#104a34}
+.focus-orbit span{font-size:13px;color:#438261;font-weight:800}
+@keyframes focus-spin{to{transform:rotate(360deg)}}
+.focus-actions{display:flex;justify-content:center;gap:9px;flex-wrap:wrap}
+.focus-actions button{min-width:145px;min-height:45px}
+.danger-button{border:1px solid #f0d7d4;background:#fff7f6;color:#a64a43;border-radius:13px;padding:10px 16px;font-weight:800}
+.konkuria-subject-list,.konkuria-history{display:grid;gap:13px}
+.konkuria-subject-row{display:grid;grid-template-columns:minmax(70px,1fr) 2fr auto;gap:10px;align-items:center}
+.konkuria-subject-row strong,.konkuria-history-row strong{font-size:11px}
+.konkuria-subject-row small,.konkuria-history-row small{font-size:10px;color:var(--muted);white-space:nowrap}
+.konkuria-bar{height:8px;background:#edf4ef;border-radius:20px;overflow:hidden}
+.konkuria-bar span{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,#9be0b3,#14784f)}
+.konkuria-history-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #edf2ee}
+.konkuria-history-row:last-child{border-bottom:0}
+.konkuria-history-row>div{display:grid;gap:3px;flex:1}
+.konkuria-history-row b{font-size:12px;color:#16563c;direction:ltr}
+.history-dot{width:9px;height:9px;border-radius:50%;background:#50ad78;box-shadow:0 0 0 4px #e8f6ed}
+@media(max-width:760px){.bottom-nav{grid-template-columns:repeat(6,minmax(0,1fr))}.bottom-nav .bottom-item small{font-size:9px}.konkuria-summary{gap:7px}.konkuria-summary>div{padding:11px 9px}.konkuria-summary strong{font-size:14px}.konkuria-subject-row{grid-template-columns:70px 1fr auto;gap:7px}}
