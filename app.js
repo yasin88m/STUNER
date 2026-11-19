@@ -335,7 +335,7 @@ function applyStudentTheme(){
 }
 function renderThemePicker(){
  const active=state.preferences.theme||"سبز جنگلی";
- return '<section class="card panel theme-panel"><div class="section-title" style="margin-top:0"><div><h2>رنگ‌بندی استیونر</h2><p>تم دلخواهت رو انتخاب کن؛ این تغییر فقط در پنل دانش‌آموز اعمال می‌شه.</p></div></div><div class="theme-swatches">'+THEME_PALETTES.map(x=>'<button type="button" class="theme-swatch '+(x.name===active?"selected":"")+'" data-theme="'+${esc(x.name)}+'" aria-label="انتخاب تم '+${esc(x.name)}+'" aria-pressed="'+(x.name===active)+'"><span style="--swatch:'+x.main+';--swatch-light:'+x.light+'"><i data-lucide="check"></i></span><small>'+${esc(x.name)}+'</small></button>').join("")+'</div></section>';
+ return '<section class="card panel theme-panel"><div class="section-title" style="margin-top:0"><div><h2>رنگ‌بندی استیونر</h2><p>تم دلخواهت رو انتخاب کن؛ این تغییر فقط در پنل دانش‌آموز اعمال می‌شه.</p></div></div><div class="theme-swatches">'+THEME_PALETTES.map(x=>'<button type="button" class="theme-swatch '+(x.name===active?"selected":"")+'" data-theme="'+esc(x.name)+'" aria-label="انتخاب تم '+esc(x.name)+'" aria-pressed="'+(x.name===active)+'"><span style="--swatch:'+x.main+';--swatch-light:'+x.light+'"><i data-lucide="check"></i></span><small>'+esc(x.name)+'</small></button>').join("")+'</div></section>';
 }
 function renderProfile(){
  let s=state.student,level=s.educationLevel||inferEducationLevel(s.grade||""),isSecondary=level==="secondary";
