@@ -503,3 +503,26 @@ button:disabled{opacity:.5;cursor:not-allowed}
     color:#65420b!important;
   }
 }
+
+
+/* Keep all six student navigation items on one aligned row */
+@media(max-width:760px){
+  .bottom-nav.has-konkuria{
+    display:grid!important;
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    grid-auto-flow:row;
+    align-items:stretch;
+  }
+  .bottom-nav.has-konkuria>.bottom-item{
+    min-width:0;
+    width:100%;
+    grid-column:auto;
+    grid-row:1;
+  }
+  .bottom-nav.has-konkuria>.bottom-item[hidden]{
+    display:none!important;
+  }
+  .bottom-nav.has-konkuria>.bottom-item.konkuria-nav-item{
+    grid-row:1;
+  }
+}
