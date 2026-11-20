@@ -4,9 +4,8 @@ const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelect
 const KEY="stuner.app.v1:"+window.STUNER_ACTIVE_USER.id+":"+window.STUNER_ACTIVE_USER.schoolId, IRAN_TZ="Asia/Tehran", days=["شنبه","یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه"];
 const THEME_PALETTES=[{"name":"سبز جنگلی","main":"#126246","dark":"#0b3e2c","light":"#e6f4eb","soft":"#cce8d7"},{"name":"آبی اقیانوسی","main":"#176b87","dark":"#10475d","light":"#e6f3f8","soft":"#c9e5ef"},{"name":"بنفش","main":"#7355a6","dark":"#49356f","light":"#f0ebf8","soft":"#ddd1ef"},{"name":"آبی سلطنتی","main":"#356acb","dark":"#23498e","light":"#eaf1fc","soft":"#cfdef8"},{"name":"فیروزه‌ای","main":"#0f887f","dark":"#075a55","light":"#e5f5f3","soft":"#c6e9e5"},{"name":"سبز زمردی","main":"#16875b","dark":"#0d5a3d","light":"#e7f5ed","soft":"#c9e9d7"},{"name":"صورتی","main":"#bd5274","dark":"#81364f","light":"#faedf2","soft":"#f0cfda"},{"name":"نارنجی","main":"#c56b2d","dark":"#85471e","light":"#fbf0e7","soft":"#f2d8c3"},{"name":"طلایی","main":"#a87917","dark":"#70500f","light":"#f8f2e3","soft":"#eadcb7"},{"name":"نیلی","main":"#4c56a8","dark":"#343b76","light":"#eceefa","soft":"#d2d6f2"},{"name":"آبی آسمانی","main":"#167f9d","dark":"#10566a","light":"#e7f4f8","soft":"#cbe7ef"},{"name":"ارغوانی","main":"#8a4e91","dark":"#5c3561","light":"#f4ebf5","soft":"#e4cfe6"},{"name":"قرمز یاقوتی","main":"#b94d4d","dark":"#7d3434","light":"#faecec","soft":"#f0cece"},{"name":"خاکستری آبی","main":"#536779","dark":"#394957","light":"#edf1f4","soft":"#d5dfe6"},{"name":"ذغالی","main":"#37474f","dark":"#263238","light":"#edf0f1","soft":"#d5dcdf"}];
 const base=()=>({student:null,tasks:[],exams:[],grades:[],plans:[],sessions:[],subjects:["ریاضی","علوم","فارسی","عربی","زبان انگلیسی","مطالعات اجتماعی","دینی","ادبیات"],preferences:{notifyTasks:true,notifyStudy:true,notifyBreak:true,taskReminderTime:"08:00",studyReminderTime:"16:00",theme:"سبز جنگلی"},timer:{mode:"study",remaining:1500,running:false,subject:"ریاضی",activity:"study",activityId:""},konkuriaFocus:{subject:"",seconds:0,running:false,startedAt:0}});
-let state=read(),page="home",taskFilter="all",taskView="tasks",planDay=(dateObj(isoToday()).getUTCDay()+1)%7,calAnchor=isoToday(),calSelected=isoToday(),ticker=null,deadline=null,konkuriaTicker=null;
-function read(){try{let s=JSON.parse(localStorage.getItem(KEY)||"null");return s?{...base(),...s,preferences:{...base().preferences,...s.preferences},timer:{...base().timer,...s.timer,running:false}}:base()}catch{return base()}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch{}}
+let state=base(),page="home",taskFilter="all",taskView="tasks",planDay=(dateObj(isoToday()).getUTCDay()+1)%7,calAnchor=isoToday(),calSelected=isoToday(),ticker=null,deadline=null,konkuriaTicker=null;
+function save(){if(cloudLoaded)cloudStore?.schedule(state)}
 function isoToday(){
  const p=new Intl.DateTimeFormat("en-CA",{timeZone:IRAN_TZ,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
  const g=k=>p.find(x=>x.type===k)?.value||"00";
@@ -55,12 +54,49 @@ function average(){let rows=state.grades.filter(g=>activeSubject(g.subject));ret
 const CURRICULUM=window.STUNER_CURRICULUM;
 // Keep classroom enrollment consistent with the principal's assignments.
 const managed=window.STUNER_ACTIVE_STUDENT_PROFILE||null;
-if(managed){
- state.student={...state.student,...managed};
- syncStudentSubjects();
- save();
-}
+let cloudStore=null,cloudLoaded=false,cloudFailure="";
 let editingProfile=false,profileSubmitting=false;
+function cloudStatus(status){
+ let el=document.getElementById("studentCloudStatus");
+ if(!el){
+  el=document.createElement("button");el.id="studentCloudStatus";el.type="button";
+  el.className="student-cloud-status";el.dataset.cloudRetry="1";
+  el.setAttribute("aria-live","polite");document.querySelector(".topbar-actions")?.prepend(el);
+ }
+ el.textContent=({loading:"دریافت اطلاعات…",saving:"در حال ذخیره…",saved:"ذخیره‌شده در حساب",failed:"ذخیره نشد؛ تلاش مجدد",offline:"ارتباط برقرار نشد"})[status]||"همگام‌سازی…";
+ el.classList.toggle("is-error",status==="failed"||status==="offline");
+ el.title="برای همگام‌سازی کلیک کنید";
+}
+function hydrateCloud(data){
+ const b=base(),v=data&&typeof data==="object"?data:{};
+ state={...b,...v,
+  tasks:Array.isArray(v.tasks)?v.tasks:[],exams:Array.isArray(v.exams)?v.exams:[],
+  grades:Array.isArray(v.grades)?v.grades:[],plans:Array.isArray(v.plans)?v.plans:[],
+  sessions:Array.isArray(v.sessions)?v.sessions:[],subjects:Array.isArray(v.subjects)?v.subjects:b.subjects,
+  preferences:{...b.preferences,...(v.preferences||{})},
+  timer:{...b.timer,...(v.timer||{}),running:false},
+  konkuriaFocus:{...b.konkuriaFocus,...(v.konkuriaFocus||{}),running:false}
+ };
+ const before=JSON.stringify(state);
+ if(managed){state.student={...state.student,...managed};syncStudentSubjects();}
+ cloudLoaded=true;cloudFailure="";render();
+ if(before!==JSON.stringify(state))save();
+}
+async function bootCloud(){
+ cloudLoaded=false;cloudFailure="";render();
+ try{
+  if(!window.STUNER_STUDENT_CLOUD||!window.STUNER_STUDENT_DB)throw Error("اتصال به دیتابیس دانش‌آموز در دسترس نیست.");
+  if(!cloudStore)cloudStore=window.STUNER_STUDENT_CLOUD.create({
+   client:window.STUNER_STUDENT_DB,schoolId:window.STUNER_ACTIVE_USER.schoolId,
+   studentId:window.STUNER_ACTIVE_USER.id,legacyKey:KEY,
+   onStatus:cloudStatus,onRemote:hydrateCloud
+  });
+  hydrateCloud(await cloudStore.load(base()));
+ }catch(err){
+  cloudFailure=err.message||"دریافت اطلاعات حساب انجام نشد.";
+  cloudLoaded=false;cloudStatus("failed");render();
+ }
+}
 function inferEducationLevel(grade=""){
  if(String(grade).includes("ابتدایی"))return "elementary";
  if(["هفتم","هشتم","نهم"].includes(grade))return "middle";
@@ -361,6 +397,11 @@ function ensureStudentHeader(){
 }
 function render(){
  let app=$("#app"),on=$("#onboarding");
+ if(!cloudLoaded){
+  app.style.display="";on.hidden=true;
+  $("#mainContent").innerHTML='<section class="card panel"><h2>اطلاعات حساب دانش‌آموز</h2><p>'+esc(cloudFailure||"در حال دریافت اطلاعات از دیتابیس استیونر…")+'</p><button class="primary-button" type="button" data-cloud-retry>تلاش مجدد</button></section>';
+  return;
+ }
  if(!profileIsReady(state.student)){
   if(managed){app.style.display="";on.hidden=true;$("#mainContent").innerHTML='<section class="card panel"><h2>اطلاعات تحصیلی ناقص است</h2><p>برای تکمیل پایه یا رشته تحصیلی، با مدیر مدرسه تماس بگیر. تغییر این اطلاعات از حساب دانش‌آموز مجاز نیست.</p></section>';return}
   app.style.display="none";on.hidden=false;populateStudentForm();return;
@@ -382,7 +423,7 @@ function examModal(){openModal("افزودن امتحان",`<form id="examForm" 
 function planModal(){openModal("افزودن جلسه مطالعه",`<form id="planForm" class="modal-form"><label class="field"><span>درس</span><select name="subject">${subjectOptions(state.timer.subject)}</select></label><label class="field"><span>روز هفته</span><select name="day">${days.map((d,i)=>`<option value="${i}" ${i===planDay?"selected":""}>${d}</option>`).join("")}</select></label><div class="field-row"><label class="field"><span>ساعت شروع</span><input name="time" type="text" inputmode="numeric" dir="ltr" maxlength="5" placeholder="۱۶:۰۰" value="۱۶:۰۰" required></label><label class="field"><span>مدت (دقیقه)</span><input name="duration" type="number" min="5" max="300" step="5" value="45" required></label></div><label class="field"><span>توضیح (اختیاری)</span><input name="note" placeholder="مثلاً مرور فصل سوم"></label><div class="modal-actions"><button class="primary-button" type="submit">ثبت جلسه</button><button class="secondary-button" type="button" data-close-modal>انصراف</button></div></form>`)}
 function gradeModal(){openModal("ثبت نمره جدید",`<form id="gradeForm" class="modal-form"><label class="field"><span>درس</span><select name="subject">${subjectOptions(state.timer.subject)}</select></label><label class="field"><span>عنوان آزمون یا فعالیت</span><input name="title" placeholder="مثلاً امتحان میان‌ترم"></label><div class="field-row"><label class="field"><span>نمره از ۲۰</span><input name="score" type="number" min="0" max="20" step=".25" placeholder="مثلاً ۱۸.۵" required></label>${dateField("date","تاریخ")}</div><div class="modal-actions"><button class="primary-button" type="submit">ثبت نمره</button><button class="secondary-button" type="button" data-close-modal>انصراف</button></div></form>`)}
 function go(p){if(p==="exams"){taskView="exams";page="tasks"}else{page=p;if(p==="tasks")taskView="tasks"}render();window.scrollTo({top:0,behavior:"smooth"})}
-function remove(key,id){state[key]=state[key].filter(x=>x.id!==id);save();render();toast("مورد انتخاب‌شده حذف شد.")}
+function remove(key,id){state[key]=state[key].filter(x=>x.id!==id);save();render();toast("حذف شد؛ در حال ذخیره در حساب…")}
 function notify(title,body){if(!("Notification"in window)||Notification.permission!=="granted")return;try{if("serviceWorker"in navigator&&navigator.serviceWorker.controller)navigator.serviceWorker.ready.then(r=>r.showNotification(title,{body,icon:"./icon.svg",dir:"rtl",lang:"fa"})).catch(()=>new Notification(title,{body,dir:"rtl"}));else new Notification(title,{body,dir:"rtl",lang:"fa"})}catch{}}
 async function enableNotifications(){if(!("Notification"in window)){toast("این مرورگر از اعلان گوشی پشتیبانی نمی‌کند.");return}let p=await Notification.requestPermission();toast(p==="granted"?"اعلان‌ها فعال شدند.":"اجازه اعلان‌ها داده نشد.");if(p==="granted")notify("استیونر آماده است","یادآوری‌های درسی‌ات فعال شدند.")}
 function reminderCheck(){if(!("Notification"in window)||Notification.permission!=="granted")return;let clock=iranClock();if(state.preferences.notifyTasks&&clock>=(state.preferences.taskReminderTime||"08:00")){let key="stuner.remind.tasks."+isoToday();if(!sessionStorage.getItem(key)){let today=state.tasks.filter(x=>activeSubject(x.subject)&&x.due===isoToday()&&!x.done),tomorrow=state.tasks.filter(x=>activeSubject(x.subject)&&x.due===isoAdd(1)&&!x.done);if(today.length||tomorrow.length){notify("یادآوری تکالیف استیونر",`${fa(today.length)} تکلیف برای امروز و ${fa(tomorrow.length)} تکلیف برای فردا داری.`);sessionStorage.setItem(key,"1")}}}if(state.preferences.notifyStudy&&clock>=(state.preferences.studyReminderTime||"16:00")){let key="stuner.remind.study."+isoToday();if(!sessionStorage.getItem(key)){notify("وقت مطالعه در استیونر", "زمان پیشنهادی مطالعه‌ات رسیده؛ یک جلسه ۲۵ دقیقه‌ای شروع کن.");sessionStorage.setItem(key,"1")}}}
@@ -428,7 +469,7 @@ function registerStudyDuration(){
  });
  state.timer.remaining=1500;
  save();render();
- toast("مدت مطالعه "+shortStudyTime(seconds/60)+" ثبت شد.");
+ toast("مدت مطالعه "+shortStudyTime(seconds/60)+" در حال ذخیره در حساب است.");
 }
 function timerComplete(){
  if(ticker)clearInterval(ticker);ticker=null;deadline=null;
@@ -451,6 +492,8 @@ function timerSkip(){if(state.timer.running)state.timer.remaining=Math.max(0,Mat
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&state.timer.running)timerTick()});
 $("#onboardingForm").addEventListener("submit",e=>{e.preventDefault();if(managed){toast("پایه و رشته را فقط مدیر مدرسه تغییر می‌دهد.");render();return;}let d=new FormData(e.currentTarget),f=String(d.get("firstName")||"").trim(),l=String(d.get("lastName")||"").trim(),a=Number(d.get("age")),level=d.get("educationLevel"),grade=d.get("grade"),track=d.get("track")||"",fieldGroup=d.get("fieldGroup")||"",major=d.get("major")||"";if(!f||!l||a<6||a>30||!level||!grade||(level==="secondary"&&(!track||!major||(track!=="نظری"&&!fieldGroup)))){$("#onboardingError").textContent="لطفاً دوره، پایه و رشته تحصیلی را کامل انتخاب کن.";return}state.student={...(state.student||{}),firstName:f,lastName:l,age:a,educationLevel:level,grade,track:level==="secondary"?track:"",fieldGroup:level==="secondary"&&track!=="نظری"?fieldGroup:"",major:level==="secondary"?major:""};syncStudentSubjects();state.timer.subject=state.subjects[0]||"";save();page="home";render();toast(`اطلاعات تحصیلی ذخیره شد، ${f}!`)});
 document.addEventListener("click",e=>{
+ if(e.target.closest("[data-cloud-retry]")){if(!cloudLoaded)bootCloud();else if(cloudStore?.isDirty())cloudStore.flush();else cloudStore?.refresh();return}
+ if(!cloudLoaded)return;
  let themeChoice=e.target.closest("[data-theme]")?.dataset.theme;if(themeChoice){state.preferences.theme=themeChoice;save();applyStudentTheme();render();toast("تم رنگی استیونر تغییر کرد.");return}
  let focusAction=e.target.closest("[data-focus-action]")?.dataset.focusAction;if(focusAction){if(focusAction==="start")startKonkuria();else if(focusAction==="pause")pauseKonkuria();else if(focusAction==="resume")resumeKonkuria();else if(focusAction==="stop")stopKonkuria();return}
  let p=e.target.closest("[data-page]");if(p){e.preventDefault();go(p.dataset.page);return}
@@ -471,6 +514,7 @@ document.addEventListener("click",e=>{
  if(e.target.closest("#notificationButton")){go("more");return}
 });
 document.addEventListener("change",e=>{
+ if(!cloudLoaded)return;
  if(e.target.id==="educationLevel"){updateEducationFields(false);return}
  if(e.target.id==="gradeSelect"){updateMajorFields(false);return}
  if(e.target.id==="trackSelect"){updateMajorFields(false);return}
@@ -499,10 +543,11 @@ document.addEventListener("change",e=>{
  }
 });
 document.addEventListener("submit",async e=>{
- let f=e.target;if(f.id==="taskForm"){e.preventDefault();let d=new FormData(f);state.tasks.push({id:uid(),title:String(d.get("title")).trim(),subject:d.get("subject"),due:d.get("due"),note:String(d.get("note")||"").trim(),done:false,createdAt:Date.now()});save();closeModal();render();toast("تکلیف جدید ثبت شد.")}
- if(f.id==="examForm"){e.preventDefault();let d=new FormData(f);state.exams.push({id:uid(),title:String(d.get("title")).trim(),subject:d.get("subject"),date:d.get("date"),note:String(d.get("note")||"").trim(),createdAt:Date.now()});save();closeModal();render();toast("امتحان به تقویمت اضافه شد.")}
- if(f.id==="planForm"){e.preventDefault();let d=new FormData(f),time=normalTime(d.get("time"),"");if(!time){toast("ساعت را به شکل ۱۶:۰۰ وارد کن.");return}state.plans.push({id:uid(),subject:d.get("subject"),day:+d.get("day"),time,duration:+d.get("duration"),note:String(d.get("note")||"").trim()});planDay=+d.get("day");save();closeModal();go("plan");toast("جلسه مطالعه برنامه‌ریزی شد.")}
- if(f.id==="gradeForm"){e.preventDefault();let d=new FormData(f),score=+d.get("score");if(score<0||score>20){toast("نمره باید بین صفر تا ۲۰ باشه.");return}state.grades.push({id:uid(),subject:d.get("subject"),title:String(d.get("title")||"").trim(),score,date:d.get("date"),createdAt:Date.now()});save();closeModal();go("stats");toast("نمره با موفقیت ثبت شد.")}
+ if(!cloudLoaded)return;
+ let f=e.target;if(f.id==="taskForm"){e.preventDefault();let d=new FormData(f);state.tasks.push({id:uid(),title:String(d.get("title")).trim(),subject:d.get("subject"),due:d.get("due"),note:String(d.get("note")||"").trim(),done:false,createdAt:Date.now()});save();closeModal();render();toast("تکلیف اضافه شد؛ در حال ذخیره در حساب…")}
+ if(f.id==="examForm"){e.preventDefault();let d=new FormData(f);state.exams.push({id:uid(),title:String(d.get("title")).trim(),subject:d.get("subject"),date:d.get("date"),note:String(d.get("note")||"").trim(),createdAt:Date.now()});save();closeModal();render();toast("امتحان اضافه شد؛ در حال ذخیره در حساب…")}
+ if(f.id==="planForm"){e.preventDefault();let d=new FormData(f),time=normalTime(d.get("time"),"");if(!time){toast("ساعت را به شکل ۱۶:۰۰ وارد کن.");return}state.plans.push({id:uid(),subject:d.get("subject"),day:+d.get("day"),time,duration:+d.get("duration"),note:String(d.get("note")||"").trim()});planDay=+d.get("day");save();closeModal();go("plan");toast("جلسه اضافه شد؛ در حال ذخیره در حساب…")}
+ if(f.id==="gradeForm"){e.preventDefault();let d=new FormData(f),score=+d.get("score");if(score<0||score>20){toast("نمره باید بین صفر تا ۲۰ باشه.");return}state.grades.push({id:uid(),subject:d.get("subject"),title:String(d.get("title")||"").trim(),score,date:d.get("date"),createdAt:Date.now()});save();closeModal();go("stats");toast("نمره اضافه شد؛ در حال ذخیره در حساب…")}
  if(f.id==="profileForm"){
   e.preventDefault();
   if(profileSubmitting)return;
@@ -539,6 +584,9 @@ if("serviceWorker"in navigator&&location.protocol!=="file:"){
  if(document.readyState==="complete")registerCurrentWorker();
  else addEventListener("load",registerCurrentWorker,{once:true});
 }
-document.addEventListener("stuner-school-work-updated",()=>{if(managed){syncStudentSubjects();save()}render()});
-if(profileIsReady(state.student))syncStudentSubjects();render();reminderCheck();setInterval(reminderCheck,60000);
+document.addEventListener("stuner-school-work-updated",()=>{if(!cloudLoaded)return;if(managed){syncStudentSubjects();save()}render()});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)cloudStore?.refresh()});
+window.addEventListener("beforeunload",e=>{if(cloudStore?.isDirty()){e.preventDefault();e.returnValue=""}});
+bootCloud();
+setInterval(()=>{if(cloudLoaded)reminderCheck()},60000);
 })();
