@@ -392,7 +392,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 }
 
 #app{background:var(--bg)}
-.theme-panel{margin-top:14px}
+.theme-panel{margin:14px 0 26px}
 .theme-swatches{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px 8px;padding:8px 0 2px}
 .theme-swatch{border:0;background:transparent;display:grid;justify-items:center;gap:6px;padding:3px 1px;color:var(--muted);min-width:0}
 .theme-swatch>span{width:39px;height:39px;border-radius:13px;background:var(--swatch);border:2px solid var(--swatch);display:grid;place-items:center;box-shadow:0 3px 10px rgba(0,0,0,.12);transition:transform .18s,box-shadow .18s}
