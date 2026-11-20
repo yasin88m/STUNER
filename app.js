@@ -57,15 +57,22 @@ const managed=window.STUNER_ACTIVE_STUDENT_PROFILE||null;
 let cloudStore=null,cloudLoaded=false,cloudFailure="",cloudBooting=false;
 let editingProfile=false,profileSubmitting=false;
 function cloudStatus(status){
- let el=document.getElementById("studentCloudStatus");
- if(!el){
-  el=document.createElement("button");el.id="studentCloudStatus";el.type="button";
-  el.className="student-cloud-status";el.dataset.cloudRetry="1";
-  el.setAttribute("aria-live","polite");document.querySelector(".topbar-actions")?.prepend(el);
- }
- el.textContent=({loading:"دریافت اطلاعات…",saving:"در حال ذخیره…",saved:"ذخیره‌شده در حساب",failed:"ذخیره نشد؛ تلاش مجدد",offline:"ارتباط برقرار نشد"})[status]||"همگام‌سازی…";
- el.classList.toggle("is-error",status==="failed"||status==="offline");
- el.title="برای همگام‌سازی کلیک کنید";
+ // Only a failed WRITE produces a top-of-screen notification. A successful save
+ // removes the warning; normal loading/saving is deliberately silent.
+ document.getElementById("studentCloudStatus")?.remove();
+ let alert=document.getElementById("studentCloudAlert");
+ if(status==="saved"){alert?.remove();return}
+ if(status!=="failed")return;
+ if(alert)return;
+ alert=document.createElement("div");
+ alert.id="studentCloudAlert";alert.className="student-cloud-alert";
+ alert.setAttribute("role","alert");alert.setAttribute("dir","rtl");
+ const message=document.createElement("span");
+ message.textContent="اطلاعات ذخیره نشد. اتصالت به اینترنت رو چک کن.";
+ const retry=document.createElement("button");
+ retry.type="button";retry.dataset.cloudRetry="1";
+ retry.className="student-cloud-retry";retry.textContent="تلاش مجدد";
+ alert.append(message,retry);document.body.append(alert);
 }
 function hydrateCloud(data){
  const b=base(),v=data&&typeof data==="object"?data:{};
@@ -95,7 +102,7 @@ async function bootCloud(){
   hydrateCloud(await cloudStore.load(base()));
  }catch(err){
   cloudFailure=err.message||"دریافت اطلاعات حساب انجام نشد.";
-  cloudLoaded=false;cloudStatus("failed");render();
+  cloudLoaded=false;render();
  }finally{cloudBooting=false}
 }
 function inferEducationLevel(grade=""){
@@ -209,7 +216,7 @@ function renderHome(){
  let visibleExams=allStudentExams();let tasks=visibleTasks.filter(t=>t.due===isoToday()&&!t.done).slice(0,4), exams=visibleExams.filter(e=>e.date>=isoToday()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
  let subjects=state.subjects.slice(0,4).map(s=>{let m=state.sessions.filter(x=>x.subject===s).reduce((a,x)=>a+(+x.minutes||0),0);return `<div class="subject-progress"><strong>${esc(s)}</strong><div class="progress-track"><span style="width:${Math.min(100,m/120*100)}%"></span></div><small>${shortStudyTime(m)}</small></div>`}).join("");
  let recordedSeconds=sumSessionSeconds(visibleSessions);
- return `<div class="home-greeting"><h1>سلام ${esc(fullName())}</h1><p>به فضای مطالعه خودت خوش آمدی.</p></div><section class="hero-card"><div class="hero-copy"><p class="eyebrow">${iranHour()<11?"صبح بخیر":iranHour()<17?"روز بخیر":"عصر بخیر"}</p><h2>برای یه روز پربار آماده‌ای؟</h2><p>با یک جلسه کوتاه شروع کن؛ مسیر موفقیت از همین‌جا می‌گذره.</p><button class="primary-button" data-page="timer">▶ شروع مطالعه <span>· ۲۵ دقیقه</span></button></div><div class="hero-orbit" style="background:conic-gradient(#74e2a8 0 ${pct}%,rgba(255,255,255,.15) ${pct}% 100%)"><div class="hero-orbit-inner"><strong>${progressLabel}</strong><small>پیشرفت تکالیف</small><span>${progressDetail}</span></div></div></section>
+ return `<div class="home-greeting"><h1>سلام ${esc(fullName())}</h1><p>به فضای مطالعه خودت خوش آمدی.</p></div><section class="hero-card"><div class="hero-copy"><p class="eyebrow">${iranHour()<11?"صبح بخیر":iranHour()<17?"روز بخیر":"عصر بخیر"}</p><h2>برای یه روز پربار آماده‌ای؟</h2><p>با یک جلسه کوتاه شروع کن؛ مسیر موفقیت از همین‌جا می‌گذره.</p><button class="primary-button" data-page="timer">▶ شروع مطالعه <span>· ۲۵ دقیقه</span></button></div><div class="hero-orbit" style="background:conic-gradient(var(--mint-300) 0 ${pct}%,rgba(255,255,255,.15) ${pct}% 100%)"><div class="hero-orbit-inner"><strong>${progressLabel}</strong><small>پیشرفت تکالیف</small><span>${progressDetail}</span></div></div></section>
  <section class="stats-grid"><article class="card stat-card"><span class="stat-icon">◷</span><div><strong>${studyTimeStamp(recordedSeconds)}</strong><small>زمان مطالعه ثبت‌شده</small></div></article><article class="card stat-card"><span class="stat-icon">☑</span><div><strong>${fa(visibleTasks.filter(t=>!t.done).length)}</strong><small>تکلیف باقی‌مانده</small></div></article><article class="card stat-card"><span class="stat-icon">♜</span><div><strong>${fa(exams.length)}</strong><small>امتحان پیش رو</small></div></article><article class="card stat-card"><span class="stat-icon">★</span><div><strong>${average()===null?"—":fa(average().toFixed(1))}</strong><small>میانگین نمرات</small></div></article></section>
  <div class="dashboard-grid"><section class="card panel"><div class="section-title" style="margin-top:0"><div><h2>کارهای امروز</h2><p>${fmt(isoToday(),{weekday:"long",day:"numeric",month:"long"})}</p></div><button class="text-button" data-page="tasks">همه تکالیف ←</button></div>${tasks.length?`<div class="task-list">${tasks.map(t=>taskRow(t,true)).join("")}</div>`:empty("برنامه امروزت خالیه","می‌تونی اولین تکلیفت رو اضافه کنی.","✓")}<button class="soft-button small-button" style="margin-top:12px" data-action="add-task">＋ افزودن تکلیف</button></section>
  <section class="card panel"><div class="section-title" style="margin-top:0"><div><h2>امتحانات نزدیک</h2><p>برای امتحان‌ها آماده بمون</p></div><button class="text-button" data-page="exams">مشاهده همه ←</button></div>${exams.length?exams.map(e=>examRow(e)).join(""):empty("هنوز امتحانی ثبت نشده","امتحان بعدی‌ات رو اینجا ثبت کن.","♜")}<button class="soft-button small-button" style="margin-top:12px" data-action="add-exam">＋ افزودن امتحان</button></section></div>
@@ -365,12 +372,15 @@ function applyStudentTheme(){
  const app=$("#app");if(!app)return;
  const chosen=THEME_PALETTES.find(x=>x.name===state.preferences.theme)||THEME_PALETTES[0];
  const rgb=c=>{const h=c.replace("#","");return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)].join(",")};
- const vars={"--green-950":chosen.dark,"--green-900":chosen.dark,"--green-800":chosen.main,"--green-700":chosen.main,"--green-600":chosen.main,"--green-500":chosen.main,"--mint-100":chosen.light,"--mint-150":chosen.light,"--mint-200":chosen.soft,"--mint-300":chosen.soft,"--bg":chosen.light,"--theme-rgb":rgb(chosen.main),"--theme-dark-rgb":rgb(chosen.dark),"--ink":chosen.dark,"--line":chosen.soft,"--shadow":"0 12px 32px rgba("+rgb(chosen.main)+",.07)","--shadow-soft":"0 5px 18px rgba("+rgb(chosen.main)+",.055)"};
- Object.entries(vars).forEach(([k,v])=>app.style.setProperty(k,v));
+ const vars={"--green-950":chosen.dark,"--green-900":chosen.dark,"--green-800":chosen.main,"--green-700":chosen.main,"--green-600":chosen.main,"--green-500":chosen.main,"--mint-100":chosen.light,"--mint-150":chosen.light,"--mint-200":chosen.soft,"--mint-300":chosen.soft,"--bg":chosen.light,"--muted":"#6f7b88","--theme-rgb":rgb(chosen.main),"--theme-dark-rgb":rgb(chosen.dark),"--ink":chosen.dark,"--line":chosen.soft,"--shadow":"0 12px 32px rgba("+rgb(chosen.main)+",.07)","--shadow-soft":"0 5px 18px rgba("+rgb(chosen.main)+",.055)"};
+ // Modal and toast roots are siblings of #app; applying variables to #app alone
+ // left task/exam forms using the default green palette.
+ [app,$("#modalRoot"),$("#toastRoot"),$("#stunerSplash"),$("#onboarding")].filter(Boolean).forEach(node=>{
+  Object.entries(vars).forEach(([k,v])=>node.style.setProperty(k,v));
+ });
  app.style.backgroundColor=chosen.light;
+ document.body.style.backgroundColor=chosen.light;
  const themeMeta=document.querySelector('meta[name="theme-color"]');if(themeMeta)themeMeta.setAttribute("content",chosen.main);
- const splash=$("#stunerSplash");if(splash){Object.entries(vars).forEach(([k,v])=>splash.style.setProperty(k,v));splash.style.color=chosen.main;}
- const onboarding=$("#onboarding");if(onboarding){Object.entries(vars).forEach(([k,v])=>onboarding.style.setProperty(k,v));}
 }
 function renderThemePicker(){
  const active=state.preferences.theme||"سبز جنگلی";
