@@ -75,7 +75,7 @@ function hydrateCloud(data){
   sessions:Array.isArray(v.sessions)?v.sessions:[],subjects:Array.isArray(v.subjects)?v.subjects:b.subjects,
   preferences:{...b.preferences,...(v.preferences||{})},
   timer:{...b.timer,...(v.timer||{}),running:false},
-  konkuriaFocus:{...b.konkuriaFocus,...(v.konkuriaFocus||{}),running:false}
+  konkuriaFocus:{...b.konkuriaFocus,...(v.konkuriaFocus||{})}
  };
  const before=JSON.stringify(state);
  if(managed){state.student={...state.student,...managed};syncStudentSubjects();}
@@ -589,4 +589,5 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)cloudStore
 window.addEventListener("beforeunload",e=>{if(cloudStore?.isDirty()){e.preventDefault();e.returnValue=""}});
 bootCloud();
 setInterval(()=>{if(cloudLoaded)reminderCheck()},60000);
+setInterval(()=>{if(cloudLoaded&&!document.hidden)cloudStore?.refresh()},45000);
 })();
