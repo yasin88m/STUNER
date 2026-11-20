@@ -54,7 +54,7 @@ function average(){let rows=state.grades.filter(g=>activeSubject(g.subject));ret
 const CURRICULUM=window.STUNER_CURRICULUM;
 // Keep classroom enrollment consistent with the principal's assignments.
 const managed=window.STUNER_ACTIVE_STUDENT_PROFILE||null;
-let cloudStore=null,cloudLoaded=false,cloudFailure="";
+let cloudStore=null,cloudLoaded=false,cloudFailure="",cloudBooting=false;
 let editingProfile=false,profileSubmitting=false;
 function cloudStatus(status){
  let el=document.getElementById("studentCloudStatus");
@@ -83,7 +83,8 @@ function hydrateCloud(data){
  if(before!==JSON.stringify(state))save();
 }
 async function bootCloud(){
- cloudLoaded=false;cloudFailure="";render();
+ if(cloudBooting)return;
+ cloudBooting=true;cloudLoaded=false;cloudFailure="";render();
  try{
   if(!window.STUNER_STUDENT_CLOUD||!window.STUNER_STUDENT_DB)throw Error("اتصال به دیتابیس دانش‌آموز در دسترس نیست.");
   if(!cloudStore)cloudStore=window.STUNER_STUDENT_CLOUD.create({
@@ -95,7 +96,7 @@ async function bootCloud(){
  }catch(err){
   cloudFailure=err.message||"دریافت اطلاعات حساب انجام نشد.";
   cloudLoaded=false;cloudStatus("failed");render();
- }
+ }finally{cloudBooting=false}
 }
 function inferEducationLevel(grade=""){
  if(String(grade).includes("ابتدایی"))return "elementary";
@@ -492,7 +493,7 @@ function timerSkip(){if(state.timer.running)state.timer.remaining=Math.max(0,Mat
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&state.timer.running)timerTick()});
 $("#onboardingForm").addEventListener("submit",e=>{e.preventDefault();if(managed){toast("پایه و رشته را فقط مدیر مدرسه تغییر می‌دهد.");render();return;}let d=new FormData(e.currentTarget),f=String(d.get("firstName")||"").trim(),l=String(d.get("lastName")||"").trim(),a=Number(d.get("age")),level=d.get("educationLevel"),grade=d.get("grade"),track=d.get("track")||"",fieldGroup=d.get("fieldGroup")||"",major=d.get("major")||"";if(!f||!l||a<6||a>30||!level||!grade||(level==="secondary"&&(!track||!major||(track!=="نظری"&&!fieldGroup)))){$("#onboardingError").textContent="لطفاً دوره، پایه و رشته تحصیلی را کامل انتخاب کن.";return}state.student={...(state.student||{}),firstName:f,lastName:l,age:a,educationLevel:level,grade,track:level==="secondary"?track:"",fieldGroup:level==="secondary"&&track!=="نظری"?fieldGroup:"",major:level==="secondary"?major:""};syncStudentSubjects();state.timer.subject=state.subjects[0]||"";save();page="home";render();toast(`اطلاعات تحصیلی ذخیره شد، ${f}!`)});
 document.addEventListener("click",e=>{
- if(e.target.closest("[data-cloud-retry]")){if(!cloudLoaded)bootCloud();else if(cloudStore?.isDirty())cloudStore.flush();else cloudStore?.refresh();return}
+ if(e.target.closest("[data-cloud-retry]")){if(!cloudLoaded)bootCloud();else if(cloudStore?.isDirty())cloudStore.flush();else if(!state.timer.running&&!state.konkuriaFocus.running)cloudStore?.refresh();else toast("ابتدا مطالعه فعال را متوقف کن تا اطلاعات بازخوانی شود.");return}
  if(!cloudLoaded)return;
  let themeChoice=e.target.closest("[data-theme]")?.dataset.theme;if(themeChoice){state.preferences.theme=themeChoice;save();applyStudentTheme();render();toast("تم رنگی استیونر تغییر کرد.");return}
  let focusAction=e.target.closest("[data-focus-action]")?.dataset.focusAction;if(focusAction){if(focusAction==="start")startKonkuria();else if(focusAction==="pause")pauseKonkuria();else if(focusAction==="resume")resumeKonkuria();else if(focusAction==="stop")stopKonkuria();return}
@@ -585,9 +586,9 @@ if("serviceWorker"in navigator&&location.protocol!=="file:"){
  else addEventListener("load",registerCurrentWorker,{once:true});
 }
 document.addEventListener("stuner-school-work-updated",()=>{if(!cloudLoaded)return;if(managed){syncStudentSubjects();save()}render()});
-document.addEventListener("visibilitychange",()=>{if(!document.hidden)cloudStore?.refresh()});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&cloudLoaded&&!state.timer.running&&!state.konkuriaFocus.running)cloudStore?.refresh()});
 window.addEventListener("beforeunload",e=>{if(cloudStore?.isDirty()){e.preventDefault();e.returnValue=""}});
 bootCloud();
 setInterval(()=>{if(cloudLoaded)reminderCheck()},60000);
-setInterval(()=>{if(cloudLoaded&&!document.hidden)cloudStore?.refresh()},45000);
+setInterval(()=>{if(cloudLoaded&&!document.hidden&&!state.timer.running&&!state.konkuriaFocus.running)cloudStore?.refresh()},45000);
 })();
