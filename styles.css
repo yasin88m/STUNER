@@ -616,3 +616,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
     padding:0 4px;
   }
 }
+
+/* Cloud persistence indicator: visible during saves and on sync errors. */
+.student-cloud-status{border:1px solid var(--line,#e2e8e6);background:var(--mint-100,#eaf5ef);color:var(--green-800,#126246);border-radius:999px;padding:7px 11px;font:inherit;font-size:11px;white-space:nowrap;cursor:pointer;line-height:1.5}
+.student-cloud-status.is-error{background:#fff1f0;border-color:#f0c0be;color:#a33535}
+@media(max-width:400px){.student-cloud-status{max-width:130px;white-space:normal;text-align:center;font-size:10px}}
