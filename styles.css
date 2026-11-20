@@ -462,7 +462,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
     justify-content:center;
     gap:5px;
     width:max-content;
-    max-width:calc(100vw / 6 - 2px);
+    max-width:calc(100vw / 5 - 2px);
     height:23px;
     min-height:23px;
     padding:0 10px;
@@ -643,3 +643,9 @@ button:disabled{opacity:.5;cursor:not-allowed}
 #app .theme-swatch>span{background:var(--swatch)}
 #app .theme-swatch.selected small{color:var(--green-800)}
 
+
+/* Preserve the HTML hidden state for Konkuria on non-grade-12 accounts.
+   The explicit flex/grid navigation rules must never make hidden buttons visible. */
+@media(max-width:760px){
+ .bottom-nav .bottom-item[hidden]{display:none!important}
+}
