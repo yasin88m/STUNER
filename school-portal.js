@@ -158,7 +158,7 @@ async function enter(member){
   }
   window.STUNER_STUDENT_DB=client;
   window.STUNER_SCHOOL_WORK?.init(client,user,member);
-  const src=document.createElement("script");src.src="./app.js?v=44";document.body.appendChild(src);return;
+  const src=document.createElement("script");src.src="./app.js?v=45";document.body.appendChild(src);return;
  }
  if(member.role==="teacher"){
   show();
