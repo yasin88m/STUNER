@@ -9,11 +9,19 @@ async function refresh(){
  if(!db||!member||!user||loading)return;
  loading=true;loadError="";
  try{
-  // RLS enforces that only students in this class can read the assignments.
-  let query=db.from("school_assignments").select("id,school_id,class_id,student_id,teacher_id,kind,title,subject,description,due_date,created_at").eq("school_id",member.school_id);
-  query=member.class_id?query.or("class_id.eq."+member.class_id+",student_id.eq."+user.id):query.eq("student_id",user.id);
-  const a=await query.order("due_date",{ascending:true});
-  if(a.error)throw a.error;
+  // Fetch class assignments and individual assignments separately.
+  // This avoids relying on a combined PostgREST OR filter for student visibility.
+  const columns="id,school_id,class_id,student_id,teacher_id,kind,title,subject,description,due_date,created_at";
+  const classQuery=member.class_id
+   ?db.from("school_assignments").select(columns).eq("school_id",member.school_id).eq("class_id",member.class_id).order("due_date",{ascending:true})
+   :Promise.resolve({data:[],error:null});
+  const personalQuery=db.from("school_assignments").select(columns).eq("school_id",member.school_id).eq("student_id",user.id).order("due_date",{ascending:true});
+  const [classResult,personalResult]=await Promise.all([classQuery,personalQuery]);
+  if(classResult.error)throw classResult.error;
+  if(personalResult.error)throw personalResult.error;
+  const merged=new Map();
+  for(const row of [...(classResult.data||[]),...(personalResult.data||[])])merged.set(row.id,row);
+  const a={data:[...merged.values()].sort((x,y)=>String(x.due_date||"").localeCompare(String(y.due_date||"")))};
   const c=await db.from("assignment_completions").select("assignment_id").eq("student_id",user.id);
   if(c.error)throw c.error;
   assignments=a.data||[];
