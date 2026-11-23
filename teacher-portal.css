@@ -129,3 +129,8 @@
  .principal-shell .teacher-work-row{align-items:flex-start;flex-wrap:wrap}
  .principal-shell .teacher-work-date{margin-right:48px;max-width:none}
 }
+
+.teacher-target-mode{display:block;margin:14px 0;color:var(--portal-text,#20332b);font-weight:700}
+.teacher-target-mode select{display:block;width:100%;margin-top:8px}
+.teacher-class-readonly{padding:12px 14px;border:1px solid var(--portal-border,#dce7e0);border-radius:12px;margin:7px 0;background:var(--portal-soft,#f6faf7)}
+.teacher-target-hint{font-size:.9rem;color:var(--portal-muted,#687b70);margin:0 0 10px}
