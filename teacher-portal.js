@@ -132,9 +132,9 @@ function onChange(e){
   const id=e.target.value;if(!state.schools.some(s=>s.school_id===id))return;
   state.schoolId=id;
   const audience=state.root.querySelector("#teacherAudience")?.value||"grade";
-  const grade=state.root.querySelector("#teacherTargetGrade")?.value||"";
-  state.root.querySelector("#teacherTargetGrade").innerHTML=gradeOptions(id);
-  renderTargetControls(audience,grade);
+  const gradeSelect=state.root.querySelector("#teacherTargetGrade");
+  gradeSelect.innerHTML=gradeOptions(id);
+  renderTargetControls(audience,gradeSelect.value||"");
   const msg=state.root.querySelector("#teacherFormMessage");if(msg)msg.textContent="";
  }else if(e.target.matches("#teacherAudience")){
   renderTargetControls(e.target.value,state.root.querySelector("#teacherTargetGrade")?.value||"");
