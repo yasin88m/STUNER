@@ -10,7 +10,9 @@ async function refresh(){
  loading=true;loadError="";
  try{
   // RLS enforces that only students in this class can read the assignments.
-  const a=await db.from("school_assignments").select("id,school_id,class_id,teacher_id,kind,title,subject,description,due_date,created_at").eq("school_id",member.school_id).eq("class_id",member.class_id).order("due_date",{ascending:true});
+  let query=db.from("school_assignments").select("id,school_id,class_id,student_id,teacher_id,kind,title,subject,description,due_date,created_at").eq("school_id",member.school_id);
+  query=member.class_id?query.or("class_id.eq."+member.class_id+",student_id.eq."+user.id):query.eq("student_id",user.id);
+  const a=await query.order("due_date",{ascending:true});
   if(a.error)throw a.error;
   const c=await db.from("assignment_completions").select("assignment_id").eq("student_id",user.id);
   if(c.error)throw c.error;
@@ -28,12 +30,13 @@ async function refresh(){
 }
 function render(page){
  if(!db||!member)return "";
- if(!member.class_id)return '<section class="card panel stuner-schoolwork"><h2>برنامه مدرسه</h2><p>هنوز در هیچ کلاسی ثبت نشده‌ای؛ مدیر مدرسه باید تو را به کلاس اختصاص دهد.</p></section>';
+ if(!member.class_id&&!assignments.some(a=>a.student_id===user?.id))return '<section class="card panel stuner-schoolwork"><h2>برنامه مدرسه</h2><p>هنوز در هیچ کلاسی ثبت نشده‌ای؛ مدیر مدرسه باید تو را به کلاس اختصاص دهد.</p></section>';
  if(page!=="home"&&page!=="tasks"&&page!=="exams")return "";
  const list=assignments.filter(x=>page==="tasks"?x.kind==="task":page==="exams"?x.kind==="exam":true);
  const content=loading&&!loaded?"<p>دریافت تکالیف و امتحانات مدرسه…</p>":loadError?'<p class="school-work-error">'+esc(loadError)+'</p>':list.length?list.map(a=>{
   const task=a.kind==="task",done=completed.has(a.id);
-  return '<article class="school-work-row"><div class="school-work-text"><small class="school-work-label">'+(task?"تکلیف":"امتحان")+' · '+esc(a.subject)+'</small><strong>'+esc(a.title)+'</strong><span>'+esc(when(a.due_date))+'</span>'+(a.description?'<p>'+esc(a.description)+'</p>':"")+'</div>'+(task?'<button type="button" class="school-work-done '+(done?"is-done":"")+'" data-school-complete="'+esc(a.id)+'">'+(done?"✓ انجام شده":"ثبت انجام تکلیف")+'</button>':"")+'</article>';
+  const assignedTo=a.student_id?"ارسالی ویژه شما":"ارسالی برای کلاس";
+  return '<article class="school-work-row"><div class="school-work-text"><small class="school-work-label">'+(task?"تکلیف":"امتحان")+' · '+esc(a.subject)+' · '+assignedTo+'</small><strong>'+esc(a.title)+'</strong><span>'+esc(when(a.due_date))+'</span>'+(a.description?'<p>'+esc(a.description)+'</p>':"")+'</div>'+(task?'<button type="button" class="school-work-done '+(done?"is-done":"")+'" data-school-complete="'+esc(a.id)+'">'+(done?"✓ انجام شده":"ثبت انجام تکلیف")+'</button>':"")+'</article>';
  }).join(""):"<p>هنوز موردی از طرف معلم برای کلاس شما ثبت نشده است.</p>";
  const title=page==="tasks"?"تکالیف ارسالی معلم":page==="exams"?"امتحانات تعیین‌شده مدرسه":"برنامه ارسالی معلمان";
  return '<section class="card panel stuner-schoolwork"><div class="school-work-head"><div><h2>'+title+'</h2><p>مربوط به کلاس شما · همگام با مدرسه</p></div><button class="secondary-button small-button" data-refresh-school-work type="button">به‌روزرسانی</button></div>'+content+'</section>';
