@@ -307,9 +307,17 @@ async function handle(form){
    r=await client.auth.signInWithPassword({email:loginEmail(username),password:String(d.get("password")||"")});
    if(r.error)throw Error("شناسه کاربری یا رمز عبور نادرست است.");
    try{
-    const verified=await provision({mode:"verify_login_role"},true);
-    if(!["student","teacher","principal"].includes(verified.role))throw Error("نقش این حساب قابل تشخیص نیست.");
-    role=verified.role;
+    const accountRole=r.data.user?.app_metadata?.stuner_role;
+    const memberships=await client.from("school_memberships").select("role").eq("user_id",r.data.user.id);
+    if(memberships.error)throw memberships.error;
+    const available=[...new Set((memberships.data||[]).map(x=>x.role).filter(x=>["student","teacher","principal"].includes(x)))];
+    const resolved=["student","teacher","principal"].includes(accountRole)&&
+      (accountRole==="principal"||available.includes(accountRole))?accountRole:
+      available.length===1?available[0]:null;
+    if(!resolved)throw Error("نقش یکتایی برای این حساب پیدا نشد؛ با مدیر مدرسه تماس بگیرید.");
+    // Existing server endpoint independently validates the resolved role against trusted account data.
+    await provision({mode:"verify_login_role",role:resolved},true);
+    role=resolved;
    }catch(error){
     await client.auth.signOut();
     login();message(error.message||"تشخیص نقش حساب انجام نشد.");return;
