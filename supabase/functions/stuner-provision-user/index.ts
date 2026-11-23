@@ -14,30 +14,32 @@ const validName=(x:unknown)=>typeof x==="string"&&x.trim().length>=2&&x.trim().l
 const validPassword=(x:unknown)=>typeof x==="string"&&x.length>=10&&x.length<=128;
 function authAddress(username:string){return username+"@accounts.stuner.invalid"}
 
-/* The selected login tab is an authorization boundary, not merely a UI preference. */
-async function verifyLoginRole(req:Request,admin:ReturnType<typeof createClient>,body:Record<string,unknown>){
- const token=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"");
- const requested=String(body.role||"");
- if(!["student","teacher","principal"].includes(requested))return respond(400,{error:"نقش ورود معتبر نیست."});
+/* Resolve the signed-in account's role from trusted server-side account metadata and memberships. */
+async function verifyLoginRole(req:Request,admin:ReturnType<typeof createClient>){
+ const token=(req.headers.get("Authorization")||"").replace(/^Bearer\\s+/i,"");
  if(!token)return respond(401,{error:"نشست ورود معتبر نیست."});
  const auth=await admin.auth.getUser(token);
  if(auth.error||!auth.data.user)return respond(401,{error:"نشست ورود معتبر نیست."});
  const account=auth.data.user;
- const memberships=await admin.from("school_memberships").select("user_id")
-  .eq("user_id",account.id).eq("role",requested).limit(1);
- if(memberships.error)return respond(503,{error:"بررسی نقش حساب فعلاً ممکن نیست."});
- let authorized=!!memberships.data?.length;
- // Principals may sign up before creating their very first school.
- if(requested==="principal"&&!authorized){
-  authorized=account.app_metadata?.stuner_role==="principal";
+ const result=await admin.from("school_memberships").select("role").eq("user_id",account.id);
+ if(result.error)return respond(503,{error:"بررسی نقش حساب فعلاً ممکن نیست."});
+ const memberships=(result.data||[]).map(x=>x.role).filter(x=>["student","teacher","principal"].includes(x));
+ const appRole=account.app_metadata?.stuner_role;
+ const uniqueRoles=[...new Set(memberships)];
+ const resolved=["student","teacher","principal"].includes(appRole)?appRole:uniqueRoles.length===1?uniqueRoles[0]:null;
+ if(!resolved)return respond(409,{error:"برای این حساب نقش یکتایی ثبت نشده است؛ با مدیر سامانه تماس بگیرید."});
+ if(resolved==="student"||resolved==="teacher"){
+  if(!memberships.includes(resolved))return respond(403,{error:"دسترسی این حساب معتبر نیست."});
+ }else{
+  let authorized=account.app_metadata?.stuner_role==="principal"||memberships.includes("principal");
   if(!authorized){
    const owned=await admin.from("schools").select("id").eq("created_by",account.id).limit(1);
    if(owned.error)return respond(503,{error:"بررسی حساب مدیر فعلاً ممکن نیست."});
    authorized=!!owned.data?.length;
   }
+  if(!authorized)return respond(403,{error:"دسترسی مدیر برای این حساب ثبت نشده است."});
  }
- return authorized?respond(200,{ok:true,role:requested}):
-  respond(403,{error:"این حساب متعلق به تب انتخاب‌شده نیست. از تب نقش خود وارد شوید."});
+ return respond(200,{ok:true,role:resolved});
 }
 
 /* Excel onboarding: authenticate principal on the server and check every class assignment. */
@@ -239,7 +241,7 @@ Deno.serve(async(req:Request)=>{
  let data:Record<string,unknown>;
  try{data=await req.json();if(!data||typeof data!=="object"||Array.isArray(data))throw Error()}catch{return respond(400,{error:"Invalid request"})}
  const mode=data.mode;
- if(mode==="verify_login_role")return await verifyLoginRole(req,admin,data);
+ if(mode==="verify_login_role")return await verifyLoginRole(req,admin);
  if(mode==="import_members")return await importMembers(req,admin,data);
  if(mode==="delete_school")return await deleteSchool(req,admin,data);
  if(mode==="change_initial_password")return await changeInitialPassword(req,admin,data);
