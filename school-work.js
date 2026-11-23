@@ -76,10 +76,10 @@ window.STUNER_SCHOOL_WORK={
  teacherSubjects(){return teacherSubjects.map(x=>({subject:x.subject,teacher:x.teacher_name}))},
  snapshot(){
   return {tasks:assignments.filter(a=>a.kind==="task").map(a=>({
-   id:"school-"+a.id,schoolId:a.id,title:a.title,subject:a.subject,due:a.due_date,
+   id:"school-"+a.id,schoolId:a.id,title:a.title,subject:a.subject,due:a.due_date,createdAt:a.created_at,
    note:a.description,done:completed.has(a.id),fromSchool:true
   })),exams:assignments.filter(a=>a.kind==="exam").map(a=>({
-   id:"school-"+a.id,schoolId:a.id,title:a.title,subject:a.subject,date:a.due_date,
+   id:"school-"+a.id,schoolId:a.id,title:a.title,subject:a.subject,date:a.due_date,createdAt:a.created_at,
    note:a.description,fromSchool:true
   }))};
  },
