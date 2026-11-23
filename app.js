@@ -204,7 +204,7 @@ function examRow(e,withDelete=false){
 }
 function schoolTasks(){return window.STUNER_SCHOOL_WORK?.snapshot()?.tasks||[]}
 function schoolExams(){return window.STUNER_SCHOOL_WORK?.snapshot()?.exams||[]}
-function allStudentTasks(){return [...state.tasks.filter(t=>activeSubject(t.subject)),...schoolTasks()]}
+function allStudentTasks(){return schoolTasks()}
 function allStudentExams(){return [...state.exams.filter(e=>activeSubject(e.subject)),...schoolExams()]}
 function schoolNotice(){
  const x=window.STUNER_SCHOOL_WORK?.status();
@@ -226,7 +226,7 @@ function renderHome(){
  let recordedSeconds=sumSessionSeconds(visibleSessions);
  return `<div class="home-greeting"><h1>سلام ${esc(fullName())}</h1><p>به فضای مطالعه خودت خوش آمدی.</p></div><section class="hero-card"><div class="hero-copy"><p class="eyebrow">${iranHour()<11?"صبح بخیر":iranHour()<17?"روز بخیر":"عصر بخیر"}</p><h2>برای یه روز پربار آماده‌ای؟</h2><p>با یک جلسه کوتاه شروع کن؛ مسیر موفقیت از همین‌جا می‌گذره.</p><button class="primary-button" data-page="timer">▶ شروع مطالعه <span>· ۲۵ دقیقه</span></button></div><div class="hero-orbit" style="background:conic-gradient(var(--mint-300) 0 ${pct}%,rgba(255,255,255,.15) ${pct}% 100%)"><div class="hero-orbit-inner"><strong>${progressLabel}</strong><small>پیشرفت تکالیف فردا</small><span>${progressDetail}</span></div></div></section>
  <section class="stats-grid"><article class="card stat-card"><span class="stat-icon">◷</span><div><strong>${studyTimeStamp(recordedSeconds)}</strong><small>زمان مطالعه ثبت‌شده</small></div></article><article class="card stat-card"><span class="stat-icon">☑</span><div><strong>${fa(total-done)}</strong><small>تکلیف فردا باقی‌مانده</small></div></article><article class="card stat-card"><span class="stat-icon">♜</span><div><strong>${fa(exams.length)}</strong><small>امتحان فردا</small></div></article><article class="card stat-card"><span class="stat-icon">★</span><div><strong>${average()===null?"—":fa(average().toFixed(1))}</strong><small>میانگین نمرات</small></div></article></section>
- <div class="dashboard-grid"><section class="card panel"><div class="section-title" style="margin-top:0"><div><h2>تکالیف فردا</h2><p>${fmt(tomorrow,{weekday:"long",day:"numeric",month:"long"})}</p></div><button class="text-button" data-page="tasks">همه تکالیف ←</button></div>${tasks.length?`<div class="task-list">${tasks.map(t=>taskRow(t,true)).join("")}</div>`:empty("برای فردا تکلیفی ثبت نشده","تکالیف فردا از طرف خودت یا معلم اینجا نمایش داده می‌شوند.","✓")}</section>
+ <div class="dashboard-grid"><section class="card panel"><div class="section-title" style="margin-top:0"><div><h2>تکالیف فردا</h2><p>${fmt(tomorrow,{weekday:"long",day:"numeric",month:"long"})}</p></div><button class="text-button" data-page="tasks">همه تکالیف ←</button></div>${tasks.length?`<div class="task-list">${tasks.map(t=>taskRow(t,true)).join("")}</div>`:empty("برای فردا تکلیفی ثبت نشده","تکالیف ثبت‌شده توسط معلم اینجا نمایش داده می‌شوند.","✓")}</section>
  <section class="card panel"><div class="section-title" style="margin-top:0"><div><h2>امتحانات فردا</h2><p>${fmt(tomorrow,{weekday:"long",day:"numeric",month:"long"})} · امروز آماده شو</p></div><button class="text-button" data-page="exams">مشاهده همه ←</button></div>${exams.length?exams.map(e=>examRow(e)).join(""):empty("برای فردا امتحانی ثبت نشده","امتحان‌های فردا از طرف خودت یا معلم اینجا نمایش داده می‌شوند.","♜")}<button class="soft-button small-button" style="margin-top:12px" data-action="add-exam-tomorrow">＋ افزودن امتحان</button></section></div>
  `;
 }
