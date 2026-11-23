@@ -706,3 +706,11 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .notification-empty-box>span{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--mint-100);color:var(--green-800);font-size:19px}
 .notification-empty-box strong{color:var(--green-900);font-size:12px}
 .notification-empty-box p{margin:0;color:var(--text-muted,#7c9687);font-size:10px;line-height:1.8}
+
+/* Final alignment: greeting and compact notification button on one row. */
+.home-greeting{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:12px}
+.home-greeting-copy{flex:1;min-width:0}
+.home-notifications{flex:0 0 auto;margin:0}
+.notification-launcher{width:38px;height:38px;min-width:38px;padding:0;gap:0;border-radius:11px}
+.notification-launcher-icon{width:22px;height:22px;font-size:16px;border-radius:7px}
+.notification-launcher-label{display:none}
