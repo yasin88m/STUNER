@@ -21,9 +21,23 @@ const nav=[
 function schoolOptions(){
  return state.schools.map(s=>'<option value="'+esc(s.school_id)+'" '+(s.school_id===state.schoolId?"selected":"")+'>'+displaySchool(s.school_id)+'</option>').join("");
 }
+function gradeOptions(id){
+ const grades=[...new Set(schoolClasses(id).map(c=>c.grade).filter(Boolean))];
+ return grades.map(g=>'<option value="'+esc(g)+'">'+esc(g)+'</option>').join("");
+}
 function classChoices(id){
  const list=schoolClasses(id);
  return list.length?list.map(c=>'<label class="teacher-class-option"><input type="checkbox" name="class_ids" value="'+esc(c.id)+'"><span><strong>'+esc(c.name)+'</strong><small>پایه '+esc(c.grade)+' · '+state.students.filter(s=>s.class_id===c.id&&s.school_id===id).length+' دانش‌آموز</small></span></label>').join(""):'<p class="teacher-empty">برای این مدرسه کلاسی به شما اختصاص داده نشده است.</p>';
+}
+function studentChoices(id){
+ const list=schoolStudents(id);
+ return list.length?list.map(s=>'<label class="teacher-class-option"><input type="checkbox" name="student_ids" value="'+esc(s.user_id)+'"><span><strong>'+esc(s.display_name||"دانش‌آموز")+'</strong><small>'+esc(schoolClasses(id).find(c=>c.id===s.class_id)?.name||"کلاس نامشخص")+' · پایه '+esc(schoolClasses(id).find(c=>c.id===s.class_id)?.grade||"—")+'</small></span></label>').join(""):'<p class="teacher-empty">دانش‌آموزی در کلاس‌های اختصاص‌یافته ثبت نشده است.</p>';
+}
+function targetChoices(id,audience,grade){
+ if(audience==="students")return studentChoices(id);
+ if(audience==="classes")return classChoices(id);
+ const list=schoolClasses(id).filter(c=>!grade||c.grade===grade);
+ return list.length?'<p class="teacher-target-hint">همه دانش‌آموزان کلاس‌های پایه انتخاب‌شده تکلیف را دریافت می‌کنند.</p>'+list.map(c=>'<div class="teacher-class-option teacher-class-readonly"><span><strong>'+esc(c.name)+'</strong><small>پایه '+esc(c.grade)+' · '+state.students.filter(s=>s.class_id===c.id&&s.school_id===id).length+' دانش‌آموز</small></span></div>').join(""):'<p class="teacher-empty">کلاسی برای این پایه در دسترس نیست.</p>';
 }
 function home(){
  const schools=state.schools.length,classes=granted().length,students=new Set(state.students.filter(s=>granted().some(c=>c.id===s.class_id)).map(s=>s.user_id)).size;
@@ -59,13 +73,18 @@ function classesPage(){
 function createPage(){
  return '<section class="portal-card teacher-create-card"><div class="teacher-card-heading"><div><h2>'+icon("clipboard-plus")+' ثبت تکلیف یا امتحان</h2><p>مدرسه را انتخاب کنید؛ تنها کلاس‌های مجاز همان مدرسه نمایش داده می‌شوند.</p></div></div><form id="teacherMultiAssignmentForm" class="portal-form">'+
  '<div class="teacher-fields-grid"><label>مدرسه<select name="school_id" id="teacherAssignmentSchool" required>'+schoolOptions()+'</select></label><label>نوع فعالیت<select name="kind" required><option value="task">تکلیف</option><option value="exam">امتحان</option></select></label></div>'+
- '<fieldset class="teacher-fieldset"><legend>کلاس‌های دریافت‌کننده</legend><p>می‌توانید هم‌زمان چند کلاس از یک مدرسه را انتخاب کنید.</p><div id="teacherClassChoices" class="teacher-class-checks">'+classChoices(state.schoolId)+'</div></fieldset>'+
+ '<label class="teacher-target-mode">ارسال برای<select name="audience" id="teacherAudience"><option value="grade">همه دانش‌آموزان یک پایه</option><option value="classes">یک یا چند کلاس مشخص</option><option value="students">دانش‌آموزان انتخابی</option></select></label>'+
+ '<div id="teacherGradeField" class="teacher-target-mode"><label>پایه تحصیلی<select name="target_grade" id="teacherTargetGrade">'+gradeOptions(state.schoolId)+'</select></label></div>'+
+ '<fieldset class="teacher-fieldset" id="teacherTargetField" hidden><legend id="teacherTargetLegend">انتخاب مخاطبان</legend><p id="teacherTargetHelp"></p><div id="teacherClassChoices" class="teacher-class-checks"></div></fieldset>'+
  '<div class="teacher-fields-grid"><label>درس<input name="subject" maxlength="100" placeholder="مثلاً ریاضی" required></label><label>عنوان<input name="title" minlength="2" maxlength="150" placeholder="مثلاً تمرین فصل سوم" required></label></div>'+
  ''+window.STUNER_JALALI.field("due_date","تاریخ امتحان یا مهلت تحویل")+'<label>توضیحات برای دانش‌آموزان<textarea name="description" rows="4" maxlength="3000" placeholder="جزئیات درس، محدوده صفحات، نکات و راهنمای انجام"></textarea></label>'+
  '<div class="teacher-form-footer"><p>پس از ثبت، این فعالیت مستقیماً در بخش تکالیف یا امتحانات دانش‌آموزان کلاس‌های انتخاب‌شده نمایش داده می‌شود.</p><button class="portal-primary" type="submit">'+icon("send")+' ثبت و ارسال</button></div></form><p class="portal-error" id="teacherFormMessage" role="status" aria-live="polite"></p></section>';
 }
 function workRows(rows){
- return rows.length?rows.map(a=>'<div class="teacher-work-row"><span class="teacher-work-icon">'+icon(a.kind==="task"?"clipboard-check":"graduation-cap")+'</span><div><strong>'+esc(a.title)+'</strong><small>'+esc(a.subject)+' · '+displaySchool(a.school_id)+' · '+esc(state.classes.find(c=>c.id===a.class_id)?.name||"—")+'</small></div><span class="teacher-work-date">'+esc(window.STUNER_JALALI.formatted(a.due_date))+'</span></div>').join(""):'<p class="teacher-empty">هنوز تکلیف یا امتحانی ثبت نشده است.</p>';
+ return rows.length?rows.map(a=>{
+  const target=a.student_id?("دانش‌آموز: "+(state.students.find(s=>s.user_id===a.student_id)?.display_name||"دانش‌آموز انتخابی")):(state.classes.find(c=>c.id===a.class_id)?.name||"کلاس");
+  return '<div class="teacher-work-row"><span class="teacher-work-icon">'+icon(a.kind==="task"?"clipboard-check":"graduation-cap")+'</span><div><strong>'+esc(a.title)+'</strong><small>'+esc(a.subject)+' · '+displaySchool(a.school_id)+' · '+esc(target)+'</small></div><span class="teacher-work-date">'+esc(window.STUNER_JALALI.formatted(a.due_date))+'</span></div>';
+ }).join(""):'<p class="teacher-empty">هنوز تکلیف یا امتحانی ثبت نشده است.</p>';
 }
 function workPage(){
  return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>فعالیت‌های ثبت‌شده</h2><p>فهرست تکالیف و امتحاناتی که ارسال کرده‌اید</p></div><button data-teacher-page="create" class="portal-secondary">'+icon("plus")+' ثبت جدید</button></div>'+workRows(state.assignments)+'</section>';
@@ -78,6 +97,10 @@ function render(){
  (state.menu?'<div class="portal-director-nav"><button type="button" class="portal-nav-scrim" data-teacher-menu="close" aria-label="بستن منو"></button><nav class="portal-nav-menu" aria-label="منوی معلم"><div class="portal-nav-title"><strong>'+icon("graduation-cap")+' پنل معلم</strong><button data-teacher-menu="close" aria-label="بستن">×</button></div>'+nav.map(n=>'<button class="'+(n[0]===state.page?"active":"")+'" data-teacher-page="'+n[0]+'">'+icon(n[2])+' '+n[1]+'</button>').join("")+'<button data-action="picker">'+icon("repeat")+' تغییر نقش یا مدرسه</button><button data-action="logout">'+icon("log-out")+' خروج از حساب</button></nav></div>':"")+
  '<main class="teacher-page">'+pages[state.page]()+'</main></div>';
  window.STUNER_ICONS?.refresh?.();
+ if(state.page==="create"){
+  const audience=state.root.querySelector("#teacherAudience")?.value||"grade";
+  renderTargetControls(audience,state.root.querySelector("#teacherTargetGrade")?.value||"");
+ }
 }
 async function load(){
  const ids=state.schools.map(s=>s.school_id);
@@ -86,7 +109,7 @@ async function load(){
   state.client.from("school_classes").select("id,school_id,name,grade").in("school_id",ids),
   state.client.from("class_teachers").select("school_id,class_id,teacher_id").eq("teacher_id",state.user.id).in("school_id",ids),
   state.client.from("school_memberships").select("school_id,user_id,role,display_name,class_id").eq("role","student").in("school_id",ids),
-  state.client.from("school_assignments").select("id,school_id,class_id,teacher_id,kind,title,subject,description,due_date,created_at").eq("teacher_id",state.user.id).in("school_id",ids).order("created_at",{ascending:false})
+  state.client.from("school_assignments").select("id,school_id,class_id,student_id,teacher_id,kind,title,subject,description,due_date,created_at").eq("teacher_id",state.user.id).in("school_id",ids).order("created_at",{ascending:false})
  ]);
  for(const response of [c,l,s,a])if(response.error)throw response.error;
  state.classes=c.data||[];state.links=l.data||[];state.students=s.data||[];state.assignments=a.data||[];
@@ -108,11 +131,28 @@ function onChange(e){
  if(e.target.matches("#teacherAssignmentSchool")){
   const id=e.target.value;if(!state.schools.some(s=>s.school_id===id))return;
   state.schoolId=id;
-  state.root.querySelector("#teacherClassChoices").innerHTML=classChoices(id);
+  const audience=state.root.querySelector("#teacherAudience")?.value||"grade";
+  const grade=state.root.querySelector("#teacherTargetGrade")?.value||"";
+  state.root.querySelector("#teacherTargetGrade").innerHTML=gradeOptions(id);
+  renderTargetControls(audience,grade);
   const msg=state.root.querySelector("#teacherFormMessage");if(msg)msg.textContent="";
+ }else if(e.target.matches("#teacherAudience")){
+  renderTargetControls(e.target.value,state.root.querySelector("#teacherTargetGrade")?.value||"");
+ }else if(e.target.matches("#teacherTargetGrade")){
+  renderTargetControls("grade",e.target.value);
  }else if(e.target.matches("#teacherClassesSchool")){
   if(!state.schools.some(s=>s.school_id===e.target.value))return;state.schoolId=e.target.value;state.classId="";render();
  }
+}
+function renderTargetControls(audience,grade){
+ const field=state.root.querySelector("#teacherTargetField"),gradeField=state.root.querySelector("#teacherGradeField");
+ const legend=state.root.querySelector("#teacherTargetLegend"),help=state.root.querySelector("#teacherTargetHelp"),choices=state.root.querySelector("#teacherClassChoices");
+ if(!field||!choices)return;
+ if(gradeField)gradeField.hidden=audience!=="grade";
+ field.hidden=audience==="grade";
+ if(audience==="classes"){legend.textContent="کلاس‌های دریافت‌کننده";help.textContent="یک یا چند کلاس از کلاس‌های اختصاص‌یافته به خودت انتخاب کن.";choices.innerHTML=classChoices(state.schoolId);}
+ if(audience==="students"){legend.textContent="دانش‌آموزان دریافت‌کننده";help.textContent="یک یا چند دانش‌آموز از کلاس‌هایی که به تو اختصاص داده شده انتخاب کن.";choices.innerHTML=studentChoices(state.schoolId);}
+ if(audience==="grade"){choices.innerHTML=targetChoices(state.schoolId,"grade",grade);}
 }
 async function onSubmit(e){
  const join=e.target.closest("#teacherJoinSchoolForm");
@@ -138,13 +178,26 @@ async function onSubmit(e){
  const form=e.target.closest("#teacherMultiAssignmentForm");if(!form)return;
  e.preventDefault();
  if(state.busy)return;
- const data=new FormData(form),schoolId=String(data.get("school_id")||"");
- const ids=[...new Set(data.getAll("class_ids").map(String))];
+ const data=new FormData(form),schoolId=String(data.get("school_id")||""),audience=String(data.get("audience")||"grade");
+ const classIds=[...new Set(data.getAll("class_ids").map(String))];
+ const studentIds=[...new Set(data.getAll("student_ids").map(String))];
  const msg=state.root.querySelector("#teacherFormMessage");
  if(!state.schools.some(s=>s.school_id===schoolId)){msg.textContent="مدرسه معتبر نیست.";return}
- if(!ids.length){msg.textContent="حداقل یک کلاس را انتخاب کنید.";return}
- if(ids.some(id=>!schoolClasses(schoolId).some(c=>c.id===id))){msg.textContent="به یکی از کلاس‌های انتخاب‌شده دسترسی ندارید.";return}
- const rows=ids.map(classId=>({school_id:schoolId,class_id:classId,teacher_id:state.user.id,kind:data.get("kind"),subject:String(data.get("subject")||"").trim(),title:String(data.get("title")||"").trim(),description:String(data.get("description")||"").trim(),due_date:data.get("due_date")}));
+ let targets=[];
+ if(audience==="grade"){
+  const grade=String(data.get("target_grade")||"");
+  targets=schoolClasses(schoolId).filter(c=>c.grade===grade).map(c=>({class_id:c.id,student_id:null}));
+ }else if(audience==="classes"){
+  if(!classIds.length){msg.textContent="حداقل یک کلاس را انتخاب کنید.";return}
+  if(classIds.some(id=>!schoolClasses(schoolId).some(c=>c.id===id))){msg.textContent="به یکی از کلاس‌های انتخاب‌شده دسترسی ندارید.";return}
+  targets=classIds.map(id=>({class_id:id,student_id:null}));
+ }else if(audience==="students"){
+  if(!studentIds.length){msg.textContent="حداقل یک دانش‌آموز را انتخاب کنید.";return}
+  if(studentIds.some(id=>!schoolStudents(schoolId).some(s=>s.user_id===id))){msg.textContent="به یکی از دانش‌آموزان انتخاب‌شده دسترسی ندارید.";return}
+  targets=studentIds.map(id=>({class_id:null,student_id:id}));
+ }else{msg.textContent="نوع مخاطب معتبر نیست.";return}
+ if(!targets.length){msg.textContent="برای این مخاطب کلاسی یا دانش‌آموزی پیدا نشد.";return}
+ const rows=targets.map(target=>({school_id:schoolId,...target,teacher_id:state.user.id,kind:data.get("kind"),subject:String(data.get("subject")||"").trim(),title:String(data.get("title")||"").trim(),description:String(data.get("description")||"").trim(),due_date:data.get("due_date")}));
  if(rows.some(x=>!x.title||!x.subject||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(String(x.due_date||"")))){msg.textContent="اطلاعات تکلیف یا امتحان را کامل کنید.";return}
  state.busy=true;const btn=form.querySelector('button[type="submit"]');btn.disabled=true;
  try{
