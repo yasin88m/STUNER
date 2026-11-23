@@ -64,10 +64,8 @@ function message(v){const x=document.getElementById("portalMessage");if(x)x.text
 function head(title){return '<div class="portal-head"><div class="portal-brand"><img src="./brand-logo.svg" alt="لوگوی استیونر"><div><strong>STUNER</strong><small>استیونر | همراه مسیر پیشرفت</small></div></div><div class="portal-head-title"><h1>'+esc(title)+'</h1></div>'+(user?'<button data-action="logout" class="portal-secondary">خروج</button>':'')+'</div>'}
 function login(){
  show();current=null;
- el.innerHTML=head("ورود به سامانه مدارس")+'<section class="portal-card"><div class="portal-roles"><button data-role="student">دانش‌آموز</button><button data-role="teacher">معلم</button><button data-role="principal">مدیر مدرسه</button></div><form id="loginForm" class="portal-form"><label>نام کاربری<input name="username" type="text" autocomplete="username" dir="ltr" required minlength="4" maxlength="32" pattern="(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})" placeholder="navid_1405"></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" dir="ltr" required></label><button class="portal-primary">ورود به استیونر</button></form><div class="portal-actions"><button data-action="signup">ساخت حساب مدیر مدرسه</button></div><p class="portal-note">حساب معلم و دانش‌آموز توسط مدیر مدرسه ساخته می‌شود؛ ایمیل نیاز نیست. دسترسی هر نقش در سرور بررسی می‌شود.</p><p class="portal-error" id="portalMessage" aria-live="polite"></p></section>';
- updateRole();
+ el.innerHTML=head("ورود به استیونر")+'<section class="portal-card"><form id="loginForm" class="portal-form"><label>شناسه کاربری<input name="username" type="text" autocomplete="username" dir="ltr" required minlength="4" maxlength="32" pattern="(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})" placeholder="شناسه کاربری"></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" dir="ltr" required></label><button class="portal-primary">ورود به استیونر</button></form><div class="portal-actions"><button data-action="signup">ساخت حساب مدیر مدرسه</button></div><p class="portal-note">نوع حساب شما به‌صورت خودکار و امن از اطلاعات حساب تشخیص داده می‌شود.</p><p class="portal-error" id="portalMessage" aria-live="polite"></p></section>';
 }
-function updateRole(){el.querySelectorAll("[data-role]").forEach(x=>x.classList.toggle("active",x.dataset.role===role))}
 function signup(){
  show();role="principal";
  el.innerHTML=head("ثبت‌نام مدیر مدرسه")+'<section class="portal-card"><form id="signupForm" class="portal-form"><label>نام و نام خانوادگی<input name="display_name" type="text" required maxlength="120" minlength="2" autocomplete="name"></label><label>نام کاربری<input name="username" type="text" required maxlength="32" minlength="4" pattern="(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})" dir="ltr" autocomplete="username" placeholder="school_manager"></label><label>رمز عبور (حداقل ۱۰ کاراکتر)<input name="password" type="password" required minlength="10" maxlength="128" dir="ltr" autocomplete="new-password"></label><button class="portal-primary">ایجاد حساب مدیر</button></form><button data-action="back" class="portal-secondary">بازگشت به ورود</button><p class="portal-note">برای ثبت‌نام ایمیل یا شماره تلفن لازم نیست. رمز را در جایی امن نگه دار؛ بازیابی خودکار رمز بدون روش ارتباطی فعال نیست.</p><p id="portalMessage" class="portal-error" aria-live="polite"></p></section>';
@@ -99,8 +97,13 @@ async function sync(){
  if(user.app_metadata?.stuner_initial_password_change===true){initialPasswordPage();return}
  const {data,error}=await client.from("school_memberships").select("school_id,user_id,role,display_name,grade,class_id,schools(name,kind)").eq("user_id",user.id);
  if(error)throw error;members=data||[];
- if(members.length&&!members.some(m=>m.role===role))role=members[0].role;
-  if(!members.length&&user.app_metadata?.stuner_role==="principal")role="principal";
+ const accountRole=user.app_metadata?.stuner_role;
+  const availableRoles=[...new Set(members.map(m=>m.role))];
+  if(["student","teacher","principal"].includes(accountRole)&&
+     (accountRole==="principal"||members.some(m=>m.role===accountRole)))role=accountRole;
+  else if(availableRoles.length===1)role=availableRoles[0];
+  else if(availableRoles.length&&!availableRoles.includes(role))role=availableRoles[0];
+  if(!members.length&&accountRole==="principal")role="principal";
  const old=sessionStorage.getItem("stuner.school");
  const last=members.find(m=>m.school_id===old&&m.role===role);
  if(last)await enter(last);else picker();
@@ -299,18 +302,19 @@ async function handle(form){
    await sync();return;
   }
   if(form.id==="loginForm"){
-   const selectedRole=role,username=String(d.get("username")||"").trim().toLowerCase();
-   if(!usernameRx.test(username))throw Error("نام کاربری معتبر نیست.");
+   const username=String(d.get("username")||"").trim().toLowerCase();
+   if(!usernameRx.test(username))throw Error("شناسه کاربری معتبر نیست.");
    r=await client.auth.signInWithPassword({email:loginEmail(username),password:String(d.get("password")||"")});
-   if(r.error)throw Error("نام کاربری یا رمز عبور نادرست است.");
+   if(r.error)throw Error("شناسه کاربری یا رمز عبور نادرست است.");
    try{
-    // Server verifies school memberships / principal status using the authenticated token.
-    await provision({mode:"verify_login_role",role:selectedRole},true);
+    const verified=await provision({mode:"verify_login_role"},true);
+    if(!["student","teacher","principal"].includes(verified.role))throw Error("نقش این حساب قابل تشخیص نیست.");
+    role=verified.role;
    }catch(error){
     await client.auth.signOut();
-    login();message(error.message||"حساب برای این تب مجاز نیست.");return;
+    login();message(error.message||"تشخیص نقش حساب انجام نشد.");return;
    }
-   sessionStorage.setItem("stuner.login.role",selectedRole);
+   sessionStorage.setItem("stuner.login.role",role);
    await sync();return;
   }
   if(form.id==="signupForm"){const username=String(d.get("username")||"").trim().toLowerCase(),password=String(d.get("password")||"");await provision({mode:"register_manager",username,password,display_name:String(d.get("display_name")||"").trim()});r=await client.auth.signInWithPassword({email:loginEmail(username),password});if(r.error)throw r.error;role="principal";sessionStorage.setItem("stuner.login.role","principal");await sync();return}
@@ -408,7 +412,6 @@ el.addEventListener("click",async e=>{
   if(e.target.closest("[data-class-back]")){viewClassId=null;dashboard();return}
   const ui=e.target.closest("[data-director-action]")?.dataset.directorAction;
   if(ui==="menu"||ui==="close"){directorMenu=ui==="menu"?!directorMenu:false;dashboard();return}
- const r=e.target.closest("[data-role]");if(r){role=r.dataset.role;sessionStorage.setItem("stuner.login.role",role);updateRole();return}
  const s=e.target.closest("[data-school]");if(s){const m=members.find(x=>x.school_id===s.dataset.school&&x.role===role);if(m)try{await enter(m)}catch(ex){message(ex.message)}return}
 
  const deletion=e.target.closest("[data-delete-assignment]");
