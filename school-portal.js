@@ -417,7 +417,7 @@ async function handle(form){
    const sent=await client.from("school_announcements").insert(rows).select("id,class_id");
    if(sent.error)throw sent.error;
    await enter(current);
-   message("اعلام‌رسانی برای "+fa(uniqueIds.length)+" کلاس ارسال شد.");
+   message("اعلام‌رسانی برای "+String(uniqueIds.length)+" کلاس ارسال شد.");
    return;
   }
   if(form.id==="resetMemberForm"){
