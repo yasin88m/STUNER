@@ -160,8 +160,17 @@ async function enter(member){
    };
   }
   window.STUNER_STUDENT_DB=client;
+  window.STUNER_SCHOOL_ANNOUNCEMENTS=[];
+  if(member.class_id){
+   const announcementResult=await client.from("school_announcements")
+    .select("id,subject,message,created_at,class_id")
+    .eq("school_id",member.school_id).eq("class_id",member.class_id)
+    .order("created_at",{ascending:false}).limit(30);
+   if(announcementResult.error)throw announcementResult.error;
+   window.STUNER_SCHOOL_ANNOUNCEMENTS=announcementResult.data||[];
+  }
   window.STUNER_SCHOOL_WORK?.init(client,user,member);
-  const src=document.createElement("script");src.src="./app.js?v=56";document.body.appendChild(src);return;
+  const src=document.createElement("script");src.src="./app.js?v=57";document.body.appendChild(src);return;
  }
  if(member.role==="teacher"){
   show();
@@ -190,6 +199,7 @@ const principalNav=[
  ["database","ورود پایگاه داده","database"],
  ["classes","کلاس‌ها","school"],
  ["work","تکالیف و امتحانات","clipboard-check"],
+ ["announcements","اعلام‌رسانی","bell"],
  ["security","مدیریت رمز عبور","shield-check"]
 ];
 const principalIcon=n=>'<i data-lucide="'+n+'"></i>';
@@ -245,6 +255,21 @@ function principalWork(){
  return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("notebook-tabs")+' تکالیف و امتحانات مدرسه</h2><p>فهرست فعالیت‌هایی که معلمان برای کلاس‌ها ثبت کرده‌اند</p></div><span class="portal-kind">'+assignments.length+' فعالیت</span></div>'+
  (assignments.map(a=>'<div class="teacher-work-row"><span class="teacher-work-icon">'+principalIcon(a.kind==="exam"?"graduation-cap":"clipboard-check")+'</span><div><strong>'+esc(a.title)+'</strong><small>'+esc(a.kind==="exam"?"امتحان":"تکلیف")+' · '+esc(a.subject)+' · '+esc(principalClass(a.class_id)?.name||"—")+'</small></div><span class="teacher-work-date">'+esc(window.STUNER_JALALI?.formatted(a.due_date)||a.due_date)+'</span></div>').join("")||'<p class="teacher-empty">هنوز تکلیف یا امتحانی برای مدرسه ثبت نشده است.</p>')+'</section>';
 }
+function principalAnnouncements(){
+ const singleOptions=classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+' · پایه '+esc(c.grade)+'</option>').join("");
+ const multipleOptions=classes.map(c=>'<label class="principal-announcement-class"><input type="checkbox" name="class_ids" value="'+esc(c.id)+'"><span><strong>'+esc(c.name)+'</strong><small>پایه '+esc(c.grade)+'</small></span></label>').join("");
+ return '<section class="portal-card principal-announcement-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("bell")+' ارسال اعلام‌رسانی</h2><p>پیام برای دانش‌آموزان کلاس انتخاب‌شده در زنگوله اعلان‌ها نمایش داده می‌شود.</p></div></div>'+
+ (classes.length?'<form id="announcementForm" class="portal-form principal-announcement-form">'+
+ '<label>موضوع<input name="subject" minlength="2" maxlength="150" placeholder="مثلاً تغییر برنامه امتحان" required></label>'+
+ '<label>پیام<textarea name="message" rows="5" maxlength="3000" placeholder="متن پیام را بنویسید..." required></textarea></label>'+
+ '<fieldset class="teacher-fieldset"><legend>مخاطبان پیام</legend><div class="principal-announcement-modes">'+
+ '<label><input type="radio" name="audience_mode" value="single" checked> یک کلاس</label>'+
+ '<label><input type="radio" name="audience_mode" value="multiple"> چند کلاس</label></div>'+
+ '<div id="announcementSingleClass"><label>انتخاب کلاس<select name="single_class_id" required><option value="">انتخاب کنید</option>'+singleOptions+'</select></label></div>'+
+ '<div id="announcementMultipleClasses" hidden><p class="portal-note">کلاس‌های موردنظر را انتخاب کنید.</p><div class="principal-announcement-class-list">'+multipleOptions+'</div></div></fieldset>'+
+ '<button type="submit" class="portal-primary">'+principalIcon("send")+' ارسال اعلام‌رسانی</button></form>':
+ '<p class="teacher-empty">برای این مدرسه هنوز کلاسی ثبت نشده است.</p>')+'</section>';
+}
 function principalSecurity(){
  return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("shield-check")+' مدیریت رمز عبور</h2><p>تنظیم رمز جدید برای حساب معلم یا دانش‌آموز همین مدرسه</p></div></div><form id="resetMemberForm" class="portal-form"><label>نام کاربری حساب<input name="username" dir="ltr" pattern="(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})" required></label><label>رمز عبور جدید (حداقل ۱۰ کاراکتر)<input name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label><button type="submit" class="portal-primary">'+principalIcon("shield-check")+' تغییر رمز عبور</button></form></section>'+principalDeleteSchool();
 }
@@ -262,7 +287,7 @@ function principalDeleteSchool(){
 function principalDatabase(){return window.STUNER_SCHOOL_DB_IMPORT?.render?.()||'<p>بخش ورود پایگاه داده بارگذاری نشد؛ صفحه را تازه‌سازی کنید.</p>';}
 function dashboard(){show();directorUi()}
 function directorUi(){
- const views={home:principalSummary,students:principalStudents,teachers:principalTeachers,classes:principalClasses,database:principalDatabase,work:principalWork,security:principalSecurity};
+ const views={home:principalSummary,students:principalStudents,teachers:principalTeachers,classes:principalClasses,database:principalDatabase,work:principalWork,announcements:principalAnnouncements,security:principalSecurity};
  if(!views[directorSection])directorSection="home";
  const title=principalNav.find(x=>x[0]===directorSection)?.[1]||"داشبورد";
  const drawer=directorMenu?'<div class="portal-director-nav"><button class="portal-nav-scrim" type="button" data-director-action="close" aria-label="بستن منو"></button><nav class="portal-nav-menu" aria-label="منوی مدیریت مدرسه"><div class="portal-nav-title"><strong>'+principalIcon("school")+' '+esc(school.name)+'</strong><button type="button" data-director-action="close" aria-label="بستن">×</button></div>'+principalNav.map(x=>'<button type="button" data-director-page="'+x[0]+'" class="'+(directorSection===x[0]?"active":"")+'">'+principalIcon(x[2])+' '+x[1]+'</button>').join("")+'<button data-action="picker">'+principalIcon("repeat")+' تغییر مدرسه</button><button data-action="logout">'+principalIcon("log-out")+' خروج از حساب</button></nav></div>':"";
@@ -378,6 +403,23 @@ async function handle(form){
  "هنرستان و تمام اطلاعات وابسته به آن حذف شدند.");
  return;
 }
+  if(form.id==="announcementForm"){
+   const subject=String(d.get("subject")||"").trim();
+   const body=String(d.get("message")||"").trim();
+   const mode=String(d.get("audience_mode")||"single");
+   const classIds=mode==="multiple"?d.getAll("class_ids").map(String):[String(d.get("single_class_id")||"")];
+   const uniqueIds=[...new Set(classIds.filter(Boolean))];
+   if(subject.length<2||subject.length>150)throw Error("موضوع باید بین ۲ تا ۱۵۰ نویسه باشد.");
+   if(!body||body.length>3000)throw Error("متن پیام را وارد کنید (حداکثر ۳۰۰۰ نویسه).");
+   if(!uniqueIds.length)throw Error("حداقل یک کلاس را انتخاب کنید.");
+   if(uniqueIds.some(id=>!classes.some(c=>c.id===id)))throw Error("یکی از کلاس‌های انتخاب‌شده معتبر نیست.");
+   const rows=uniqueIds.map(classId=>({school_id:school.id,class_id:classId,manager_id:user.id,subject,message:body}));
+   const sent=await client.from("school_announcements").insert(rows).select("id,class_id");
+   if(sent.error)throw sent.error;
+   await enter(current);
+   message("اعلام‌رسانی برای "+fa(uniqueIds.length)+" کلاس ارسال شد.");
+   return;
+  }
   if(form.id==="resetMemberForm"){
    const username=String(d.get("username")||"").trim().toLowerCase();
    await provision({mode:"reset_member",school_id:school.id,username,password:String(d.get("password")||"")},true);
@@ -436,7 +478,16 @@ el.addEventListener("click",async e=>{
  if(a==="signup")signup();if(a==="back")login();
  if(a==="create")newSchool();if(a==="picker"){directorMenu=false;viewClassId=null;directorSection="home";picker()}
 });
-el.addEventListener("change",e=>{if(e.target.id==="schoolKind"){window.STUNER_SCHOOL_DB_IMPORT?.invalidate?.();renderSchoolFields();return}if(e.target.closest("#schoolForm"))updateSchoolPreview()});
+el.addEventListener("change",e=>{
+ if(e.target.id==="schoolKind"){window.STUNER_SCHOOL_DB_IMPORT?.invalidate?.();renderSchoolFields();return}
+ if(e.target.closest("#schoolForm"))updateSchoolPreview();
+ if(e.target.name==="audience_mode"&&e.target.closest("#announcementForm")){
+  const multi=e.target.value==="multiple";
+  const one=document.getElementById("announcementSingleClass"),many=document.getElementById("announcementMultipleClasses");
+  if(one){one.hidden=multi;one.querySelector("select").required=!multi;}
+  if(many)many.hidden=!multi;
+ }
+});
 el.addEventListener("input",e=>{if(e.target.closest("#schoolForm"))updateSchoolPreview()});
 el.addEventListener("submit",async e=>{if(!e.target.matches("form"))return;e.preventDefault();const btn=e.target.querySelector("button");if(btn)btn.disabled=true;await handle(e.target);if(btn?.isConnected)btn.disabled=false});
 async function start(){
