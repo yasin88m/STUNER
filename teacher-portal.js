@@ -1,7 +1,7 @@
 /* Dedicated multi-school teacher workspace for STUNER. All reads respect Supabase RLS. */
 (function(){
 "use strict";
-const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],page:"home",joinNote:"",onMembershipsChanged:null,menu:false,schoolId:"",classId:"",busy:false};
+const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],views:[],page:"home",joinNote:"",onMembershipsChanged:null,menu:false,schoolId:"",classId:"",busy:false};
 const esc=x=>String(x??"").replace(/[&<>"']/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[a]));
 const icon=n=>'<i data-lucide="'+n+'"></i>';
 const schoolName=id=>state.schools.find(x=>x.school_id===id)?.schools?.name||"مدرسه";
@@ -80,10 +80,25 @@ function createPage(){
  ''+window.STUNER_JALALI.field("due_date","تاریخ امتحان یا مهلت تحویل")+'<label>توضیحات برای دانش‌آموزان<textarea name="description" rows="4" maxlength="3000" placeholder="جزئیات درس، محدوده صفحات، نکات و راهنمای انجام"></textarea></label>'+
  '<div class="teacher-form-footer"><p>پس از ثبت، این فعالیت مستقیماً در بخش تکالیف یا امتحانات دانش‌آموزان کلاس‌های انتخاب‌شده نمایش داده می‌شود.</p><button class="portal-primary" type="submit">'+icon("send")+' ثبت و ارسال</button></div></form><p class="portal-error" id="teacherFormMessage" role="status" aria-live="polite"></p></section>';
 }
+function viewTime(value){
+ try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Tehran"}).format(new Date(value))}
+ catch{return value||"—"}
+}
+function assignmentViewReport(a){
+ if(a.kind!=="task")return "";
+ const targets=a.student_id?state.students.filter(s=>s.user_id===a.student_id&&s.school_id===a.school_id):state.students.filter(s=>s.school_id===a.school_id&&s.class_id===a.class_id);
+ const records=state.views.filter(v=>v.assignment_id===a.id);
+ const viewed=new Map(records.map(v=>[v.student_id,v]));
+ const lines=targets.map(student=>{
+  const record=viewed.get(student.user_id);
+  return '<div class="teacher-work-row"><div><strong>'+esc(student.display_name||"دانش‌آموز")+'</strong><small>'+(record?'مشاهده در '+esc(viewTime(record.first_viewed_at)):'هنوز مشاهده نکرده')+'</small></div><span class="portal-kind">'+(record?'مشاهده شده':'مشاهده نشده')+'</span></div>';
+ }).join("");
+ return '<details class="teacher-view-report"><summary>گزارش مشاهده · '+records.length+' از '+targets.length+' نفر</summary><div class="principal-list">'+(lines||'<p class="teacher-empty">دانش‌آموزی برای این تکلیف پیدا نشد.</p>')+'</div></details>';
+}
 function workRows(rows){
  return rows.length?rows.map(a=>{
   const target=a.student_id?("دانش‌آموز: "+(state.students.find(s=>s.user_id===a.student_id)?.display_name||"دانش‌آموز انتخابی")):(state.classes.find(c=>c.id===a.class_id)?.name||"کلاس");
-  return '<div class="teacher-work-row"><span class="teacher-work-icon">'+icon(a.kind==="task"?"clipboard-check":"graduation-cap")+'</span><div><strong>'+esc(a.title)+'</strong><small>'+esc(a.subject)+' · '+displaySchool(a.school_id)+' · '+esc(target)+'</small></div><span class="teacher-work-date">'+esc(window.STUNER_JALALI.formatted(a.due_date))+'</span></div>';
+  return '<div class="teacher-work-row"><span class="teacher-work-icon">'+icon(a.kind==="task"?"clipboard-check":"graduation-cap")+'</span><div><strong>'+esc(a.title)+'</strong><small>'+esc(a.subject)+' · '+displaySchool(a.school_id)+' · '+esc(target)+'</small></div><span class="teacher-work-date">'+esc(window.STUNER_JALALI.formatted(a.due_date))+'</span></div>'+assignmentViewReport(a);
  }).join(""):'<p class="teacher-empty">هنوز تکلیف یا امتحانی ثبت نشده است.</p>';
 }
 function workPage(){
@@ -113,6 +128,12 @@ async function load(){
  ]);
  for(const response of [c,l,s,a])if(response.error)throw response.error;
  state.classes=c.data||[];state.links=l.data||[];state.students=s.data||[];state.assignments=a.data||[];
+ const taskIds=state.assignments.filter(x=>x.kind==="task").map(x=>x.id);
+ if(taskIds.length){
+  const viewed=await state.client.from("assignment_views").select("assignment_id,student_id,first_viewed_at").in("assignment_id",taskIds);
+  if(viewed.error)throw viewed.error;
+  state.views=viewed.data||[];
+ }else state.views=[];
 }
 const refresh=async()=>{await load();render()};
 async function onClick(e){
