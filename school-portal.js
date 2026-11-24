@@ -170,7 +170,7 @@ async function enter(member){
    window.STUNER_SCHOOL_ANNOUNCEMENTS=announcementResult.data||[];
   }
   window.STUNER_SCHOOL_WORK?.init(client,user,member);
-  const src=document.createElement("script");src.src="./app.js?v=59";document.body.appendChild(src);return;
+  const src=document.createElement("script");src.src="./app.js?v=60";document.body.appendChild(src);return;
  }
  if(member.role==="teacher"){
   show();
