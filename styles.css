@@ -748,3 +748,11 @@ html,body{max-width:100%;overflow-x:hidden;}
 .notification-popover{position:fixed!important;inset-block-start:80px!important;inset-inline-end:12px!important;inset-inline-start:auto!important;inset-block-end:auto!important;transform:none!important;width:min(320px,calc(100vw - 24px))!important;max-width:calc(100vw - 24px)!important;max-height:calc(100vh - 100px)!important;max-height:calc(100dvh - 100px)!important;overflow:auto!important;z-index:2147483000!important;}
 .notification-popover-heading .notification-close{display:grid!important;visibility:visible!important;opacity:1!important;}
 .notification-launcher-icon{font-family:"Apple Color Emoji","Segoe UI Emoji",sans-serif!important;font-size:20px!important;}
+
+/* v56: notification dialog is portaled to body by app.js, independent of dashboard layout. */
+#app{max-width:100%;overflow-x:clip;}
+html,body{width:100%;max-width:100%;overflow-x:clip!important;}
+.notification-popover{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 76px)!important;right:12px!important;left:auto!important;bottom:auto!important;transform:none!important;width:min(320px,calc(100vw - 24px))!important;max-width:calc(100vw - 24px)!important;max-height:calc(100vh - 100px)!important;max-height:calc(100dvh - 100px)!important;overflow-x:hidden!important;overflow-y:auto!important;z-index:2147483000!important;box-sizing:border-box!important;margin:0!important;}
+.notification-popover-heading{position:relative!important;display:flex!important;align-items:center!important;min-height:36px!important;padding:0 42px 0 0!important;}
+.notification-popover-heading .notification-close{position:absolute!important;top:3px!important;right:0!important;left:auto!important;display:grid!important;visibility:visible!important;opacity:1!important;place-items:center!important;width:30px!important;height:30px!important;min-width:30px!important;padding:0!important;border:0!important;border-radius:9px!important;background:var(--mint-100)!important;color:var(--green-900)!important;font-size:24px!important;line-height:1!important;cursor:pointer!important;}
+.notification-launcher-icon svg{display:block;width:21px;height:21px;}
