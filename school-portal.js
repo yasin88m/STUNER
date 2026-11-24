@@ -192,7 +192,7 @@ async function enter(member){
   client.from("class_subject_teachers").select("class_id,teacher_id,subject").eq("school_id",sid),
   client.from("school_weekly_schedule").select("id,school_id,class_id,weekday,start_time,end_time,subject,teacher_name,room,created_at").eq("school_id",sid).order("weekday").order("start_time")
  ]);
- for(const r of [s,c,p,t,w,n,ts])if(r.error)throw r.error;
+ for(const r of [s,c,p,t,w,n,ts,ws])if(r.error)throw r.error;
  school=s.data;classes=c.data||[];people=p.data||[];teacherLinks=t.data||[];subjectLinks=ts.data||[];assignments=w.data||[];accountNames=n.data||[];weeklyPublishedRows=ws.data||[];dashboard();
 }
 
