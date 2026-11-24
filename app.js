@@ -436,40 +436,41 @@ function planModal(){openModal("افزودن جلسه مطالعه",`<form id="p
 function gradeModal(){openModal("ثبت نمره جدید",`<form id="gradeForm" class="modal-form"><label class="field"><span>درس</span><select name="subject">${subjectOptions(state.timer.subject)}</select></label><label class="field"><span>عنوان آزمون یا فعالیت</span><input name="title" placeholder="مثلاً امتحان میان‌ترم"></label><div class="field-row"><label class="field"><span>نمره از ۲۰</span><input name="score" type="number" min="0" max="20" step=".25" placeholder="مثلاً ۱۸.۵" required></label>${dateField("date","تاریخ")}</div><div class="modal-actions"><button class="primary-button" type="submit">ثبت نمره</button><button class="secondary-button" type="button" data-close-modal>انصراف</button></div></form>`)}
 function go(p){
   if(p==="konkuria")p="home";
-  if(p==="exams"){taskView="exams";p="tasks"}
-  if(p==="tasks")taskView="tasks";
-  if(p!==page){
-   try{history.pushState({stunerApp:true,page:p},"",location.href)}catch{}
-   page=p;
+  let nextTaskView=taskView;
+  if(p==="exams"){nextTaskView="exams";p="tasks"}
+  else if(p==="tasks")nextTaskView="tasks";
+  if(p!==page||nextTaskView!==taskView){
+   try{history.pushState({stunerApp:true,page:p,taskView:nextTaskView},"",location.href)}catch{}
+   page=p;taskView=nextTaskView;
   }
   render();window.scrollTo({top:0,behavior:"smooth"});
  }
  function installBackNavigation(){
-  const rootState={stunerApp:true,root:true,page};
+  const rootState={stunerApp:true,root:true,page,taskView};
   try{
    history.replaceState(rootState,"",location.href);
-   history.pushState({stunerApp:true,guard:true,page},"",location.href);
+   history.pushState({stunerApp:true,guard:true,page,taskView},"",location.href);
   }catch{}
   window.addEventListener("popstate",event=>{
    if($("#modalRoot")?.innerHTML.trim()){
     closeModal();
-    try{history.pushState({stunerApp:true,guard:true,page},"",location.href)}catch{}
+    try{history.pushState({stunerApp:true,guard:true,page,taskView},"",location.href)}catch{}
     return;
    }
    const target=event.state;
    if(target?.stunerApp){
     page=target.page||"home";
-    if(page==="exams"){taskView="exams";page="tasks"}
+    taskView=target.taskView||"tasks";
     render();window.scrollTo({top:0,behavior:"smooth"});
     if(target.root){
-     try{history.pushState({stunerApp:true,guard:true,page},"",location.href)}catch{}
+     try{history.pushState({stunerApp:true,guard:true,page,taskView},"",location.href)}catch{}
     }
     return;
    }
-   try{history.pushState({stunerApp:true,guard:true,page},"",location.href)}catch{}
+   try{history.pushState({stunerApp:true,guard:true,page,taskView},"",location.href)}catch{}
   });
  }
-installBackNavigation();
+ installBackNavigation();
  function remove(key,id){state[key]=state[key].filter(x=>x.id!==id);save();render();toast("حذف شد؛ در حال ذخیره در حساب…")}
 function notify(title,body){if(!("Notification"in window)||Notification.permission!=="granted")return;try{if("serviceWorker"in navigator&&navigator.serviceWorker.controller)navigator.serviceWorker.ready.then(r=>r.showNotification(title,{body,icon:"./icon.svg",dir:"rtl",lang:"fa"})).catch(()=>new Notification(title,{body,dir:"rtl"}));else new Notification(title,{body,dir:"rtl",lang:"fa"})}catch{}}
 async function enableNotifications(){if(!("Notification"in window)){toast("این مرورگر از اعلان گوشی پشتیبانی نمی‌کند.");return}let p=await Notification.requestPermission();toast(p==="granted"?"اعلان‌ها فعال شدند.":"اجازه اعلان‌ها داده نشد.");if(p==="granted")notify("استیونر آماده است","یادآوری‌های درسی‌ات فعال شدند.")}
@@ -552,7 +553,7 @@ document.addEventListener("click",e=>{
  if(e.target.closest("[data-close-modal]")||e.target.matches("[data-modal-backdrop]")){closeModal();return}
  let t=e.target.closest("[data-toggle-task]");if(t){let x=state.tasks.find(z=>z.id===t.dataset.toggleTask);if(x){x.done=!x.done;save();render();toast(x.done?"آفرین! تکلیف انجام‌شده ثبت شد.":"وضعیت تکلیف تغییر کرد.")}return}
  for(let [attr,key] of [["data-delete-task","tasks"],["data-delete-exam","exams"],["data-delete-plan","plans"],["data-delete-grade","grades"]]){let x=e.target.closest("["+attr+"]");if(x){remove(key,x.getAttribute(attr));return}}
- let workTab=e.target.closest("[data-work-tab]");if(workTab){taskView=workTab.dataset.workTab;page="tasks";taskFilter="all";render();return}
+ let workTab=e.target.closest("[data-work-tab]");if(workTab){taskFilter="all";go(workTab.dataset.workTab==="exams"?"exams":"tasks");return}
  let filter=e.target.closest("[data-task-filter]");if(filter){taskFilter=filter.dataset.taskFilter;render();return}
  let day=e.target.closest("[data-plan-day]");if(day){planDay=+day.dataset.planDay;render();return}
  let cal=e.target.closest("[data-calendar-date]");if(cal){calSelected=cal.dataset.calendarDate;render();return}
