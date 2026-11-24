@@ -36,6 +36,12 @@ async function refresh(){
  }catch(e){loadError=e.message||"ارتباط با مدرسه برقرار نشد."}
  finally{loading=false;update()}
 }
+async function recordFirstViews(rows){
+ if(!db||!user||!rows.length)return;
+ const payload=rows.map(a=>({assignment_id:a.id,student_id:user.id}));
+ const result=await db.from("assignment_views").upsert(payload,{onConflict:"assignment_id,student_id",ignoreDuplicates:true});
+ if(result.error)console.warn("ثبت زمان مشاهده تکلیف انجام نشد:",result.error.message);
+}
 function render(page){
  if(!db||!member)return "";
  if(!member.class_id&&!assignments.some(a=>a.student_id===user?.id))return '<section class="card panel stuner-schoolwork"><h2>برنامه مدرسه</h2><p>هنوز در هیچ کلاسی ثبت نشده‌ای؛ مدیر مدرسه باید تو را به کلاس اختصاص دهد.</p></section>';
@@ -44,8 +50,9 @@ function render(page){
  const content=loading&&!loaded?"<p>دریافت تکالیف و امتحانات مدرسه…</p>":loadError?'<p class="school-work-error">'+esc(loadError)+'</p>':list.length?list.map(a=>{
   const task=a.kind==="task",done=completed.has(a.id);
   const assignedTo=a.student_id?"ارسالی ویژه شما":"ارسالی برای کلاس";
-  return '<article class="school-work-row"><div class="school-work-text"><small class="school-work-label">'+(task?"تکلیف":"امتحان")+' · '+esc(a.subject)+' · '+assignedTo+'</small><strong>'+esc(a.title)+'</strong><span>'+esc(when(a.due_date))+'</span>'+(a.description?'<p>'+esc(a.description)+'</p>':"")+'</div>'+(task?'<button type="button" class="school-work-done '+(done?"is-done":"")+'" data-school-complete="'+esc(a.id)+'">'+(done?"✓ انجام شده":"ثبت انجام تکلیف")+'</button>':"")+'</article>';
+  return '<article class="school-work-row" data-school-assignment="'+esc(a.id)+'"><div class="school-work-text"><small class="school-work-label">'+(task?"تکلیف":"امتحان")+' · '+esc(a.subject)+' · '+assignedTo+'</small><strong>'+esc(a.title)+'</strong><span>'+esc(when(a.due_date))+'</span>'+(a.description?'<p>'+esc(a.description)+'</p>':"")+'</div>'+(task?'<button type="button" class="school-work-done '+(done?"is-done":"")+'" data-school-complete="'+esc(a.id)+'">'+(done?"✓ انجام شده":"ثبت انجام تکلیف")+'</button>':"")+'</article>';
  }).join(""):"<p>هنوز موردی از طرف معلم برای کلاس شما ثبت نشده است.</p>";
+ if(page==="tasks"&&loaded&&!loadError)recordFirstViews(list.filter(a=>a.kind==="task"));
  const title=page==="tasks"?"تکالیف ارسالی معلم":page==="exams"?"امتحانات تعیین‌شده مدرسه":"برنامه ارسالی معلمان";
  return '<section class="card panel stuner-schoolwork"><div class="school-work-head"><div><h2>'+title+'</h2><p>مربوط به کلاس شما · همگام با مدرسه</p></div><button class="secondary-button small-button" data-refresh-school-work type="button">به‌روزرسانی</button></div>'+content+'</section>';
 }
