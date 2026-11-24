@@ -42,6 +42,10 @@ async function recordFirstViews(rows){
  const result=await db.from("assignment_views").upsert(payload,{onConflict:"assignment_id,student_id",ignoreDuplicates:true});
  if(result.error)console.warn("ثبت زمان مشاهده تکلیف انجام نشد:",result.error.message);
 }
+async function recordVisibleTaskViews(){
+ if(!db||!user||!loaded||loadError||loading)return;
+ return recordFirstViews(assignments.filter(a=>a.kind==="task"));
+}
 function render(page){
  if(!db||!member)return "";
  if(!member.class_id&&!assignments.some(a=>a.student_id===user?.id))return '<section class="card panel stuner-schoolwork"><h2>برنامه مدرسه</h2><p>هنوز در هیچ کلاسی ثبت نشده‌ای؛ مدیر مدرسه باید تو را به کلاس اختصاص دهد.</p></section>';
@@ -79,7 +83,7 @@ document.addEventListener("click",e=>{
 });
 window.STUNER_SCHOOL_WORK={
  init(client,account,m){db=client;user=account;member=m;assignments=[];teacherSubjects=[];completed=new Set();loaded=false;refresh()},
- render,refresh,renderTeachers,
+ render,refresh,renderTeachers,recordFirstViews:recordVisibleTaskViews,
  teacherSubjects(){return teacherSubjects.map(x=>({subject:x.subject,teacher:x.teacher_name}))},
  snapshot(){
   return {tasks:assignments.filter(a=>a.kind==="task").map(a=>({
