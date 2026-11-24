@@ -743,3 +743,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .notification-popover-heading>span{order:2!important;flex:0 0 auto!important;}
 html,body{max-width:100%;overflow-x:hidden;}
 .home-greeting,.home-notifications{min-width:0;}
+
+/* v55: force a viewport-contained popup even in narrow Android webviews. */
+.notification-popover{position:fixed!important;inset-block-start:80px!important;inset-inline-end:12px!important;inset-inline-start:auto!important;inset-block-end:auto!important;transform:none!important;width:min(320px,calc(100vw - 24px))!important;max-width:calc(100vw - 24px)!important;max-height:calc(100vh - 100px)!important;max-height:calc(100dvh - 100px)!important;overflow:auto!important;z-index:2147483000!important;}
+.notification-popover-heading .notification-close{display:grid!important;visibility:visible!important;opacity:1!important;}
+.notification-launcher-icon{font-family:"Apple Color Emoji","Segoe UI Emoji",sans-serif!important;font-size:20px!important;}
