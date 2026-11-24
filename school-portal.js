@@ -6,7 +6,7 @@ const el=document.getElementById("portalRoot"),cover=document.getElementById("sc
 const app=document.getElementById("app"),on=document.getElementById("onboarding");
 const ready=/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(cfg.url||"")&&/^(sb_publishable_|eyJ)/.test(cfg.publishableKey||"");
 let client=null,user=null,role=["student","teacher","principal"].includes(sessionStorage.getItem("stuner.login.role"))?sessionStorage.getItem("stuner.login.role"):"student",members=[],current=null,classes=[],people=[],teacherLinks=[],subjectLinks=[],school=null,assignments=[],accountNames=[];
-let directorSection="home",directorMenu=false,viewClassId=null;
+let directorSection="home",directorMenu=false,viewClassId=null,weeklyDraftRows=[],weeklyDraftName="",weeklyPublishedRows=[];
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 const usernameRx=/^(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})$/;
@@ -160,6 +160,9 @@ async function enter(member){
    };
   }
   window.STUNER_STUDENT_DB=client;
+  window.STUNER_SCHOOL_CONTEXT={schoolId:member.school_id,classId:member.class_id||null};
+  window.STUNER_WEEKLY_SCHEDULE=[];
+  if(member.class_id){const weekly=await client.from("school_weekly_schedule").select("id,weekday,start_time,end_time,subject,teacher_name,room").eq("school_id",member.school_id).eq("class_id",member.class_id).order("weekday").order("start_time");if(weekly.error)throw weekly.error;window.STUNER_WEEKLY_SCHEDULE=weekly.data||[];}
   window.STUNER_SCHOOL_ANNOUNCEMENTS=[];
   if(member.class_id){
    const announcementResult=await client.from("school_announcements")
@@ -170,7 +173,7 @@ async function enter(member){
    window.STUNER_SCHOOL_ANNOUNCEMENTS=announcementResult.data||[];
   }
   window.STUNER_SCHOOL_WORK?.init(client,user,member);
-  const src=document.createElement("script");src.src="./app.js?v=62";document.body.appendChild(src);return;
+  const src=document.createElement("script");src.src="./app.js?v=63";document.body.appendChild(src);return;
  }
  if(member.role==="teacher"){
   show();
@@ -179,17 +182,18 @@ async function enter(member){
   return;
  }
  const sid=current.school_id;
- const [s,c,p,t,w,n,ts]=await Promise.all([
+ const [s,c,p,t,w,n,ts,ws]=await Promise.all([
   client.from("schools").select("id,name,kind,branch,majors,grades,created_by").eq("id",sid).single(),
   client.from("school_classes").select("id,name,grade,major,school_id").eq("school_id",sid),
   client.from("school_memberships").select("user_id,role,display_name,grade,class_id").eq("school_id",sid),
   client.from("class_teachers").select("class_id,teacher_id").eq("school_id",sid),
   client.from("school_assignments").select("id,school_id,class_id,teacher_id,kind,title,subject,description,due_date,created_at").eq("school_id",sid).order("due_date",{ascending:true}),
   client.from("account_usernames").select("user_id,username"),
-  client.from("class_subject_teachers").select("class_id,teacher_id,subject").eq("school_id",sid)
+  client.from("class_subject_teachers").select("class_id,teacher_id,subject").eq("school_id",sid),
+  client.from("school_weekly_schedule").select("id,school_id,class_id,weekday,start_time,end_time,subject,teacher_name,room,created_at").eq("school_id",sid).order("weekday").order("start_time")
  ]);
  for(const r of [s,c,p,t,w,n,ts])if(r.error)throw r.error;
- school=s.data;classes=c.data||[];people=p.data||[];teacherLinks=t.data||[];subjectLinks=ts.data||[];assignments=w.data||[];accountNames=n.data||[];dashboard();
+ school=s.data;classes=c.data||[];people=p.data||[];teacherLinks=t.data||[];subjectLinks=ts.data||[];assignments=w.data||[];accountNames=n.data||[];weeklyPublishedRows=ws.data||[];dashboard();
 }
 
 const principalNav=[
@@ -199,6 +203,7 @@ const principalNav=[
  ["database","ورود پایگاه داده","database"],
  ["classes","کلاس‌ها","school"],
  ["work","تکالیف و امتحانات","clipboard-check"],
+ ["weekly","برنامه هفتگی","calendar-days"],
  ["announcements","اعلام‌رسانی","bell"],
  ["security","مدیریت رمز عبور","shield-check"]
 ];
@@ -251,6 +256,60 @@ function principalClasses(){
  return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("school")+' کلاس‌های مدرسه</h2><p>برای مشاهده اطلاعات و دانش‌آموزان، یک کلاس انتخاب کنید.</p></div><span class="portal-kind">'+classes.length+' کلاس</span></div><div class="teacher-class-grid">'+(classes.map(c=>'<button type="button" class="teacher-class-card" data-class-detail="'+esc(c.id)+'"><span class="teacher-school-icon">'+principalIcon("book-open")+'</span><strong>'+esc(c.name)+'</strong><small>'+esc(c.grade)+' · '+people.filter(p=>p.role==="student"&&p.class_id===c.id).length+' دانش‌آموز</small><span>نمایش دانش‌آموزان '+principalIcon("arrow-left")+'</span></button>').join("")||'<p class="teacher-empty">کلاسی ثبت نشده است.</p>')+'</div></section>'+
  '<details class="portal-card principal-disclosure"><summary>'+principalIcon("plus")+' ایجاد کلاس جدید</summary><form id="classForm" class="portal-form"><div class="teacher-fields-grid"><label>عنوان کلاس<input name="name" minlength="2" maxlength="120" required></label><label>پایه'+(school.grades?.length?'<select name="grade" required>'+school.grades.map(g=>'<option value="'+esc(g)+'">'+esc(g)+'</option>').join("")+'</select>':'<input name="grade" required maxlength="40">')+'</label></div><button class="portal-primary" type="submit">ایجاد کلاس</button></form></details>';
 }
+
+const weeklyDays=["شنبه","یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه"];
+const weeklyNormalize=v=>String(v??"").normalize("NFKC").replace(/ي/g,"ی").replace(/ك/g,"ک").replace(/[\s\u200c_\-–—.,،:()]/g,"").toLowerCase();
+const weeklyDigits=v=>String(v??"").replace(/[۰-۹]/g,c=>String("۰۱۲۳۴۵۶۷۸۹".indexOf(c))).replace(/[٠-٩]/g,c=>String("٠١٢٣٤٥٦٧٨٩".indexOf(c)));
+function weeklyTime(v){
+ if(v instanceof Date&&!isNaN(v))return String(v.getHours()).padStart(2,"0")+":"+String(v.getMinutes()).padStart(2,"0");
+ if(typeof v==="number"&&v>=0&&v<1){const n=Math.round(v*1440);return String(Math.floor(n/60)%24).padStart(2,"0")+":"+String(n%60).padStart(2,"0")}
+ const m=weeklyDigits(v).trim().match(/^(\d{1,2})\s*[:٫.]\s*(\d{1,2})$/);if(!m)return "";
+ const h=Number(m[1]),mi=Number(m[2]);return h<=23&&mi<=59?String(h).padStart(2,"0")+":"+String(mi).padStart(2,"0"):"";
+}
+function weeklyDay(v){
+ const n=weeklyNormalize(v),aliases=[["شنبه","ش"],["یکشنبه","ی"],["دوشنبه","د"],["سهشنبه","س"],["چهارشنبه","چ"],["پنجشنبه","پ"],["جمعه","ج"]];
+ return aliases.findIndex(a=>n===weeklyNormalize(a[0])||n===weeklyNormalize(a[1]));
+}
+function weeklyPreviewMarkup(rows){
+ if(!rows.length)return '<p class="teacher-empty">هنوز فایلی برای بررسی انتخاب نشده است.</p>';
+ const groups=new Set(rows.map(r=>r.class_id));
+ return '<div class="teacher-stats"><div><span>کلاس‌های شناسایی‌شده</span><strong>'+groups.size+'</strong></div><div><span>جلسه‌های برنامه</span><strong>'+rows.length+'</strong></div></div>'+
+ '<div class="principal-list">'+rows.slice(0,30).map(r=>'<div class="teacher-work-row"><span class="teacher-work-icon">'+principalIcon("calendar-clock")+'</span><div><strong>'+esc(r.subject)+'</strong><small>'+esc(principalClass(r.class_id)?.name||"کلاس نامشخص")+' · '+weeklyDays[r.weekday]+' · '+r.start_time+' تا '+r.end_time+'</small><small>'+esc([r.teacher_name,r.room].filter(Boolean).join(" · "))+'</small></div></div>').join("")+'</div>'+
+ (rows.length>30?'<p class="portal-note">۳۰ ردیف اول از '+rows.length+' ردیف نمایش داده شده است.</p>':"");
+}
+function principalWeeklySchedule(){
+ const current=weeklyPublishedRows.length?'<section class="portal-card"><div class="teacher-card-heading"><div><h2>برنامه منتشرشده فعلی</h2><p>'+weeklyPublishedRows.length+' جلسه ثبت‌شده برای کلاس‌های مدرسه</p></div></div><div class="principal-list">'+weeklyPublishedRows.slice(0,12).map(r=>'<div class="teacher-work-row"><div><strong>'+esc(r.subject)+'</strong><small>'+esc(principalClass(r.class_id)?.name||"کلاس")+' · '+weeklyDays[r.weekday]+' · '+String(r.start_time).slice(0,5)+' تا '+String(r.end_time).slice(0,5)+'</small></div></div>').join("")+'</div></section>':'<section class="portal-card"><p class="teacher-empty">هنوز برنامه هفتگی برای مدرسه منتشر نشده است.</p></section>';
+ return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("calendar-days")+' مدیریت برنامه هفتگی</h2><p>یک فایل اکسل شامل برنامه همه کلاس‌ها بارگذاری کن؛ پس از بررسی، برای تمام کلاس‌ها منتشر می‌شود.</p></div></div>'+
+ '<label class="school-import-file"><i data-lucide="file-spreadsheet"></i><span>انتخاب فایل Excel برنامه همه کلاس‌ها</span><input type="file" id="weeklyScheduleFile" accept=".xlsx,.xls"></label>'+
+ '<p class="portal-note">ستون‌های فایل باید شامل نام کلاس، روز، ساعت شروع، ساعت پایان و درس باشند. نام دبیر و مکان اختیاری است. نام کلاس‌ها باید با کلاس‌های ثبت‌شده در STUNER مطابقت داشته باشد.</p>'+
+ '<div id="weeklySchedulePreview">'+weeklyPreviewMarkup(weeklyDraftRows)+'</div>'+
+ (weeklyDraftRows.length?'<button type="button" class="portal-primary" data-weekly-publish>'+principalIcon("send")+' انتشار برنامه برای همه کلاس‌ها</button>':"")+
+ '<p id="weeklyScheduleStatus" class="portal-note" role="status" aria-live="polite">'+(weeklyDraftName?'فایل انتخاب‌شده: '+esc(weeklyDraftName):"")+'</p></section>'+current;
+}
+async function parseWeeklyWorkbook(file){
+ if(!window.readXlsxFile)throw Error("ابزار خواندن فایل Excel بارگذاری نشده؛ صفحه را تازه‌سازی کن.");
+ const grid=await window.readXlsxFile(file);if(!Array.isArray(grid)||!grid.length)throw Error("فایل اکسل خالی است.");
+ const aliases={class:["کلاس","نام کلاس","class","classname","class name"],day:["روز","روز هفته","day","weekday"],start:["ساعت شروع","شروع","از ساعت","start","starttime","start time"],end:["ساعت پایان","پایان","تا ساعت","end","endtime","end time"],subject:["درس","نام درس","موضوع","subject","lesson"],teacher:["دبیر","نام دبیر","معلم","teacher","teachername"],room:["مکان","کلاس درس","اتاق","room","location"]};
+ let header=-1,cols={};
+ for(let i=0;i<Math.min(10,grid.length);i++){const cells=(grid[i]||[]).map(weeklyNormalize),found={};for(const [key,list] of Object.entries(aliases)){const j=cells.findIndex(c=>list.some(a=>weeklyNormalize(a)===c));if(j>=0)found[key]=j;}if(["class","day","start","end","subject"].every(k=>found[k]!==undefined)){header=i;cols=found;break}}
+ if(header<0)throw Error("ستون‌های لازم پیدا نشدند: کلاس، روز، ساعت شروع، ساعت پایان و درس.");
+ const byName=new Map(classes.map(c=>[weeklyNormalize(c.name),c])),rows=[],errors=[];
+ for(let i=header+1;i<grid.length;i++){const cells=grid[i]||[];if(!cells.some(x=>String(x??"").trim()))continue;const get=k=>cols[k]===undefined?"":cells[cols[k]],classRow=byName.get(weeklyNormalize(get("class"))),day=weeklyDay(get("day")),start=weeklyTime(get("start")),end=weeklyTime(get("end")),subject=String(get("subject")??"").trim();if(!classRow||day<0||!start||!end||end<=start||!subject){errors.push(i+1);continue}rows.push({class_id:classRow.id,weekday:day,start_time:start,end_time:end,subject,teacher_name:String(get("teacher")??"").trim(),room:String(get("room")??"").trim()})}
+ if(errors.length)throw Error("ردیف‌های "+errors.slice(0,12).join("، ")+(errors.length>12?" و چند ردیف دیگر":"")+" نامعتبرند یا نام کلاسشان در مدرسه پیدا نشد.");
+ if(!rows.length)throw Error("هیچ جلسه معتبری در فایل پیدا نشد.");if(rows.length>1000)throw Error("تعداد ردیف‌های برنامه بیشتر از حد مجاز (۱۰۰۰) است.");return rows;
+}
+async function loadWeeklyWorkbook(file){
+ const status=document.getElementById("weeklyScheduleStatus");
+ try{weeklyDraftRows=await parseWeeklyWorkbook(file);weeklyDraftName=file.name;const preview=document.getElementById("weeklySchedulePreview");if(preview)preview.innerHTML=weeklyPreviewMarkup(weeklyDraftRows);if(!document.querySelector("[data-weekly-publish]"))preview?.insertAdjacentHTML("afterend",'<button type="button" class="portal-primary" data-weekly-publish>'+principalIcon("send")+' انتشار برنامه برای همه کلاس‌ها</button>');if(status)status.textContent="فایل با موفقیت بررسی شد: "+file.name;window.STUNER_ICONS?.refresh?.();}
+ catch(err){weeklyDraftRows=[];weeklyDraftName="";const preview=document.getElementById("weeklySchedulePreview");if(preview)preview.innerHTML='<p class="portal-error">'+esc(err.message)+'</p>';document.querySelector("[data-weekly-publish]")?.remove();if(status)status.textContent="";}
+}
+async function publishWeeklySchedule(){
+ if(!weeklyDraftRows.length){message("ابتدا یک فایل اکسل معتبر انتخاب کن.");return}if(!confirm("برنامه جدید برای تمام کلاس‌های مدرسه منتشر و جایگزین برنامه قبلی شود؟"))return;
+ const button=document.querySelector("[data-weekly-publish]");if(button)button.disabled=true;
+ try{const {data,error}=await client.rpc("publish_school_weekly_schedule",{p_school_id:school.id,p_rows:weeklyDraftRows});if(error)throw error;weeklyDraftRows=[];weeklyDraftName="";const result=await client.from("school_weekly_schedule").select("id,school_id,class_id,weekday,start_time,end_time,subject,teacher_name,room,created_at").eq("school_id",school.id).order("weekday").order("start_time");if(result.error)throw result.error;weeklyPublishedRows=result.data||[];directorSection="weekly";dashboard();message("برنامه هفتگی برای "+Number(data||0)+" جلسه منتشر شد.");}
+ catch(err){message(err.message||"انتشار برنامه انجام نشد.");if(button)button.disabled=false}
+}
+
 function principalWork(){
  return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("notebook-tabs")+' تکالیف و امتحانات مدرسه</h2><p>فهرست فعالیت‌هایی که معلمان برای کلاس‌ها ثبت کرده‌اند</p></div><span class="portal-kind">'+assignments.length+' فعالیت</span></div>'+
  (assignments.map(a=>'<div class="teacher-work-row"><span class="teacher-work-icon">'+principalIcon(a.kind==="exam"?"graduation-cap":"clipboard-check")+'</span><div><strong>'+esc(a.title)+'</strong><small>'+esc(a.kind==="exam"?"امتحان":"تکلیف")+' · '+esc(a.subject)+' · '+esc(principalClass(a.class_id)?.name||"—")+'</small></div><span class="teacher-work-date">'+esc(window.STUNER_JALALI?.formatted(a.due_date)||a.due_date)+'</span></div>').join("")||'<p class="teacher-empty">هنوز تکلیف یا امتحانی برای مدرسه ثبت نشده است.</p>')+'</section>';
@@ -287,7 +346,7 @@ function principalDeleteSchool(){
 function principalDatabase(){return window.STUNER_SCHOOL_DB_IMPORT?.render?.()||'<p>بخش ورود پایگاه داده بارگذاری نشد؛ صفحه را تازه‌سازی کنید.</p>';}
 function dashboard(){show();directorUi()}
 function directorUi(){
- const views={home:principalSummary,students:principalStudents,teachers:principalTeachers,classes:principalClasses,database:principalDatabase,work:principalWork,announcements:principalAnnouncements,security:principalSecurity};
+ const views={home:principalSummary,students:principalStudents,teachers:principalTeachers,classes:principalClasses,database:principalDatabase,work:principalWork,weekly:principalWeeklySchedule,announcements:principalAnnouncements,security:principalSecurity};
  if(!views[directorSection])directorSection="home";
  const title=principalNav.find(x=>x[0]===directorSection)?.[1]||"داشبورد";
  const drawer=directorMenu?'<div class="portal-director-nav"><button class="portal-nav-scrim" type="button" data-director-action="close" aria-label="بستن منو"></button><nav class="portal-nav-menu" aria-label="منوی مدیریت مدرسه"><div class="portal-nav-title"><strong>'+principalIcon("school")+' '+esc(school.name)+'</strong><button type="button" data-director-action="close" aria-label="بستن">×</button></div>'+principalNav.map(x=>'<button type="button" data-director-page="'+x[0]+'" class="'+(directorSection===x[0]?"active":"")+'">'+principalIcon(x[2])+' '+x[1]+'</button>').join("")+'<button data-action="picker">'+principalIcon("repeat")+' تغییر مدرسه</button><button data-action="logout">'+principalIcon("log-out")+' خروج از حساب</button></nav></div>':"";
@@ -464,6 +523,7 @@ el.addEventListener("click",async e=>{
   if(ui==="menu"||ui==="close"){directorMenu=ui==="menu"?!directorMenu:false;dashboard();return}
  const s=e.target.closest("[data-school]");if(s){const m=members.find(x=>x.school_id===s.dataset.school&&x.role===role);if(m)try{await enter(m)}catch(ex){message(ex.message)}return}
 
+ if(e.target.closest("[data-weekly-publish]")){await publishWeeklySchedule();return}
  const deletion=e.target.closest("[data-delete-assignment]");
  if(deletion){
   const row=assignments.find(x=>x.id===deletion.dataset.deleteAssignment&&x.teacher_id===user?.id);
@@ -479,6 +539,7 @@ el.addEventListener("click",async e=>{
  if(a==="create")newSchool();if(a==="picker"){directorMenu=false;viewClassId=null;directorSection="home";picker()}
 });
 el.addEventListener("change",e=>{
+ if(e.target.id==="weeklyScheduleFile"){const file=e.target.files?.[0];if(file)loadWeeklyWorkbook(file);return}
  if(e.target.id==="schoolKind"){window.STUNER_SCHOOL_DB_IMPORT?.invalidate?.();renderSchoolFields();return}
  if(e.target.closest("#schoolForm"))updateSchoolPreview();
  if(e.target.name==="audience_mode"&&e.target.closest("#announcementForm")){
