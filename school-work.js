@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-let db=null,user=null,member=null,assignments=[],completed=new Set(),teacherSubjects=[],loading=false,loaded=false,loadError="";
+let db=null,user=null,member=null,assignments=[],completed=new Set(),teacherSubjects=[],loading=false,loaded=false,loadError="",pendingViewRecord=false,viewRecordError="";
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fa=v=>String(v).replace(/[0-9]/g,n=>"۰۱۲۳۴۵۶۷۸۹"[+n]);
 const when=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium",timeZone:"Asia/Tehran"}).format(new Date(v+"T12:00:00Z"))}catch{return v||"—"}};
@@ -34,16 +34,18 @@ async function refresh(){
   }
   loaded=true;
  }catch(e){loadError=e.message||"ارتباط با مدرسه برقرار نشد."}
- finally{loading=false;update()}
+ finally{loading=false;update();if(pendingViewRecord&&loaded&&!loadError){pendingViewRecord=false;recordFirstViews(assignments.filter(a=>a.kind==="task"))}}
 }
 async function recordFirstViews(rows){
  if(!db||!user||!rows.length)return;
  const payload=rows.map(a=>({assignment_id:a.id,student_id:user.id}));
  const result=await db.from("assignment_views").upsert(payload,{onConflict:"assignment_id,student_id",ignoreDuplicates:true});
- if(result.error)console.warn("ثبت زمان مشاهده تکلیف انجام نشد:",result.error.message);
+ if(result.error){viewRecordError=result.error.message||"خطای نامشخص";console.error("ثبت زمان مشاهده تکلیف انجام نشد:",result.error);return false;}viewRecordError="";return true;
 }
 async function recordVisibleTaskViews(){
- if(!db||!user||!loaded||loadError||loading)return;
+ if(!db||!user)return;
+ if(loading||!loaded){pendingViewRecord=true;return;}
+ if(loadError)return;
  return recordFirstViews(assignments.filter(a=>a.kind==="task"));
 }
 function render(page){
@@ -94,6 +96,6 @@ window.STUNER_SCHOOL_WORK={
    note:a.description,fromSchool:true
   }))};
  },
- status(){return {loading:loading&&!loaded,error:loadError,loaded:loaded,active:!!db&&!!member}}
+ status(){return {loading:loading&&!loaded,error:loadError,viewError:viewRecordError,loaded:loaded,active:!!db&&!!member}}
 };
 })();
