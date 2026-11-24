@@ -72,7 +72,7 @@ function signup(){
 }
 function initialPasswordPage(){
  show();current=null;
- el.innerHTML=head("تغییر رمز اولیه")+'<section class="portal-card"><h2>برای امنیت حساب، رمز جدید تعیین کن</h2><p class="portal-note">شماره تماس فقط رمز اولیه حساب واردشده از اکسل است. قبل از استفاده از سامانه، رمز شخصی حداقل ۱۲ کاراکتری با حروف و عدد انتخاب کن.</p><form class="portal-form" id="initialPasswordForm"><label>رمز جدید<input name="password" type="password" minlength="6" maxlength="128" autocomplete="new-password" dir="ltr" required></label><label>تکرار رمز جدید<input name="confirm" type="password" minlength="6" maxlength="128" autocomplete="new-password" dir="ltr" required></label><button class="portal-primary" type="submit">ذخیره رمز و ورود به سامانه</button></form><p id="portalMessage" class="portal-error" aria-live="polite"></p></section>';
+ el.innerHTML=head("تغییر رمز اولیه")+'<section class="portal-card"><h2>برای امنیت حساب، رمز جدید تعیین کن</h2><p class="portal-note">شماره تماس فقط رمز اولیه حساب واردشده از اکسل است. قبل از استفاده از سامانه، رمز شخصی حداقل ۶ کاراکتری با حروف و عدد انتخاب کن.</p><form class="portal-form" id="initialPasswordForm"><label>رمز جدید<input name="password" type="password" minlength="6" maxlength="128" autocomplete="new-password" dir="ltr" required></label><label>تکرار رمز جدید<input name="confirm" type="password" minlength="6" maxlength="128" autocomplete="new-password" dir="ltr" required></label><button class="portal-primary" type="submit">ذخیره رمز و ورود به سامانه</button></form><p id="portalMessage" class="portal-error" aria-live="polite"></p></section>';
 }
 function picker(){
  show();
