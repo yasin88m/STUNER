@@ -102,7 +102,7 @@ function workRows(rows){
  }).join(""):'<p class="teacher-empty">هنوز تکلیف یا امتحانی ثبت نشده است.</p>';
 }
 function workPage(){
- return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>فعالیت‌های ثبت‌شده</h2><p>فهرست تکالیف و امتحاناتی که ارسال کرده‌اید</p></div><button data-teacher-page="create" class="portal-secondary">'+icon("plus")+' ثبت جدید</button></div>'+workRows(state.assignments)+'</section>';
+ return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>فعالیت‌های ثبت‌شده</h2><p>فهرست تکالیف و امتحاناتی که ارسال کرده‌اید</p></div><div class="teacher-work-actions"><button type="button" data-teacher-refresh class="portal-secondary">به‌روزرسانی گزارش‌ها</button><button data-teacher-page="create" class="portal-secondary">'+icon("plus")+' ثبت جدید</button></div></div>'+workRows(state.assignments)+'</section>';
 }
 function render(){
  if(!state.root)return;
@@ -138,6 +138,12 @@ async function load(){
 const refresh=async()=>{await load();render()};
 async function onClick(e){
  if(window.STUNER_JALALI?.handleClick(e))return;
+ const refreshButton=e.target.closest("[data-teacher-refresh]");
+ if(refreshButton){
+  refreshButton.disabled=true;refreshButton.textContent="در حال به‌روزرسانی…";
+  try{await refresh()}catch(err){refreshButton.disabled=false;refreshButton.textContent="خطا؛ دوباره تلاش کن"}
+  return;
+ }
  const page=e.target.closest("[data-teacher-page]");
  if(page){state.page=page.dataset.teacherPage;state.menu=false;state.classId="";render();return}
  const menu=e.target.closest("[data-teacher-menu]");
@@ -234,6 +240,10 @@ window.STUNER_TEACHER_UI={
   state.schools=members.filter(m=>m.role==="teacher");
   state.schoolId=state.schools.some(m=>m.school_id===active.school_id)?active.school_id:state.schools[0]?.school_id||"";
   state.page="home";state.menu=false;state.classId="";
+  if(!window.__stunerTeacherFocusRefresh){
+   window.__stunerTeacherFocusRefresh=true;
+   window.addEventListener("focus",()=>{if(state.root&&state.page==="work")refresh().catch(()=>{})});
+  }
   if(!root.dataset.teacherEvents){root.dataset.teacherEvents="1";root.addEventListener("click",onClick);root.addEventListener("change",onChange);root.addEventListener("submit",onSubmit)}
   try{await load();render()}catch(err){root.innerHTML='<section class="portal-card"><h2>اشکال در دریافت اطلاعات مدارس</h2><p>'+esc(err.message)+'</p><button class="portal-secondary" data-action="picker">بازگشت</button></section>'}
  },
