@@ -131,3 +131,6 @@
 .portal-head-title h1{font-size:20px;margin:0;color:#143f2e;font-weight:900}
 .portal-head>.portal-secondary{align-self:flex-end}
 @media(max-width:520px){.portal-brand img{width:52px;height:52px}.portal-brand strong{font-size:21px}.portal-head-title h1{font-size:18px}}
+
+/* Principal announcement composer */
+.principal-announcement-form{display:grid;gap:16px}.principal-announcement-form textarea{width:100%;min-height:120px;resize:vertical;box-sizing:border-box}.principal-announcement-modes{display:flex;flex-wrap:wrap;gap:18px;margin:4px 0 14px}.principal-announcement-modes label{display:flex;align-items:center;gap:8px;font-weight:800}.principal-announcement-class-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px}.principal-announcement-class{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--mint-200,#d7e9df);border-radius:12px;background:var(--surface,#fff)}.principal-announcement-class span{display:grid;gap:2px}.principal-announcement-class small{color:var(--text-muted,#789184);font-size:11px}.notification-message{margin:2px 0 4px;color:var(--text-main,#31483d);font-size:13px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere}
