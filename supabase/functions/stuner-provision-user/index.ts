@@ -16,7 +16,7 @@ function authAddress(username:string){return username+"@accounts.stuner.invalid"
 
 /* Resolve the signed-in account's role from trusted server-side account metadata and memberships. */
 async function verifyLoginRole(req:Request,admin:ReturnType<typeof createClient>){
- const token=(req.headers.get("Authorization")||"").replace(/^Bearer\\s+/i,"");
+ const token=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"");
  if(!token)return respond(401,{error:"نشست ورود معتبر نیست."});
  const auth=await admin.auth.getUser(token);
  if(auth.error||!auth.data.user)return respond(401,{error:"نشست ورود معتبر نیست."});
