@@ -11,7 +11,7 @@ function respond(status:number,data:unknown){
 }
 const usernameOk=(x:unknown):x is string=>typeof x==="string"&&/^(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})$/.test(x);
 const validName=(x:unknown)=>typeof x==="string"&&x.trim().length>=2&&x.trim().length<=120;
-const validPassword=(x:unknown)=>typeof x==="string"&&x.length>=10&&x.length<=128;
+const validPassword=(x:unknown)=>typeof x==="string"&&x.length>=6&&x.length<=128;
 function authAddress(username:string){return username+"@accounts.stuner.invalid"}
 
 /* Resolve the signed-in account's role from trusted server-side account metadata and memberships. */
@@ -129,8 +129,8 @@ async function changeInitialPassword(req:Request,admin:ReturnType<typeof createC
  const user=auth.data.user;
  if(user.app_metadata?.stuner_initial_password_change!==true)return respond(403,{error:"این عملیات برای این حساب لازم نیست."});
  const password=payload.password;
- if(typeof password!=="string"||password.length<12||password.length>128||!/[\p{L}]/u.test(password)||!/[0-9]/.test(password))
-  return respond(400,{error:"رمز جدید باید حداقل ۱۲ کاراکتر و شامل حروف و عدد باشد."});
+ if(typeof password!=="string"||password.length<6||password.length>128||!/[\p{L}]/u.test(password)||!/[0-9]/.test(password))
+  return respond(400,{error:"رمز جدید باید حداقل ۶ کاراکتر و شامل حروف و عدد باشد."});
  const changed=await admin.auth.admin.updateUserById(user.id,{
   password,app_metadata:{...user.app_metadata,stuner_initial_password_change:false}
  });
@@ -250,7 +250,7 @@ Deno.serve(async(req:Request)=>{
  const name=String(data.display_name||"").trim();
  const password=data.password;
  if(!usernameOk(username)||(mode!=="reset_member"&&!validName(name))||!validPassword(password)){
-  return respond(400,{error:"نام کاربری باید با حرف لاتین شروع شود یا کد ملی ۱۰ رقمی باشد. رمز عبور حداقل ۱۰ کاراکتر لازم دارد."});
+  return respond(400,{error:"نام کاربری باید با حرف لاتین شروع شود یا کد ملی ۱۰ رقمی باشد. رمز عبور حداقل ۶ کاراکتر لازم دارد."});
  }
  if(mode!=="register_manager"&&mode!=="create_member"&&mode!=="reset_member")return respond(400,{error:"Unknown operation"});
  let principalId:string|null=null,schoolId:string|null=null,role:"principal"|"teacher"|"student"="principal";
