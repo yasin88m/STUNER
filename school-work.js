@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-let db=null,user=null,member=null,assignments=[],completed=new Set(),teacherSubjects=[],loading=false,loaded=false,loadError="",pendingViewRecord=false,viewRecordError="";
+let db=null,user=null,member=null,assignments=[],completed=new Set(),teacherSubjects=[],loading=false,loaded=false,loadError="",pendingViewRecord=false,pendingViewIds=new Set(),viewRecordError="";
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fa=v=>String(v).replace(/[0-9]/g,n=>"۰۱۲۳۴۵۶۷۸۹"[+n]);
 const when=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium",timeZone:"Asia/Tehran"}).format(new Date(v+"T12:00:00Z"))}catch{return v||"—"}};
@@ -34,7 +34,7 @@ async function refresh(){
   }
   loaded=true;
  }catch(e){loadError=e.message||"ارتباط با مدرسه برقرار نشد."}
- finally{loading=false;update();if(pendingViewRecord&&loaded&&!loadError){pendingViewRecord=false;recordFirstViews(assignments.filter(a=>a.kind==="task"))}}
+ finally{loading=false;update();if(loaded&&!loadError){if(pendingViewRecord){pendingViewRecord=false;recordFirstViews(assignments.filter(a=>a.kind==="task"))}else if(pendingViewIds.size){const ids=[...pendingViewIds];pendingViewIds.clear();recordFirstViews(assignments.filter(a=>a.kind==="task"&&ids.includes(a.id)))}}}
 }
 async function recordFirstViews(rows){
  if(!db||!user||!rows.length)return;
@@ -47,6 +47,13 @@ async function recordVisibleTaskViews(){
  if(loading||!loaded){pendingViewRecord=true;return;}
  if(loadError)return;
  return recordFirstViews(assignments.filter(a=>a.kind==="task"));
+}
+async function recordAssignmentView(id){
+ if(!db||!user||!id)return;
+ if(loading||!loaded){pendingViewIds.add(id);return;}
+ if(loadError)return;
+ const row=assignments.find(a=>a.id===id&&a.kind==="task");
+ if(row)return recordFirstViews([row]);
 }
 function render(page){
  if(!db||!member)return "";
@@ -84,8 +91,8 @@ document.addEventListener("click",e=>{
  if(e.target.closest("[data-refresh-school-work]")){e.preventDefault();refresh()}
 });
 window.STUNER_SCHOOL_WORK={
- init(client,account,m){db=client;user=account;member=m;assignments=[];teacherSubjects=[];completed=new Set();loaded=false;refresh()},
- render,refresh,renderTeachers,recordFirstViews:recordVisibleTaskViews,
+ init(client,account,m){db=client;user=account;member=m;assignments=[];teacherSubjects=[];completed=new Set();pendingViewRecord=false;pendingViewIds.clear();loaded=false;refresh()},
+ render,refresh,renderTeachers,recordFirstViews:recordVisibleTaskViews,recordAssignmentView,
  teacherSubjects(){return teacherSubjects.map(x=>({subject:x.subject,teacher:x.teacher_name}))},
  snapshot(){
   return {tasks:assignments.filter(a=>a.kind==="task").map(a=>({
