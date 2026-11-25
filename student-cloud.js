@@ -2,7 +2,7 @@
    localStorage is read only for one-time migration of old device data. */
 (function(){
 "use strict";
-const collections=["tasks","exams","grades","plans","sessions"];
+const collections=["tasks","exams","grades","plans","sessions","personalTasks"];
 const copy=x=>JSON.parse(JSON.stringify(x));
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 function combineLegacy(remote,old){
