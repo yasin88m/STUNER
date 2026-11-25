@@ -1,7 +1,7 @@
 /* Dedicated multi-school teacher workspace for STUNER. All reads respect Supabase RLS. */
 (function(){
 "use strict";
-const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],views:[],page:"home",joinNote:"",onMembershipsChanged:null,menu:false,schoolId:"",classId:"",busy:false};
+const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],views:[],grades:[],page:"home",joinNote:"",onMembershipsChanged:null,menu:false,schoolId:"",classId:"",busy:false};
 const esc=x=>String(x??"").replace(/[&<>"']/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[a]));
 const icon=n=>'<i data-lucide="'+n+'"></i>';
 const schoolName=id=>state.schools.find(x=>x.school_id===id)?.schools?.name||"مدرسه";
@@ -16,7 +16,7 @@ const nav=[
  ["schools","مدارس من","school"],
  ["classes","کلاس‌های من","users-round"],
  ["create","ثبت تکلیف یا امتحان","clipboard-plus"],
- ["work","فعالیت‌های ثبت‌شده","notebook-tabs"]
+ ["work","فعالیت‌های ثبت‌شده","notebook-tabs"],["grades","ثبت نمرات","graduation-cap"]
 ];
 function schoolOptions(){
  return state.schools.map(s=>'<option value="'+esc(s.school_id)+'" '+(s.school_id===state.schoolId?"selected":"")+'>'+displaySchool(s.school_id)+'</option>').join("");
@@ -46,6 +46,19 @@ function home(){
  '<section class="portal-card"><div class="teacher-card-heading"><div><h2>مدارس محل تدریس</h2><p>برای مشاهده همه مدارس، وارد بخش مدارس من شوید.</p></div><button class="portal-secondary" data-teacher-page="schools">مشاهده همه '+icon("arrow-left")+'</button></div>'+
  '<div class="teacher-school-grid">'+state.schools.slice(0,4).map(s=>schoolCard(s)).join("")+'</div></section>'+
  '<section class="portal-card"><div class="teacher-card-heading"><div><h2>آخرین فعالیت‌ها</h2><p>تکالیف و امتحانات ثبت‌شده توسط شما</p></div><button class="portal-secondary" data-teacher-page="work">همه فعالیت‌ها</button></div>'+workRows(state.assignments.slice(0,4))+'</section>';
+}
+
+function gradePage(){
+ const classes=schoolClasses(state.schoolId);
+ return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>ثبت و ویرایش نمرات</h2><p>ثبت نمرات کلاس‌های خودت؛ دستی یا با فایل اکسل.</p></div></div>'+
+ '<form id="teacherGradesForm" class="portal-form"><div class="teacher-fields-grid"><label>مدرسه<select id="teacherGradeSchool">'+schoolOptions()+'</select></label><label>کلاس<select name="class_id" id="teacherGradeClass">'+classes.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+' · پایه '+esc(x.grade)+'</option>').join("")+'</select></label></div>'+
+ '<div class="teacher-fields-grid"><label>درس<input name="subject" required maxlength="100" placeholder="مثلاً ریاضی"></label><label>عنوان آزمون<input name="title" maxlength="150" placeholder="مثلاً امتحان فصل اول"></label></div>'+
+ '<label>تاریخ<input name="graded_on" type="date" value="'+new Date().toISOString().slice(0,10)+'" required></label>'+
+ '<label>ورود از اکسل (.xlsx)<input id="teacherGradeExcel" type="file" accept=".xlsx,.xls"></label><p class="teacher-empty">قالب اکسل: ستون اول نام کامل دانش‌آموز، ستون دوم نمره از ۲۰.</p><button type="button" class="portal-secondary" data-teacher-import-grades>خواندن فایل اکسل</button>'+
+ '<h3 class="teacher-subtitle">نمرات دانش‌آموزان</h3><div id="teacherGradeRows">'+gradeRows(classes[0]?.id||"")+'</div><div class="teacher-form-footer"><p>نمره بین صفر تا ۲۰ باشد؛ خانه خالی ذخیره نمی‌شود.</p><button class="portal-primary" type="submit">ذخیره نمرات</button></div><p id="teacherGradesMessage" class="portal-error" role="status"></p></form></section>';
+}
+function gradeRows(classId){
+ return state.students.filter(s=>s.class_id===classId).map(s=>'<label class="teacher-grade-row"><strong>'+esc(s.display_name||"دانش‌آموز")+'</strong><input type="number" name="grade_'+esc(s.user_id)+'" min="0" max="20" step="0.25" placeholder="از ۲۰"></label>').join("")||'<p class="teacher-empty">دانش‌آموزی در این کلاس نیست.</p>';
 }
 function schoolCard(s){
  const id=s.school_id;
@@ -106,7 +119,7 @@ function workPage(){
 }
 function render(){
  if(!state.root)return;
- const pages={home:home,schools:schoolsPage,classes:classesPage,create:createPage,work:workPage};
+ const pages={home:home,schools:schoolsPage,classes:classesPage,create:createPage,work:workPage,grades:gradePage};
  const label=nav.find(n=>n[0]===state.page)?.[1]||"پنل معلم";
  state.root.innerHTML='<div class="teacher-shell"><header class="teacher-appbar"><button type="button" class="portal-hamburger" data-teacher-menu="toggle" aria-label="باز کردن منوی معلم" aria-expanded="'+state.menu+'"><i data-lucide="menu"></i></button><div class="teacher-page-title"><small>STUNER · پنل معلم</small><h1>'+esc(label)+'</h1></div><span class="teacher-appbar-school">'+icon("school")+' '+displaySchool(state.schoolId)+'</span></header>'+
  (state.menu?'<div class="portal-director-nav"><button type="button" class="portal-nav-scrim" data-teacher-menu="close" aria-label="بستن منو"></button><nav class="portal-nav-menu" aria-label="منوی معلم"><div class="portal-nav-title"><strong>'+icon("graduation-cap")+' پنل معلم</strong><button data-teacher-menu="close" aria-label="بستن">×</button></div>'+nav.map(n=>'<button class="'+(n[0]===state.page?"active":"")+'" data-teacher-page="'+n[0]+'">'+icon(n[2])+' '+n[1]+'</button>').join("")+'<button data-action="picker">'+icon("repeat")+' تغییر نقش یا مدرسه</button><button data-action="logout">'+icon("log-out")+' خروج از حساب</button></nav></div>':"")+
@@ -120,14 +133,15 @@ function render(){
 async function load(){
  const ids=state.schools.map(s=>s.school_id);
  if(!ids.length)throw Error("هیچ مدرسه‌ای به حساب شما اختصاص نیافته است.");
- const [c,l,s,a]=await Promise.all([
+ const [c,l,s,a,g]=await Promise.all([
   state.client.from("school_classes").select("id,school_id,name,grade").in("school_id",ids),
   state.client.from("class_teachers").select("school_id,class_id,teacher_id").eq("teacher_id",state.user.id).in("school_id",ids),
   state.client.from("school_memberships").select("school_id,user_id,role,display_name,class_id").eq("role","student").in("school_id",ids),
-  state.client.from("school_assignments").select("id,school_id,class_id,student_id,teacher_id,kind,title,subject,description,due_date,created_at").eq("teacher_id",state.user.id).in("school_id",ids).order("created_at",{ascending:false})
+  state.client.from("school_assignments").select("id,school_id,class_id,student_id,teacher_id,kind,title,subject,description,due_date,created_at").eq("teacher_id",state.user.id).in("school_id",ids).order("created_at",{ascending:false}),
+  state.client.from("school_student_grades").select("id,school_id,class_id,student_id,teacher_id,subject,title,score,graded_on").eq("teacher_id",state.user.id).in("school_id",ids)
  ]);
- for(const response of [c,l,s,a])if(response.error)throw response.error;
- state.classes=c.data||[];state.links=l.data||[];state.students=s.data||[];state.assignments=a.data||[];
+ for(const response of [c,l,s,a,g])if(response.error)throw response.error;
+ state.classes=c.data||[];state.links=l.data||[];state.students=s.data||[];state.assignments=a.data||[];state.grades=g.data||[];
  const taskIds=state.assignments.filter(x=>x.kind==="task").map(x=>x.id);
  if(taskIds.length){
   const viewed=await state.client.from("assignment_views").select("assignment_id,student_id,first_viewed_at").in("assignment_id",taskIds);
@@ -169,7 +183,9 @@ async function onClick(e){
  if(e.target.closest("[data-teacher-back]")){state.classId="";render()}
 }
 function onChange(e){
- if(e.target.matches("#teacherAssignmentSchool")){
+ if(e.target.matches("#teacherGradeSchool")){const id=e.target.value;if(!state.schools.some(s=>s.school_id===id))return;state.schoolId=id;render();}
+  else if(e.target.matches("#teacherGradeClass")){const box=state.root.querySelector("#teacherGradeRows");if(box)box.innerHTML=gradeRows(e.target.value);}
+  else if(e.target.matches("#teacherAssignmentSchool")){
   const id=e.target.value;if(!state.schools.some(s=>s.school_id===id))return;
   state.schoolId=id;
   const audience=state.root.querySelector("#teacherAudience")?.value||"grade";
@@ -214,6 +230,33 @@ async function onSubmit(e){
    await refresh();
   }catch(err){msg.textContent=err.message||"عضویت انجام نشد.";btn.disabled=false}
   finally{state.busy=false}
+  return;
+ }
+ 
+const gradeForm=e.target.closest("#teacherGradesForm");
+ if(gradeForm){
+  e.preventDefault();if(state.busy)return;
+  const d=new FormData(gradeForm),classId=String(d.get("class_id")||""),subject=String(d.get("subject")||"").trim(),title=String(d.get("title")||"").trim(),graded_on=String(d.get("graded_on")||"");
+  if(!schoolClasses(state.schoolId).some(x=>x.id===classId)||!subject||!graded_on){state.root.querySelector("#teacherGradesMessage").textContent="کلاس، درس و تاریخ را کامل کن.";return}
+  const rows=[];
+  for(const s of state.students.filter(x=>x.class_id===classId)){const raw=d.get("grade_"+s.user_id);if(raw==null||String(raw).trim()==="")continue;const score=Number(raw);if(!Number.isFinite(score)||score<0||score>20){state.root.querySelector("#teacherGradesMessage").textContent="نمره باید بین صفر تا ۲۰ باشد.";return}rows.push({school_id:state.schoolId,class_id:classId,student_id:s.user_id,teacher_id:state.user.id,subject,title,score,graded_on})}
+  if(!rows.length){state.root.querySelector("#teacherGradesMessage").textContent="حداقل یک نمره وارد کن.";return}
+  state.busy=true;const btn=gradeForm.querySelector('button[type="submit"]');btn.disabled=true;
+  try{const r=await state.client.from("school_student_grades").upsert(rows,{onConflict:"school_id,class_id,student_id,subject,title,graded_on"});if(r.error)throw r.error;await refresh();const m=state.root.querySelector("#teacherGradesMessage");if(m)m.textContent=rows.length+" نمره ذخیره شد."}
+  catch(err){state.root.querySelector("#teacherGradesMessage").textContent=err.message||"ذخیره انجام نشد."}
+  finally{state.busy=false;if(btn?.isConnected)btn.disabled=false}
+  return;
+ }
+const importBtn=e.target.closest("[data-teacher-import-grades]");
+ if(importBtn){
+  const file=state.root.querySelector("#teacherGradeExcel")?.files?.[0],msg=state.root.querySelector("#teacherGradesMessage");
+  if(!file){msg.textContent="ابتدا فایل اکسل را انتخاب کن.";return}
+  if(typeof window.readXlsxFile!=="function"){msg.textContent="ابزار اکسل بارگذاری نشده است.";return}
+  importBtn.disabled=true;
+  try{const rows=await window.readXlsxFile(file),classId=state.root.querySelector("#teacherGradeClass").value,students=state.students.filter(x=>x.class_id===classId),norm=x=>String(x??"").trim().replace(/\s+/g," ").toLowerCase(),batch=[];
+   for(const row of rows){const name=norm(row?.[0]);if(!name||name.includes("نام"))continue;const student=students.find(x=>norm(x.display_name)===name),score=Number(String(row?.[1]??"").replace(",","."));if(!student||!Number.isFinite(score)||score<0||score>20)continue;batch.push({school_id:state.schoolId,class_id:classId,student_id:student.user_id,teacher_id:state.user.id,subject:String(state.root.querySelector('[name="subject"]').value||"").trim(),title:String(state.root.querySelector('[name="title"]').value||"').trim(),score,graded_on:state.root.querySelector('[name="graded_on"]').value})}
+   if(!batch.length)throw Error("ردیف معتبری در فایل پیدا نشد.");const r=await state.client.from("school_student_grades").upsert(batch,{onConflict:"school_id,class_id,student_id,subject,title,graded_on"});if(r.error)throw r.error;await refresh();const m=state.root.querySelector("#teacherGradesMessage");if(m)m.textContent=batch.length+" نمره از اکسل ذخیره شد.";
+  }catch(err){msg.textContent=err.message||"ورود اکسل ناموفق بود."}finally{if(importBtn.isConnected)importBtn.disabled=false}
   return;
  }
  const form=e.target.closest("#teacherMultiAssignmentForm");if(!form)return;
