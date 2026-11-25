@@ -145,3 +145,8 @@
 
 .teacher-delete-work{border-color:#f0caca!important;color:#b42318!important;background:#fff5f5!important;font-size:11px!important;padding:7px 10px!important;white-space:nowrap}
 .teacher-delete-work:disabled{opacity:.6;cursor:wait}
+
+.teacher-grade-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #eaf1ec;border-radius:12px;margin:8px 0}
+.teacher-grade-row input{width:110px;max-width:38%;border:1px solid #dce9df;border-radius:9px;padding:9px;text-align:center;direction:ltr}
+#teacherGradesForm>label{display:grid;gap:7px;margin:10px 0;font-size:12px}
+#teacherGradesForm input[type="text"],#teacherGradesForm input[type="date"],#teacherGradesForm input[type="file"],#teacherGradesForm select{width:100%;padding:10px;border:1px solid #dce9df;border-radius:10px;background:#fff}
