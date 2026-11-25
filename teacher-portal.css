@@ -142,3 +142,6 @@
 /* Explicit status colors inside the teacher's first-view report */
 .teacher-view-report .portal-kind.view-status-seen{background-color:#e8f7ed!important;border-color:#b9e4c7!important;color:#168044!important}
 .teacher-view-report .portal-kind.view-status-unseen{background-color:#fff0f0!important;border-color:#f0c2c2!important;color:#c62828!important}
+
+.teacher-delete-work{border-color:#f0caca!important;color:#b42318!important;background:#fff5f5!important;font-size:11px!important;padding:7px 10px!important;white-space:nowrap}
+.teacher-delete-work:disabled{opacity:.6;cursor:wait}
