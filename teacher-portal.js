@@ -53,7 +53,7 @@ function gradePage(){
  return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>ثبت و ویرایش نمرات</h2><p>ثبت نمرات کلاس‌های خودت؛ دستی یا با فایل اکسل.</p></div></div>'+
  '<form id="teacherGradesForm" class="portal-form"><div class="teacher-fields-grid"><label>مدرسه<select id="teacherGradeSchool">'+schoolOptions()+'</select></label><label>کلاس<select name="class_id" id="teacherGradeClass">'+classes.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+' · پایه '+esc(x.grade)+'</option>').join("")+'</select></label></div>'+
  '<div class="teacher-fields-grid"><label>درس<input name="subject" required maxlength="100" placeholder="مثلاً ریاضی"></label><label>عنوان آزمون<input name="title" maxlength="150" placeholder="مثلاً امتحان فصل اول"></label></div>'+
- '<label>تاریخ<input name="graded_on" type="date" value="'+new Date().toISOString().slice(0,10)+'" required></label>'+
+ (window.STUNER_JALALI?.field("graded_on","تاریخ ثبت نمره") || '<label>تاریخ<input name="graded_on" type="date" value="'+new Date().toISOString().slice(0,10)+'" required></label>')+
  '<label>ورود از اکسل (.xlsx)<input id="teacherGradeExcel" type="file" accept=".xlsx,.xls"></label><p class="teacher-empty">قالب اکسل: ستون اول نام کامل دانش‌آموز، ستون دوم نمره از ۲۰.</p><button type="button" class="portal-secondary" data-teacher-import-grades>خواندن فایل اکسل</button>'+
  '<h3 class="teacher-subtitle">نمرات دانش‌آموزان</h3><div id="teacherGradeRows">'+gradeRows(classes[0]?.id||"")+'</div><div class="teacher-form-footer"><p>نمره بین صفر تا ۲۰ باشد؛ خانه خالی ذخیره نمی‌شود.</p><button class="portal-primary" type="submit">ذخیره نمرات</button></div><p id="teacherGradesMessage" class="portal-error" role="status"></p></form></section>';
 }
