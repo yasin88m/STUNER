@@ -98,7 +98,7 @@ function assignmentViewReport(a){
 function workRows(rows){
  return rows.length?rows.map(a=>{
   const target=a.student_id?("دانش‌آموز: "+(state.students.find(s=>s.user_id===a.student_id)?.display_name||"دانش‌آموز انتخابی")):(state.classes.find(c=>c.id===a.class_id)?.name||"کلاس");
-  return '<div class="teacher-work-row"><span class="teacher-work-icon">'+icon(a.kind==="task"?"clipboard-check":"graduation-cap")+'</span><div><strong>'+esc(a.title)+'</strong><small>'+esc(a.subject)+' · '+displaySchool(a.school_id)+' · '+esc(target)+'</small></div><span class="teacher-work-date">'+esc(window.STUNER_JALALI.formatted(a.due_date))+'</span></div>'+assignmentViewReport(a);
+  return '<div class="teacher-work-row"><span class="teacher-work-icon">'+icon(a.kind==="task"?"clipboard-check":"graduation-cap")+'</span><div><strong>'+esc(a.title)+'</strong><small>'+esc(a.subject)+' · '+displaySchool(a.school_id)+' · '+esc(target)+'</small></div><span class="teacher-work-date">'+esc(window.STUNER_JALALI.formatted(a.due_date))+'</span><button type="button" class="portal-secondary teacher-delete-work" data-teacher-delete-work="${esc(a.id)}">حذف تکلیف</button></div>'+assignmentViewReport(a);
  }).join(""):'<p class="teacher-empty">هنوز تکلیف یا امتحانی ثبت نشده است.</p>';
 }
 function workPage(){
@@ -138,6 +138,20 @@ async function load(){
 const refresh=async()=>{await load();render()};
 async function onClick(e){
  if(window.STUNER_JALALI?.handleClick(e))return;
+ const deleteWork=e.target.closest("[data-teacher-delete-work]");
+ if(deleteWork){
+  const id=deleteWork.dataset.teacherDeleteWork;
+  const assignment=state.assignments.find(a=>a.id===id&&a.teacher_id===state.user.id);
+  if(!assignment)return;
+  if(!confirm("این تکلیف یا امتحان برای همه دانش‌آموزان دریافت‌کننده حذف شود؟ این کار قابل بازگشت نیست."))return;
+  deleteWork.disabled=true;deleteWork.textContent="در حال حذف…";
+  try{
+   const result=await state.client.from("school_assignments").delete().eq("id",id).eq("teacher_id",state.user.id);
+   if(result.error)throw result.error;
+   await refresh();
+  }catch(err){alert("حذف فعالیت انجام نشد: "+(err.message||"خطای نامشخص"));deleteWork.disabled=false;deleteWork.textContent="حذف تکلیف"}
+  return;
+ }
  const refreshButton=e.target.closest("[data-teacher-refresh]");
  if(refreshButton){
   refreshButton.disabled=true;refreshButton.textContent="در حال به‌روزرسانی…";
