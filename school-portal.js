@@ -161,6 +161,8 @@ async function enter(member){
   }
   window.STUNER_STUDENT_DB=client;
   window.STUNER_SCHOOL_CONTEXT={schoolId:member.school_id,classId:member.class_id||null};
+   window.STUNER_SCHOOL_GRADE_ROWS=[];
+   if(member.class_id){const gr=await client.from("school_student_grades").select("id,subject,title,score,graded_on,created_at").eq("school_id",member.school_id).eq("class_id",member.class_id).eq("student_id",user.id).order("graded_on",{ascending:false});if(gr.error)throw gr.error;window.STUNER_SCHOOL_GRADE_ROWS=gr.data||[];}
   window.STUNER_WEEKLY_SCHEDULE=[];
   if(member.class_id){const weekly=await client.from("school_weekly_schedule").select("id,weekday,start_time,end_time,subject,teacher_name,room").eq("school_id",member.school_id).eq("class_id",member.class_id).order("weekday").order("start_time");if(weekly.error)throw weekly.error;window.STUNER_WEEKLY_SCHEDULE=weekly.data||[];}
   window.STUNER_SCHOOL_ANNOUNCEMENTS=[];
@@ -173,7 +175,7 @@ async function enter(member){
    window.STUNER_SCHOOL_ANNOUNCEMENTS=announcementResult.data||[];
   }
   window.STUNER_SCHOOL_WORK?.init(client,user,member);
-  const src=document.createElement("script");src.src="./app.js?v=65";document.body.appendChild(src);return;
+  const src=document.createElement("script");src.src="./app.js?v=66";document.body.appendChild(src);return;
  }
  if(member.role==="teacher"){
   show();
