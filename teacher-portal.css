@@ -138,3 +138,7 @@
 /* رنگ وضعیت مشاهده تکلیف در گزارش معلم */
 .portal-kind.view-status-seen{background:#e8f7ed;border-color:#b9e4c7;color:#168044}
 .portal-kind.view-status-unseen{background:#fff0f0;border-color:#f0c2c2;color:#c62828}
+
+/* Explicit status colors inside the teacher's first-view report */
+.teacher-view-report .portal-kind.view-status-seen{background-color:#e8f7ed!important;border-color:#b9e4c7!important;color:#168044!important}
+.teacher-view-report .portal-kind.view-status-unseen{background-color:#fff0f0!important;border-color:#f0c2c2!important;color:#c62828!important}
