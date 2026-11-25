@@ -134,3 +134,7 @@
 .teacher-target-mode select{display:block;width:100%;margin-top:8px}
 .teacher-class-readonly{padding:12px 14px;border:1px solid var(--portal-border,#dce7e0);border-radius:12px;margin:7px 0;background:var(--portal-soft,#f6faf7)}
 .teacher-target-hint{font-size:.9rem;color:var(--portal-muted,#687b70);margin:0 0 10px}
+
+/* رنگ وضعیت مشاهده تکلیف در گزارش معلم */
+.portal-kind.view-status-seen{background:#e8f7ed;border-color:#b9e4c7;color:#168044}
+.portal-kind.view-status-unseen{background:#fff0f0;border-color:#f0c2c2;color:#c62828}
