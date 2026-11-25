@@ -38,9 +38,19 @@ async function refresh(){
 }
 async function recordFirstViews(rows){
  if(!db||!user||!rows.length)return;
- const payload=rows.map(a=>({assignment_id:a.id,student_id:user.id}));
- const result=await db.from("assignment_views").upsert(payload,{onConflict:"assignment_id,student_id",ignoreDuplicates:true});
- if(result.error){viewRecordError=result.error.message||"خطای نامشخص";console.error("ثبت زمان مشاهده تکلیف انجام نشد:",result.error);return false;}viewRecordError="";return true;
+ // This table intentionally grants INSERT (not UPDATE) to students.
+ // Use INSERT and treat an existing (assignment, student) pair as already viewed.
+ const results=await Promise.all(rows.map(a=>db.from("assignment_views").insert({
+  assignment_id:a.id,student_id:user.id
+ })));
+ const failures=results.map(x=>x.error).filter(e=>e&&e.code!=="23505");
+ if(failures.length){
+  viewRecordError=failures.map(e=>e.message||"خطای نامشخص").join("؛ ");
+  console.error("ثبت زمان مشاهده تکلیف انجام نشد:",failures);
+  return false;
+ }
+ viewRecordError="";
+ return true;
 }
 async function recordVisibleTaskViews(){
  if(!db||!user)return;
