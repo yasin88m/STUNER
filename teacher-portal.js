@@ -58,7 +58,11 @@ function gradePage(){
  '<h3 class="teacher-subtitle">نمرات دانش‌آموزان</h3><div id="teacherGradeRows">'+gradeRows(classes[0]?.id||"")+'</div><div class="teacher-form-footer"><p>نمره بین صفر تا ۲۰ باشد؛ خانه خالی ذخیره نمی‌شود.</p><button class="portal-primary" type="submit">ذخیره نمرات</button></div><p id="teacherGradesMessage" class="portal-error" role="status"></p></form></section>';
 }
 function gradeRows(classId){
- return state.students.filter(s=>s.class_id===classId).map(s=>'<label class="teacher-grade-row"><strong>'+esc(s.display_name||"دانش‌آموز")+'</strong><input type="number" name="grade_'+esc(s.user_id)+'" min="0" max="20" step="0.25" placeholder="از ۲۰"></label>').join("")||'<p class="teacher-empty">دانش‌آموزی در این کلاس نیست.</p>';
+ const subject=String(state.root.querySelector('[name="subject"]')?.value||"").trim(),title=String(state.root.querySelector('[name="title"]')?.value||"").trim(),date=state.root.querySelector('[name="graded_on"]')?.value||"";
+ return state.students.filter(s=>s.class_id===classId).map(s=>{
+  const old=state.grades.find(g=>g.student_id===s.user_id&&g.class_id===classId&&g.subject===subject&&g.title===title&&g.graded_on===date);
+  return '<label class="teacher-grade-row"><strong>'+esc(s.display_name||"دانش‌آموز")+'</strong><input type="number" name="grade_'+esc(s.user_id)+'" min="0" max="20" step="0.25" placeholder="از ۲۰" value="'+(old?esc(old.score):"")+'"></label>';
+ }).join("")||'<p class="teacher-empty">دانش‌آموزی در این کلاس نیست.</p>';
 }
 function schoolCard(s){
  const id=s.school_id;
@@ -184,7 +188,7 @@ async function onClick(e){
 }
 function onChange(e){
  if(e.target.matches("#teacherGradeSchool")){const id=e.target.value;if(!state.schools.some(s=>s.school_id===id))return;state.schoolId=id;render();}
-  else if(e.target.matches("#teacherGradeClass")){const box=state.root.querySelector("#teacherGradeRows");if(box)box.innerHTML=gradeRows(e.target.value);}
+  else if(e.target.matches("#teacherGradeClass,#teacherGradesForm [name=subject],#teacherGradesForm [name=title],#teacherGradesForm [name=graded_on]")){const box=state.root.querySelector("#teacherGradeRows");const classId=state.root.querySelector("#teacherGradeClass")?.value;if(box&&classId)box.innerHTML=gradeRows(classId);}
   else if(e.target.matches("#teacherAssignmentSchool")){
   const id=e.target.value;if(!state.schools.some(s=>s.school_id===id))return;
   state.schoolId=id;
