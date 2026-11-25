@@ -520,3 +520,32 @@ html,body{width:100%;max-width:100%;overflow-x:clip!important;}
 .notification-popover-heading{position:relative!important;display:flex!important;align-items:center!important;min-height:36px!important;padding:0 42px 0 0!important;}
 .notification-popover-heading .notification-close{position:absolute!important;top:3px!important;right:0!important;left:auto!important;display:grid!important;visibility:visible!important;opacity:1!important;place-items:center!important;width:30px!important;height:30px!important;min-width:30px!important;padding:0!important;border:0!important;border-radius:9px!important;background:var(--mint-100)!important;color:var(--green-900)!important;font-size:24px!important;line-height:1!important;cursor:pointer!important;}
 .notification-launcher-icon svg{display:block;width:21px;height:21px;}
+
+/* Personal tasks: integrated STUNER student workspace */
+.personal-task-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px;text-align:center}
+.personal-task-summary>div{display:grid;gap:3px;padding:8px 4px}
+.personal-task-summary strong{font-size:22px;font-weight:900;color:var(--green-900)}
+.personal-task-summary small{font-size:10px;color:var(--muted)}
+.personal-task-toolbar{margin:0 0 12px}
+.personal-task-list{display:grid;gap:0}
+.personal-task-row{display:flex;align-items:center;gap:11px;padding:14px 2px;border-bottom:1px solid var(--line);border-inline-start:3px solid var(--priority-color);padding-inline-start:10px}
+.personal-task-row:last-child{border-bottom:0}
+.personal-task-row.priority-low{--priority-color:#269b68}
+.personal-task-row.priority-medium{--priority-color:#d99a28}
+.personal-task-row.priority-high{--priority-color:#d94b55}
+.personal-task-main{flex:1;min-width:0;display:grid;gap:7px}
+.personal-task-main>strong{font-size:13px;line-height:1.8;color:var(--ink);overflow-wrap:anywhere}
+.personal-task-main>strong.is-done{text-decoration:line-through;color:var(--muted)}
+.personal-task-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.personal-kind,.priority-label,.personal-duration{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:7px;font-size:9px;font-weight:800;white-space:nowrap}
+.personal-kind.study{background:#e8f1ff;color:#3567ae}
+.personal-kind.personal{background:#f1eafa;color:#8055a7}
+.priority-low .priority-label{background:#e5f5ed;color:#18784b}
+.priority-medium .priority-label{background:#fff4df;color:#a56b0b}
+.priority-high .priority-label{background:#ffebeb;color:#bf343e}
+.personal-duration{background:var(--mint-100);color:var(--green-800)}
+.personal-duration .stuner-icon{width:12px;height:12px}
+.personal-task-actions{display:flex;align-items:center;gap:3px;flex:none}
+.personal-play{background:var(--mint-100);color:var(--green-800)}
+.personal-task-row .check-control{flex:none}
+@media(max-width:420px){.personal-task-row{gap:8px;padding-inline-start:7px}.personal-task-meta{gap:4px}.personal-kind,.priority-label,.personal-duration{font-size:8px;padding:3px 5px}}
