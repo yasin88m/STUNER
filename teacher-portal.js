@@ -91,7 +91,7 @@ function assignmentViewReport(a){
  const viewed=new Map(records.map(v=>[v.student_id,v]));
  const lines=targets.map(student=>{
   const record=viewed.get(student.user_id);
-  return '<div class="teacher-work-row"><div><strong>'+esc(student.display_name||"دانش‌آموز")+'</strong><small>'+(record?'مشاهده در '+esc(viewTime(record.first_viewed_at)):'هنوز مشاهده نکرده')+'</small></div><span class="portal-kind">'+(record?'مشاهده شده':'مشاهده نشده')+'</span></div>';
+  return '<div class="teacher-work-row"><div><strong>'+esc(student.display_name||"دانش‌آموز")+'</strong><small>'+(record?'مشاهده در '+esc(viewTime(record.first_viewed_at)):'هنوز مشاهده نکرده')+'</small></div><span class="portal-kind '+(record?'view-status-seen':'view-status-unseen')+'">'+(record?'مشاهده شده':'مشاهده نشده')+'</span></div>';
  }).join("");
  return '<details class="teacher-view-report"><summary>گزارش مشاهده · '+records.length+' از '+targets.length+' نفر</summary><div class="principal-list">'+(lines||'<p class="teacher-empty">دانش‌آموزی برای این تکلیف پیدا نشد.</p>')+'</div></details>';
 }
