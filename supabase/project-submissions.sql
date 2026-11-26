@@ -4,6 +4,9 @@
 -- Support assignments targeted to one student while retaining the student's class context.
 alter table public.school_assignments add column if not exists student_id uuid references auth.users(id) on delete cascade;
 
+-- This legacy audience constraint conflicts with the current class/student targeting model.
+alter table public.school_assignments drop constraint if exists school_assignments_target_check;
+
 -- Older deployments may have used a differently named CHECK constraint for kind.
 -- Remove every CHECK constraint that references kind before allowing the project value.
 do $
