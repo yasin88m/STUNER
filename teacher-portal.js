@@ -312,8 +312,13 @@ const importBtn=e.target.closest("[data-teacher-import-grades]");
   targets=studentIds.map(id=>({class_id:schoolStudents(schoolId).find(student=>student.user_id===id)?.class_id||null,student_id:id}));
  }else{msg.textContent="نوع مخاطب معتبر نیست.";return}
  if(!targets.length){msg.textContent="برای این مخاطب کلاسی یا دانش‌آموزی پیدا نشد.";return}
- const rows=targets.map(target=>({school_id:schoolId,...target,teacher_id:state.user.id,kind:data.get("kind"),subject:String(data.get("subject")||"").trim(),title:String(data.get("title")||"").trim(),description:String(data.get("description")||"").trim(),due_date:data.get("due_date")}));
- if(rows.some(x=>!x.title||!x.subject||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(String(x.due_date||"")))){msg.textContent="اطلاعات تکلیف یا امتحان را کامل کنید.";return}
+ const kind=String(data.get("kind")||"");
+ if(!["task","exam","project"].includes(kind)){msg.textContent="نوع فعالیت معتبر نیست.";return}
+ const subject=String(data.get("subject")||"").trim(),title=String(data.get("title")||"").trim(),dueDate=String(data.get("due_date")||"");
+ if(!subject||!title||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(dueDate)){msg.textContent=kind==="project"?"برای ثبت پروژه، درس، عنوان و مهلت تحویل را کامل کنید.":"برای ثبت فعالیت، درس، عنوان و تاریخ را کامل کنید.";return}
+ const rows=targets.map(target=>({school_id:schoolId,...target,teacher_id:state.user.id,kind,subject,title,description:String(data.get("description")||"").trim(),due_date:dueDate}));
+ if(rows.some(x=>!x.class_id||!x.teacher_id)){msg.textContent="کلاس یا اطلاعات معلم معتبر نیست؛ مخاطبان را دوباره انتخاب کنید.";return}
+ msg.textContent="";msg.classList.remove("teacher-form-error","teacher-form-success");
  state.busy=true;const btn=form.querySelector('button[type="submit"]');btn.disabled=true;
  try{
   const result=await state.client.from("school_assignments").insert(rows);
@@ -327,7 +332,9 @@ const importBtn=e.target.closest("[data-teacher-import-grades]");
   const kind=String(data.get("kind")||"task");
   state.flashType="error";
   state.flashMessage=(kind==="project"?"ثبت پروژه با خطا مواجه شد: ":"ثبت فعالیت با خطا مواجه شد: ")+(err?.message||"خطای نامشخص");
-  if(msg){msg.classList.remove("teacher-form-success");msg.classList.add("teacher-form-error");msg.textContent=state.flashMessage;}
+  console.error("STUNER teacher activity insert failed:",err);
+  const details=[err?.message,err?.details,err?.hint,err?.code].filter(Boolean).join(" · ");
+  if(msg){msg.classList.remove("teacher-form-success");msg.classList.add("teacher-form-error");msg.textContent=state.flashMessage+(details?" ["+details+"]":"");}
   btn.disabled=false;
  }
  finally{state.busy=false}
