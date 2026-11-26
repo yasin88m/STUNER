@@ -208,3 +208,12 @@
 .teacher-work-feedback.is-error{color:#b42318;background:#fff0ef;border-color:#f2b8b5}
 .teacher-form-success{color:#176b43!important;font-weight:700}
 .teacher-form-error{color:#b42318!important;font-weight:700}
+
+.teacher-project-file-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.teacher-project-updated{background:#fff4d8!important;color:#8a5a08!important;border:1px solid #f0d58e}
+.teacher-inbox-notices{display:grid;gap:9px;margin:0 0 13px;padding:13px 15px;border:1px solid #b9dfc6;border-radius:14px;background:#f0faf3}
+.teacher-inbox-notices>strong{display:flex;align-items:center;gap:7px;color:#176341;font-size:12px}
+.teacher-inbox-notices>div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:7px;border-top:1px solid #dcefe2}
+.teacher-inbox-notices>div span{font-size:11px;line-height:1.8;color:#315a40}
+.teacher-inbox-notices>div small{font-size:10px;color:#7b9382;white-space:nowrap}
+@media(max-width:560px){.teacher-project-file-actions{width:100%;justify-content:stretch}.teacher-project-file-actions>*{flex:1}.teacher-inbox-notices>div{align-items:flex-start;flex-direction:column}}
