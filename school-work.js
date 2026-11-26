@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-let db=null,user=null,member=null,assignments=[],completed=new Set(),teacherSubjects=[],projectSubmissions=new Map(),loading=false,loaded=false,loadError="",pendingViewRecord=false,pendingViewIds=new Set(),viewRecordError="",uploadingProject="",uploadProgress=0,viewAttempted=new Set();
+let db=null,user=null,member=null,assignments=[],completed=new Set(),teacherSubjects=[],projectSubmissions=new Map(),loading=false,loaded=false,loadError="",pendingViewRecord=false,pendingViewIds=new Set(),viewRecordError="",uploadingProject="",uploadProgress=0,viewAttempted=new Set(),studentRefreshTimer=null;
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fa=v=>String(v).replace(/[0-9]/g,n=>"۰۱۲۳۴۵۶۷۸۹"[+n]);
 const when=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium",timeZone:"Asia/Tehran"}).format(new Date(v+"T12:00:00Z"))}catch{return v||"—"}};
@@ -127,6 +127,7 @@ async function uploadProjectFile(input){
  const file=input.files&&input.files[0];if(!assignment||!file)return;
  const status=document.querySelector('[data-project-upload-status="'+CSS.escape(assignmentId)+'"]');
  const progress=document.querySelector('[data-project-progress="'+CSS.escape(assignmentId)+'"]');
+ if(uploadingProject){if(status)status.textContent="ارسال فایل دیگری در حال انجام است؛ پس از پایان دوباره تلاش کن.";input.value="";return;}
  const track=progress?.querySelector(".school-project-progress-track"),fill=track?.querySelector("span");
  const percentLabel=progress?.querySelector("[data-project-progress-label]");
  const label=input.closest(".school-project-file-label");
@@ -174,7 +175,7 @@ document.addEventListener("click",e=>{
  });
 document.addEventListener("change",e=>{const projectInput=e.target.closest("[data-project-file]");if(projectInput)uploadProjectFile(projectInput)});
 window.STUNER_SCHOOL_WORK={
- init(client,account,m){db=client;user=account;member=m;assignments=[];teacherSubjects=[];projectSubmissions=new Map();completed=new Set();pendingViewRecord=false;pendingViewIds.clear();viewAttempted.clear();loaded=false;refresh()},
+ init(client,account,m){db=client;user=account;member=m;assignments=[];teacherSubjects=[];projectSubmissions=new Map();completed=new Set();pendingViewRecord=false;pendingViewIds.clear();viewAttempted.clear();loaded=false;if(studentRefreshTimer)clearInterval(studentRefreshTimer);refresh();studentRefreshTimer=setInterval(()=>{if(document.visibilityState==="visible"&&db&&member)refresh()},60000)},
  render,refresh,renderTeachers,recordFirstViews:recordVisibleTaskViews,recordAssignmentView,
  teacherSubjects(){return teacherSubjects.map(x=>({subject:x.subject,teacher:x.teacher_name}))},
  snapshot(){
