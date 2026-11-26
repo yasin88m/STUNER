@@ -5,6 +5,27 @@ const cfg=window.STUNER_SUPABASE_CONFIG||{};
 const el=document.getElementById("portalRoot"),cover=document.getElementById("schoolPortal");
 const app=document.getElementById("app"),on=document.getElementById("onboarding");
 const ready=/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(cfg.url||"")&&/^(sb_publishable_|eyJ)/.test(cfg.publishableKey||"");
+const assetPromises=new Map();
+function loadScript(src){
+ if(assetPromises.has(src))return assetPromises.get(src);
+ const promise=new Promise((resolve,reject)=>{
+  const script=document.createElement("script");script.src=src;script.async=true;
+  script.onload=resolve;script.onerror=()=>{assetPromises.delete(src);reject(new Error("بارگذاری فایل ضروری ناموفق بود: "+src.split("/").pop()))};
+  document.head.appendChild(script);
+ });
+ assetPromises.set(src,promise);return promise;
+}
+function loadStyle(href){
+ if(assetPromises.has(href))return assetPromises.get(href);
+ const promise=new Promise((resolve,reject)=>{
+  const link=document.createElement("link");link.rel="stylesheet";link.href=href;
+  link.onload=resolve;link.onerror=()=>{assetPromises.delete(href);reject(new Error("بارگذاری استایل ناموفق بود: "+href.split("/").pop()))};
+  document.head.appendChild(link);
+ });
+ assetPromises.set(href,promise);return promise;
+}
+function loadAssets(scripts,styles){return Promise.all([...scripts.map(loadScript),...styles.map(loadStyle)])}
+const XLSX_READER="https://cdn.jsdelivr.net/npm/read-excel-file@9.3.12/bundle/read-excel-file.min.js";
 let client=null,user=null,role=["student","teacher","principal"].includes(sessionStorage.getItem("stuner.login.role"))?sessionStorage.getItem("stuner.login.role"):"student",members=[],current=null,classes=[],people=[],teacherLinks=[],subjectLinks=[],school=null,assignments=[],accountNames=[];
 let directorSection="home",directorMenu=false,viewClassId=null,weeklyDraftRows=[],weeklyDraftName="",weeklyPublishedRows=[];
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -65,6 +86,7 @@ function head(title){return '<div class="portal-head"><div class="portal-brand">
 function login(){
  show();current=null;
  el.innerHTML=head("ورود به استیونر")+'<section class="portal-card"><form id="loginForm" class="portal-form"><label>شناسه کاربری<input name="username" type="text" autocomplete="username" dir="ltr" required minlength="4" maxlength="32" pattern="(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})" placeholder="شناسه کاربری"></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" dir="ltr" required></label><button class="portal-primary">ورود به استیونر</button></form><div class="portal-actions"><button data-action="signup">ساخت حساب مدیر مدرسه</button></div><p class="portal-note">نوع حساب شما به‌صورت خودکار و امن از اطلاعات حساب تشخیص داده می‌شود.</p><p class="portal-error" id="portalMessage" aria-live="polite"></p></section>';
+ const submit=el.querySelector("#loginForm button");if(submit)submit.disabled=!client;
 }
 function signup(){
  show();role="principal";
@@ -104,6 +126,7 @@ async function sync(){
   else if(availableRoles.length===1)role=availableRoles[0];
   else if(availableRoles.length&&!availableRoles.includes(role))role=availableRoles[0];
   if(!members.length&&accountRole==="principal")role="principal";
+ if(role==="principal")await loadAssets(["./stuner-icons.js?v=29","./school-import.js","./school-database.js?v=35",XLSX_READER],["./school-import.css?v=29","./school-database.css?v=35","./stuner-glass.css?v=2"]);
  const old=sessionStorage.getItem("stuner.school");
  const last=members.find(m=>m.school_id===old&&m.role===role);
  if(last)await enter(last);else picker();
@@ -113,6 +136,7 @@ async function enter(member){
  if(current?.school_id!==member.school_id){directorSection="home";viewClassId=null;directorMenu=false}
  current=member;sessionStorage.setItem("stuner.school",member.school_id);
  if(member.role==="student"){
+  await loadAssets(["./stuner-icons.js?v=29","./curriculum.js?v=2","./stuner-jalali.js?v=2","./school-work.js?v=45","./student-cloud.js?v=41"],["./styles.css?v=64","./stuner-glass.css?v=2"]);
   cover.hidden=true;app.style.display="";on.hidden=true;
   window.STUNER_ACTIVE_USER={id:user.id,schoolId:member.school_id};
   const personalParts=String(member.display_name||"دانش‌آموز").trim().split(/\s+/);
@@ -189,6 +213,7 @@ async function enter(member){
  }
  if(member.role==="teacher"){
   show();
+  await loadAssets(["./stuner-icons.js?v=29","./stuner-jalali.js?v=2","./teacher-portal.js?v=41"],["./teacher-portal.css?v=39","./stuner-glass.css?v=2"]);
   if(!window.STUNER_TEACHER_UI)throw Error("پنل معلم بارگذاری نشده است.");
   await window.STUNER_TEACHER_UI.start({client,user,members,active:member,root:el,onMembershipsChanged:items=>{members=[...members.filter(x=>x.role!=="teacher"),...items]}});
   return;
@@ -564,10 +589,12 @@ el.addEventListener("change",e=>{
 el.addEventListener("input",e=>{if(e.target.closest("#schoolForm"))updateSchoolPreview()});
 el.addEventListener("submit",async e=>{if(!e.target.matches("form"))return;e.preventDefault();const btn=e.target.querySelector("button");if(btn)btn.disabled=true;await handle(e.target);if(btn?.isConnected)btn.disabled=false});
 async function start(){
- show();
+ show();login();
  if(!ready){el.innerHTML=head("اتصال Supabase لازم است")+'<section class="portal-card"><p>برای فعال‌سازی سه نوع ورود، ابتدا پروژه Supabase بساز؛ فایل <code>supabase/schema.sql</code> را در SQL Editor اجرا کن و آدرس پروژه و Publishable Key را در <code>supabase-config.js</code> قرار بده.</p><p>ورود نمایشی یا حساب مدیر بدون بررسی سرور فعال نشده است.</p></section>';return}
+ await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.94.1/dist/umd/supabase.js");
  if(!window.supabase?.createClient){el.innerHTML=head("کتابخانه Supabase بارگذاری نشد")+'<p>اتصال اینترنت را بررسی کن.</p>';return}
  client=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+ const submit=el.querySelector("#loginForm button");if(submit)submit.disabled=false;
  await sync();client.auth.onAuthStateChange(event=>{if(event==="SIGNED_OUT"&&!el.querySelector("#loginForm")&&!el.querySelector("#initialPasswordForm"))location.reload()});
 }
 start().catch(e=>{show();el.innerHTML=head("خطای اتصال")+'<section class="portal-card">'+esc(e.message)+'</section>'});
