@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-let db=null,user=null,member=null,assignments=[],completed=new Set(),teacherSubjects=[],loading=false,loaded=false,loadError="",pendingViewRecord=false,pendingViewIds=new Set(),viewRecordError="";
+let db=null,user=null,member=null,assignments=[],completed=new Set(),teacherSubjects=[],projectSubmissions=new Map(),loading=false,loaded=false,loadError="",pendingViewRecord=false,pendingViewIds=new Set(),viewRecordError="",uploadingProject="";
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fa=v=>String(v).replace(/[0-9]/g,n=>"۰۱۲۳۴۵۶۷۸۹"[+n]);
 const when=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium",timeZone:"Asia/Tehran"}).format(new Date(v+"T12:00:00Z"))}catch{return v||"—"}};
@@ -26,6 +26,13 @@ async function refresh(){
   if(c.error)throw c.error;
   assignments=a.data||[];
   completed=new Set((c.data||[]).map(x=>x.assignment_id));
+  const projectIds=assignments.filter(x=>x.kind==="project").map(x=>x.id);
+  projectSubmissions=new Map();
+  if(projectIds.length){
+   const submissions=await db.from("project_submissions").select("id,assignment_id,student_id,file_name,file_path,file_size,mime_type,submitted_at").in("assignment_id",projectIds).eq("student_id",user.id);
+   if(submissions.error)throw submissions.error;
+   for(const row of submissions.data||[])projectSubmissions.set(row.assignment_id,row);
+  }
   teacherSubjects=[];
   if(member.class_id){
    const teachers=await db.rpc("list_student_class_subjects",{p_school:member.school_id,p_class:member.class_id});
@@ -68,15 +75,16 @@ async function recordAssignmentView(id){
 function render(page){
  if(!db||!member)return "";
  if(!member.class_id&&!assignments.some(a=>a.student_id===user?.id))return '<section class="card panel stuner-schoolwork"><h2>برنامه مدرسه</h2><p>هنوز در هیچ کلاسی ثبت نشده‌ای؛ مدیر مدرسه باید تو را به کلاس اختصاص دهد.</p></section>';
- if(page!=="home"&&page!=="tasks"&&page!=="exams")return "";
- const list=assignments.filter(x=>page==="tasks"?x.kind==="task":page==="exams"?x.kind==="exam":true);
+ if(page!=="home"&&page!=="tasks"&&page!=="exams"&&page!=="projects")return "";
+ const list=assignments.filter(x=>page==="tasks"?x.kind==="task":page==="exams"?x.kind==="exam":page==="projects"?x.kind==="project":true);
  const content=loading&&!loaded?"<p>دریافت تکالیف و امتحانات مدرسه…</p>":loadError?'<p class="school-work-error">'+esc(loadError)+'</p>':list.length?list.map(a=>{
-  const task=a.kind==="task",done=completed.has(a.id);
+  const task=a.kind==="task",project=a.kind==="project",done=completed.has(a.id),submission=projectSubmissions.get(a.id);
   const assignedTo=a.student_id?"ارسالی ویژه شما":"ارسالی برای کلاس";
-  return '<article class="school-work-row" data-school-assignment="'+esc(a.id)+'"><div class="school-work-text"><small class="school-work-label">'+(task?"تکلیف":"امتحان")+' · '+esc(a.subject)+' · '+assignedTo+'</small><strong>'+esc(a.title)+'</strong><span>'+esc(when(a.due_date))+'</span>'+(a.description?'<p>'+esc(a.description)+'</p>':"")+'</div>'+(task?'<button type="button" class="school-work-done '+(done?"is-done":"")+'" data-school-complete="'+esc(a.id)+'">'+(done?"✓ انجام شده":"ثبت انجام تکلیف")+'</button>':"")+'</article>';
+  const submissionUI=project?'<div class="school-project-submit"><div class="school-project-status">'+(submission?'<strong>فایل شما ارسال شده است</strong><small>'+esc(submission.file_name)+'</small>':'<strong>هنوز فایلی ارسال نکرده‌ای</strong><small>فایل پروژه را تا تاریخ مقرر بارگذاری کن.</small>')+'</div><label class="school-project-file-label">'+(submission?"ارسال نسخه جدید":"انتخاب فایل پروژه")+'<input type="file" accept=".ppt,.pptx,.pdf,.doc,.docx,.xls,.xlsx,.zip,.jpg,.jpeg,.png" data-project-file="'+esc(a.id)+'" '+(uploadingProject===a.id?"disabled":"")+'></label><span class="school-project-upload-status" data-project-upload-status="'+esc(a.id)+'">'+(uploadingProject===a.id?"در حال ارسال…":"حداکثر حجم فایل: ۵۰ مگابایت")+'</span></div>':"";
+  return '<article class="school-work-row school-project-row" data-school-assignment="'+esc(a.id)+'"><div class="school-work-text"><small class="school-work-label">'+(project?"پروژه":task?"تکلیف":"امتحان")+' · '+esc(a.subject)+' · '+assignedTo+'</small><strong>'+esc(a.title)+'</strong><span>'+esc(when(a.due_date))+'</span>'+(a.description?'<p>'+esc(a.description)+'</p>':"")+'</div>'+(task?'<button type="button" class="school-work-done '+(done?"is-done":"")+'" data-school-complete="'+esc(a.id)+'">'+(done?"✓ انجام شده":"ثبت انجام تکلیف")+'</button>':"")+submissionUI+'</article>';
  }).join(""):"<p>هنوز موردی از طرف معلم برای کلاس شما ثبت نشده است.</p>";
  if(page==="tasks"&&loaded&&!loadError)recordFirstViews(list.filter(a=>a.kind==="task"));
- const title=page==="tasks"?"تکالیف ارسالی معلم":page==="exams"?"امتحانات تعیین‌شده مدرسه":"برنامه ارسالی معلمان";
+ const title=page==="tasks"?"تکالیف ارسالی معلم":page==="exams"?"امتحانات تعیین‌شده مدرسه":page==="projects"?"پروژه‌های ارسالی معلم":"برنامه ارسالی معلمان";
  return '<section class="card panel stuner-schoolwork"><div class="school-work-head"><div><h2>'+title+'</h2><p>مربوط به کلاس شما · همگام با مدرسه</p></div><button class="secondary-button small-button" data-refresh-school-work type="button">به‌روزرسانی</button></div>'+content+'</section>';
 }
 function renderTeachers(){
@@ -84,6 +92,26 @@ function renderTeachers(){
  const items=teacherSubjects.map(x=>'<div class="school-subject-teacher"><strong>'+esc(x.subject)+'</strong><span>'+esc(x.teacher_name)+'</span></div>').join("");
  return '<section class="card panel stuner-schoolwork school-course-teachers"><div class="school-work-head"><div><h2>درس‌ها و دبیران کلاس من</h2><p>اطلاعات ثبت‌شده توسط هنرستان</p></div></div>'+
  (items||'<p>هنوز اطلاعات دبیران درس‌های این کلاس ثبت نشده است.</p>')+'</section>';
+}
+async function uploadProjectFile(input){
+ const assignmentId=input.dataset.projectFile,assignment=assignments.find(x=>x.id===assignmentId&&x.kind==="project");
+ const file=input.files&&input.files[0];if(!assignment||!file)return;
+ const status=document.querySelector('[data-project-upload-status="'+CSS.escape(assignmentId)+'"]');
+ if(!/\.(pptx?|pdf|docx?|xlsx?|zip|jpe?g|png)$/i.test(file.name)){if(status)status.textContent="فرمت فایل پشتیبانی نمی‌شود.";input.value="";return}
+ if(file.size>50*1024*1024){if(status)status.textContent="حجم فایل نباید بیشتر از ۵۰ مگابایت باشد.";input.value="";return}
+ uploadingProject=assignmentId;input.disabled=true;if(status)status.textContent="در حال بارگذاری فایل…";
+ try{
+  const previous=projectSubmissions.get(assignmentId);
+  const safeName=file.name.normalize("NFKC").replace(/[^\p{L}\p{N}._-]+/gu,"_").slice(-120)||"project-file";
+  const path=assignmentId+"/"+user.id+"/"+Date.now()+"_"+safeName;
+  const upload=await db.storage.from("stuner-project-submissions").upload(path,file,{contentType:file.type||"application/octet-stream",upsert:false});
+  if(upload.error)throw upload.error;
+  const saved=await db.from("project_submissions").upsert({assignment_id:assignmentId,student_id:user.id,file_name:file.name.slice(0,255),file_path:path,file_size:file.size,mime_type:file.type||"application/octet-stream",submitted_at:new Date().toISOString()},{onConflict:"assignment_id,student_id"}).select("id,assignment_id,student_id,file_name,file_path,file_size,mime_type,submitted_at").single();
+  if(saved.error){await db.storage.from("stuner-project-submissions").remove([path]);throw saved.error}
+  projectSubmissions.set(assignmentId,saved.data);
+  if(previous&&previous.file_path)await db.storage.from("stuner-project-submissions").remove([previous.file_path]);
+  uploadingProject="";update();
+ }catch(err){uploadingProject="";if(status)status.textContent="ارسال انجام نشد: "+(err.message||"خطای نامشخص");input.disabled=false}
 }
 async function toggle(id,button){
  if(!db||!user||!assignments.some(a=>a.id===id&&a.kind==="task"))return;
@@ -98,10 +126,11 @@ async function toggle(id,button){
 document.addEventListener("click",e=>{
  const button=e.target.closest("[data-school-complete]");
  if(button){e.preventDefault();toggle(button.dataset.schoolComplete,button);return}
- if(e.target.closest("[data-refresh-school-work]")){e.preventDefault();refresh()}
+ if(e.target.closest("[data-refresh-school-work]")){e.preventDefault();refresh();return}
+ const projectInput=e.target.closest("[data-project-file]");if(projectInput){uploadProjectFile(projectInput);return}
 });
 window.STUNER_SCHOOL_WORK={
- init(client,account,m){db=client;user=account;member=m;assignments=[];teacherSubjects=[];completed=new Set();pendingViewRecord=false;pendingViewIds.clear();loaded=false;refresh()},
+ init(client,account,m){db=client;user=account;member=m;assignments=[];teacherSubjects=[];projectSubmissions=new Map();completed=new Set();pendingViewRecord=false;pendingViewIds.clear();loaded=false;refresh()},
  render,refresh,renderTeachers,recordFirstViews:recordVisibleTaskViews,recordAssignmentView,
  teacherSubjects(){return teacherSubjects.map(x=>({subject:x.subject,teacher:x.teacher_name}))},
  snapshot(){
