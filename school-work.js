@@ -22,7 +22,7 @@ async function refresh(){
   const merged=new Map();
   for(const row of [...(classResult.data||[]),...(personalResult.data||[])])merged.set(row.id,row);
   const a={data:[...merged.values()].sort((x,y)=>String(x.due_date||"").localeCompare(String(y.due_date||"")))};
-  assignments=a.data||[];
+  assignments=(a.data||[]).filter(row=>row.kind!=="task"||Date.parse(row.created_at)>=Date.now()-7*24*60*60*1000);
   const projectIds=assignments.filter(x=>x.kind==="project").map(x=>x.id);
   // Load independent student data in parallel to reduce the wait after opening the school-work tabs.
   const [completionResult,submissionResult,teacherResult]=await Promise.all([
