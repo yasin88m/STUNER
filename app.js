@@ -275,9 +275,11 @@ function renderPlan(){
 function renderTasks(){
  const tasks=allStudentTasks().sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"));
  const exams=allStudentExams().sort((a,b)=>a.date.localeCompare(b.date));
- const isExam=taskView==="exams";
- const buttons='<button type="button" role="tab" aria-selected="'+(!isExam)+'" class="'+(!isExam?"active":"")+'" data-work-tab="tasks"><i data-lucide="clipboard-check"></i> تکالیف <span>'+fa(tasks.length)+'</span></button><button type="button" role="tab" aria-selected="'+isExam+'" class="'+(isExam?"active":"")+'" data-work-tab="exams"><i data-lucide="graduation-cap"></i> امتحانات <span>'+fa(exams.length)+'</span></button>';
- const top=heading("تکالیف و امتحانات","تکالیف ثبت‌شده توسط معلم در این بخش نمایش داده می‌شوند.")+'<div class="work-main-tabs" role="tablist" aria-label="نوع فعالیت">'+buttons+'</div>'+schoolNotice();
+ const isExam=taskView==="exams",isProject=taskView==="projects";
+ const projectCount=(window.STUNER_SCHOOL_WORK?.snapshot?.().projects||[]).length;
+ const buttons='<button type="button" role="tab" aria-selected="'+(!isExam&&!isProject)+'" class="'+(!isExam&&!isProject?"active":"")+'" data-work-tab="tasks"><i data-lucide="clipboard-check"></i> تکالیف <span>'+fa(tasks.length)+'</span></button><button type="button" role="tab" aria-selected="'+isExam+'" class="'+(isExam?"active":"")+'" data-work-tab="exams"><i data-lucide="graduation-cap"></i> امتحانات <span>'+fa(exams.length)+'</span></button><button type="button" role="tab" aria-selected="'+isProject+'" class="'+(isProject?"active":"")+'" data-work-tab="projects"><i data-lucide="folder-kanban"></i> پروژه‌ها <span>'+fa(projectCount)+'</span></button>';
+ const top=heading("تکالیف، امتحانات و پروژه‌ها","فعالیت‌های ثبت‌شده توسط معلم در این بخش نمایش داده می‌شوند.")+'<div class="work-main-tabs" role="tablist" aria-label="نوع فعالیت">'+buttons+'</div>'+schoolNotice();
+ if(isProject)return top+(window.STUNER_SCHOOL_WORK?.render?.("projects")||empty("پروژه‌ای ثبت نشده","پروژه‌های معلم اینجا نمایش داده می‌شوند.","folder-kanban"));
  if(isExam){
   return top+'<div class="stats-grid work-exam-stats"><article class="card stat-card"><span class="stat-icon"><i data-lucide="calendar-check"></i></span><div><strong>'+fa(exams.filter(e=>e.date>=isoToday()).length)+'</strong><small>امتحان پیش رو</small></div></article><article class="card stat-card"><span class="stat-icon"><i data-lucide="calendar-days"></i></span><div><strong>'+fa(exams.filter(e=>e.date<isoToday()).length)+'</strong><small>امتحان گذشته</small></div></article></div><section class="card list-card">'+(exams.length?exams.map(e=>examRow(e,true)).join(""):empty("امتحانی ثبت نشده","می‌توانی امتحان شخصی اضافه کنی.","calendar-days"))+'</section>';
  }
@@ -580,7 +582,7 @@ document.addEventListener("click",e=>{
  if(e.target.closest("[data-close-modal]")||e.target.matches("[data-modal-backdrop]")){closeModal();return}
  let t=e.target.closest("[data-toggle-task]");if(t){let x=state.tasks.find(z=>z.id===t.dataset.toggleTask);if(x){x.done=!x.done;save();render();toast(x.done?"آفرین! تکلیف انجام‌شده ثبت شد.":"وضعیت تکلیف تغییر کرد.")}return}
  for(let [attr,key] of [["data-delete-task","tasks"],["data-delete-exam","exams"],["data-delete-plan","plans"]]){let x=e.target.closest("["+attr+"]");if(x){remove(key,x.getAttribute(attr));return}}
- let workTab=e.target.closest("[data-work-tab]");if(workTab){taskFilter="all";go(workTab.dataset.workTab==="exams"?"exams":"tasks");return}
+ let workTab=e.target.closest("[data-work-tab]");if(workTab){taskFilter="all";taskView=workTab.dataset.workTab==="projects"?"projects":workTab.dataset.workTab==="exams"?"exams":"tasks";go("tasks");return}
  let personalFilter=e.target.closest("[data-personal-filter]");if(personalFilter){personalTaskFilter=personalFilter.dataset.personalFilter;render();return}
  let filter=e.target.closest("[data-task-filter]");if(filter){taskFilter=filter.dataset.taskFilter;render();return}
  let day=e.target.closest("[data-plan-day]");if(day){planDay=+day.dataset.planDay;render();return}
