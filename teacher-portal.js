@@ -1,7 +1,7 @@
 /* Dedicated multi-school teacher workspace for STUNER. All reads respect Supabase RLS. */
 (function(){
 "use strict";
-const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],views:[],submissions:[],grades:[],inboxNotifications:[],submissionsInitialized:false,pollTimer:null,page:"home",joinNote:"",onMembershipsChanged:null,menu:false,schoolId:"",classId:"",busy:false,flashMessage:"",flashType:""};
+const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],views:[],submissions:[],grades:[],gradeImportRows:[],inboxNotifications:[],submissionsInitialized:false,pollTimer:null,page:"home",joinNote:"",onMembershipsChanged:null,menu:false,schoolId:"",classId:"",busy:false,flashMessage:"",flashType:""};
 const esc=x=>String(x??"").replace(/[&<>"']/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[a]));
 const icon=n=>'<i data-lucide="'+n+'"></i>';
 const schoolName=id=>state.schools.find(x=>x.school_id===id)?.schools?.name||"مدرسه";
@@ -52,12 +52,12 @@ function gradePage(){
  const classes=schoolClasses(state.schoolId);
  const initialClass=classes[0]?.id||"";
  const studentCount=state.students.filter(s=>s.class_id===initialClass).length;
- return '<section class="portal-card teacher-grades-card"><div class="teacher-card-heading"><div><h2>'+icon("graduation-cap")+' ثبت و ویرایش نمرات</h2><p>نمره‌های هر آزمون را برای دانش‌آموزان کلاس ثبت و مدیریت کن.</p></div><span class="portal-kind">'+classes.length+' کلاس</span></div>'+
+ return '<section class="portal-card teacher-grades-card"><div class="teacher-card-heading"><div><h2>'+icon("graduation-cap")+' دفتر ثبت نمرات</h2><p>ابتدا کلاس را انتخاب کن؛ سپس نمره‌ها را دستی یا با فایل اکسل وارد کن.</p></div><span class="portal-kind">'+classes.length+' کلاس</span></div>'+
  '<div class="teacher-grade-intro"><span class="teacher-grade-intro-icon">'+icon("clipboard-check")+'</span><div><strong>دفتر ثبت نمرات</strong><small>نمره‌ها از صفر تا ۲۰ ثبت می‌شوند؛ می‌توانی دستی وارد کنی یا از اکسل بخوانی.</small></div></div>'+
  '<form id="teacherGradesForm" class="portal-form teacher-grades-form"><section class="teacher-grade-section"><h3>'+icon("sliders-horizontal")+' مشخصات آزمون</h3><div class="teacher-fields-grid"><label>مدرسه<select id="teacherGradeSchool">'+schoolOptions()+'</select></label><label>کلاس<select name="class_id" id="teacherGradeClass">'+classes.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+' · پایه '+esc(x.grade)+'</option>').join("")+'</select></label></div>'+
  '<div class="teacher-fields-grid"><label>درس<input name="subject" required maxlength="100" placeholder="مثلاً ریاضی"></label><label>عنوان آزمون<input name="title" maxlength="150" placeholder="مثلاً امتحان فصل اول"></label></div>'+
  '<div class="teacher-grade-date-panel"><div class="teacher-grade-date-heading"><span>'+icon("calendar-days")+' تاریخ امتحان</span><small>روز برگزاری آزمون را از تقویم شمسی انتخاب کن.</small></div>'+(window.STUNER_JALALI?.field("graded_on","تاریخ انتخاب‌شده",undefined,{shortcuts:false}) || '<label>تاریخ امتحان<input name="graded_on" type="date" value="'+new Date().toISOString().slice(0,10)+'" required></label>')+'</div>'+
- '</section><section class="teacher-grade-section teacher-grade-import"><div><h3>'+icon("file-spreadsheet")+' ورود گروهی از اکسل</h3><p>ستون اول: نام کامل دانش‌آموز · ستون دوم: نمره از ۲۰</p></div><label class="teacher-grade-file">انتخاب فایل اکسل<input id="teacherGradeExcel" type="file" accept=".xlsx,.xls"></label><button type="button" class="portal-secondary" data-teacher-import-grades>'+icon("upload")+' خواندن و ثبت فایل</button></section>'+
+ '</section><section class="teacher-grade-section teacher-grade-import"><div class="teacher-grade-import-copy"><h3>'+icon("file-spreadsheet")+' ورود نمرات با اکسل</h3><p>فایل را انتخاب کن؛ ابتدا اطلاعات آن را بررسی و اصلاح می‌کنی و بعد از تأیید ذخیره می‌شود.</p></div><label class="teacher-grade-file"><span>فایل اکسل کلاس (xlsx یا xls)</span><input id="teacherGradeExcel" type="file" accept=".xlsx,.xls"></label><button type="button" class="portal-secondary" data-teacher-import-grades>'+icon("scan-search")+' بررسی فایل اکسل</button><div id="teacherGradeImportReview" class="teacher-grade-import-review" hidden></div></section>'+
  '<section class="teacher-grade-section"><div class="teacher-grade-list-heading"><div><h3>'+icon("users-round")+' نمرات دانش‌آموزان</h3><p>نمره هر دانش‌آموز را در کادر مقابل نامش وارد کن.</p></div><span class="portal-kind">'+studentCount+' دانش‌آموز</span></div><div id="teacherGradeRows">'+gradeRows(initialClass)+'</div></section><div class="teacher-form-footer teacher-grade-footer"><p>فقط خانه‌های دارای نمره ذخیره می‌شوند. نمره می‌تواند اعشاری و با گام ۰٫۲۵ باشد.</p><button class="portal-primary" type="submit">'+icon("save")+' ذخیره نمرات</button></div><p id="teacherGradesMessage" class="portal-error" role="status" aria-live="polite"></p></form></section>';
 }
 function gradeRows(classId){
@@ -66,6 +66,12 @@ function gradeRows(classId){
   const old=state.grades.find(g=>g.student_id===s.user_id&&g.class_id===classId&&g.subject===subject&&g.title===title&&g.graded_on===date);
   return '<label class="teacher-grade-row"><span class="teacher-grade-index">'+(index+1)+'</span><span class="teacher-grade-avatar">'+esc((s.display_name||"؟").trim().charAt(0)||"؟")+'</span><span class="teacher-grade-student"><strong>'+esc(s.display_name||"دانش‌آموز")+'</strong><small>دانش‌آموز</small></span><span class="teacher-grade-input-wrap"><input type="number" name="grade_'+esc(s.user_id)+'" min="0" max="20" step="0.25" inputmode="decimal" placeholder="—" aria-label="نمره '+esc(s.display_name||"دانش‌آموز")+' از ۲۰" value="'+(old?esc(old.score):"")+'"><small>از ۲۰</small></span></label>';
  }).join("")||'<p class="teacher-empty">دانش‌آموزی در این کلاس نیست.</p>';
+}
+function gradeImportReview(){
+ const rows=state.gradeImportRows,students=state.students.filter(s=>s.class_id===state.root.querySelector("#teacherGradeClass")?.value);
+ if(!rows.length)return "";
+ const options='<option value="">نادیده گرفتن این ردیف</option>'+students.map(s=>'<option value="'+esc(s.user_id)+'">'+esc(s.display_name||"دانش‌آموز")+'</option>').join("");
+ return '<div class="teacher-grade-review-head"><div><strong>پیش‌نمایش نمرات اکسل</strong><small>'+rows.length+' ردیف خوانده شد؛ قبل از ذخیره نام دانش‌آموز و نمره را بررسی کن.</small></div><span class="portal-kind">'+rows.filter(r=>r.student_id&&r.score!==null).length+' ردیف آماده</span></div><div class="teacher-grade-review-table"><div class="teacher-grade-review-row teacher-grade-review-labels"><span>ردیف</span><span>نام در فایل / دانش‌آموز</span><span>نمره از ۲۰</span></div>'+rows.map((r,i)=>'<div class="teacher-grade-review-row"><span class="teacher-grade-review-index">'+(i+1)+'</span><div class="teacher-grade-review-student"><small>نام داخل فایل: '+esc(r.source_name||"—")+'</small><select aria-label="انتساب ردیف '+(i+1)+' به دانش‌آموز" data-import-student="'+i+'">'+options.replace('value="'+esc(r.student_id||"")+'"','value="'+esc(r.student_id||"")+'" selected')+'</select></div><label class="teacher-grade-review-score"><input type="number" min="0" max="20" step="0.25" inputmode="decimal" placeholder="—" value="'+(r.score===null?"":esc(r.score))+'" data-import-score="'+i+'"><small>از ۲۰</small></label></div>').join("")+'</div><div class="teacher-grade-review-actions"><small>ردیف‌های بدون دانش‌آموز یا نمره ذخیره نمی‌شوند.</small><button type="button" class="portal-primary" data-teacher-save-import>'+icon("save")+' تأیید و ذخیره نمرات</button></div>';
 }
 function schoolCard(s){
  const id=s.school_id;
@@ -197,6 +203,26 @@ async function onClick(e){
   finally{downloadBtn.disabled=false}
   return;
  }
+ const saveImport=e.target.closest("[data-teacher-save-import]");
+ if(saveImport){
+  const form=state.root.querySelector("#teacherGradesForm"),classId=state.root.querySelector("#teacherGradeClass")?.value,subject=String(form?.querySelector('[name="subject"]')?.value||"").trim(),title=String(form?.querySelector('[name="title"]')?.value||"").trim(),graded_on=String(form?.querySelector('[name="graded_on"]')?.value||""),msg=state.root.querySelector("#teacherGradesMessage");
+  if(!subject||!graded_on){msg.textContent="ابتدا درس و تاریخ امتحان را کامل کن.";return}
+  const students=state.students.filter(s=>s.class_id===classId),seen=new Set(),batch=[];
+  for(let i=0;i<state.gradeImportRows.length;i++){
+   const studentId=state.root.querySelector('[data-import-student="'+i+'"]')?.value||"",raw=state.root.querySelector('[data-import-score="'+i+'"]')?.value??"";
+   if(!studentId||String(raw).trim()==="")continue;
+   const score=Number(String(raw).replace(",",".")),student=students.find(s=>s.user_id===studentId);
+   if(!student||!Number.isFinite(score)||score<0||score>20){msg.textContent="نام دانش‌آموز و نمره هر ردیف باید معتبر باشد.";return}
+   if(seen.has(studentId)){msg.textContent="یک دانش‌آموز در چند ردیف انتخاب شده است؛ هر دانش‌آموز باید فقط یک نمره داشته باشد.";return}
+   seen.add(studentId);batch.push({school_id:state.schoolId,class_id:classId,student_id:studentId,teacher_id:state.user.id,subject,title,score,graded_on});
+  }
+  if(!batch.length){msg.textContent="حداقل یک ردیف معتبر برای ذخیره انتخاب کن.";return}
+  saveImport.disabled=true;state.busy=true;
+  try{const result=await state.client.from("school_student_grades").upsert(batch,{onConflict:"school_id,class_id,student_id,subject,title,graded_on"});if(result.error)throw result.error;state.gradeImportRows=[];await refresh();const m=state.root.querySelector("#teacherGradesMessage");if(m)m.textContent=batch.length+" نمره پس از بررسی فایل اکسل ذخیره شد."}
+  catch(err){msg.textContent=err.message||"ذخیره نمرات اکسل ناموفق بود."}
+  finally{state.busy=false;if(saveImport.isConnected)saveImport.disabled=false}
+  return;
+ }
  const deleteWork=e.target.closest("[data-teacher-delete-work]");
  if(deleteWork){
   const id=deleteWork.dataset.teacherDeleteWork;
@@ -229,7 +255,7 @@ async function onClick(e){
 }
 function onChange(e){
  if(e.target.matches("#teacherGradeSchool")){const id=e.target.value;if(!state.schools.some(s=>s.school_id===id))return;state.schoolId=id;render();}
-  else if(e.target.matches("#teacherGradeClass,#teacherGradesForm [name=subject],#teacherGradesForm [name=title],#teacherGradesForm [name=graded_on]")){const box=state.root.querySelector("#teacherGradeRows");const classId=state.root.querySelector("#teacherGradeClass")?.value;if(box&&classId){box.innerHTML=gradeRows(classId);const count=state.students.filter(s=>s.class_id===classId).length;const badge=state.root.querySelector(".teacher-grade-list-heading .portal-kind");if(badge)badge.textContent=count+" دانش‌آموز";}}
+  else if(e.target.matches("#teacherGradeClass,#teacherGradesForm [name=subject],#teacherGradesForm [name=title],#teacherGradesForm [name=graded_on]")){const box=state.root.querySelector("#teacherGradeRows");const classId=state.root.querySelector("#teacherGradeClass")?.value;if(box&&classId){box.innerHTML=gradeRows(classId);const count=state.students.filter(s=>s.class_id===classId).length;const badge=state.root.querySelector(".teacher-grade-list-heading .portal-kind");if(badge)badge.textContent=count+" دانش‌آموز";}if(e.target.matches("#teacherGradeClass")){state.gradeImportRows=[];const review=state.root.querySelector("#teacherGradeImportReview");if(review){review.hidden=true;review.innerHTML="";}}}
   else if(e.target.matches("#teacherAssignmentSchool")){
   const id=e.target.value;if(!state.schools.some(s=>s.school_id===id))return;
   state.schoolId=id;
@@ -294,14 +320,18 @@ const gradeForm=e.target.closest("#teacherGradesForm");
  }
 const importBtn=e.target.closest("[data-teacher-import-grades]");
  if(importBtn){
-  const file=state.root.querySelector("#teacherGradeExcel")?.files?.[0],msg=state.root.querySelector("#teacherGradesMessage");
+  const file=state.root.querySelector("#teacherGradeExcel")?.files?.[0],msg=state.root.querySelector("#teacherGradesMessage"),classId=state.root.querySelector("#teacherGradeClass")?.value;
   if(!file){msg.textContent="ابتدا فایل اکسل را انتخاب کن.";return}
+  if(!classId){msg.textContent="ابتدا کلاس را انتخاب کن.";return}
   if(typeof window.readXlsxFile!=="function"){msg.textContent="ابزار اکسل بارگذاری نشده است.";return}
-  importBtn.disabled=true;
-  try{const rows=await window.readXlsxFile(file),classId=state.root.querySelector("#teacherGradeClass").value,students=state.students.filter(x=>x.class_id===classId),norm=x=>String(x??"").trim().replace(/\s+/g," ").toLowerCase(),batch=[];
-   for(const row of rows){const name=norm(row?.[0]);if(!name||name.includes("نام"))continue;const student=students.find(x=>norm(x.display_name)===name),score=Number(String(row?.[1]??"").replace(",","."));if(!student||!Number.isFinite(score)||score<0||score>20)continue;batch.push({school_id:state.schoolId,class_id:classId,student_id:student.user_id,teacher_id:state.user.id,subject:String(state.root.querySelector('[name="subject"]').value||"").trim(),title:String(state.root.querySelector('[name="title"]').value||"").trim(),score,graded_on:state.root.querySelector('[name="graded_on"]').value})}
-   if(!batch.length)throw Error("ردیف معتبری در فایل پیدا نشد.");const r=await state.client.from("school_student_grades").upsert(batch,{onConflict:"school_id,class_id,student_id,subject,title,graded_on"});if(r.error)throw r.error;await refresh();const m=state.root.querySelector("#teacherGradesMessage");if(m)m.textContent=batch.length+" نمره از اکسل ذخیره شد.";
-  }catch(err){msg.textContent=err.message||"ورود اکسل ناموفق بود."}finally{if(importBtn.isConnected)importBtn.disabled=false}
+  importBtn.disabled=true;msg.textContent="";
+  try{
+   const rows=await window.readXlsxFile(file),students=state.students.filter(x=>x.class_id===classId),norm=x=>String(x??"").trim().replace(/\s+/g," ").toLowerCase(),parsed=[];
+   for(const row of rows){const name=String(row?.[0]??"").trim().replace(/\s+/g," ");if(!name||norm(name).includes("نام"))continue;const matches=students.filter(x=>norm(x.display_name)===norm(name)),raw=String(row?.[1]??"").trim().replace(",",".");const score=raw===""?null:Number(raw);parsed.push({source_name:name,student_id:matches.length===1?matches[0].user_id:"",score:Number.isFinite(score)&&score>=0&&score<=20?score:null});}
+   if(!parsed.length)throw Error("در فایل، ردیف قابل خواندنی پیدا نشد. ستون اول باید نام دانش‌آموز و ستون دوم نمره باشد.");
+   state.gradeImportRows=parsed;const review=state.root.querySelector("#teacherGradeImportReview");review.innerHTML=gradeImportReview();review.hidden=false;msg.textContent="فایل خوانده شد. اطلاعات را بررسی و سپس تأیید کن.";
+  }catch(err){msg.textContent=err.message||"خواندن فایل اکسل ناموفق بود."}
+  finally{if(importBtn.isConnected)importBtn.disabled=false}
   return;
  }
  const form=e.target.closest("#teacherMultiAssignmentForm");if(!form)return;
