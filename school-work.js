@@ -127,8 +127,8 @@ document.addEventListener("click",e=>{
  const button=e.target.closest("[data-school-complete]");
  if(button){e.preventDefault();toggle(button.dataset.schoolComplete,button);return}
  if(e.target.closest("[data-refresh-school-work]")){e.preventDefault();refresh();return}
- const projectInput=e.target.closest("[data-project-file]");if(projectInput){uploadProjectFile(projectInput);return}
-});
+ });
+document.addEventListener("change",e=>{const projectInput=e.target.closest("[data-project-file]");if(projectInput)uploadProjectFile(projectInput)});
 window.STUNER_SCHOOL_WORK={
  init(client,account,m){db=client;user=account;member=m;assignments=[];teacherSubjects=[];projectSubmissions=new Map();completed=new Set();pendingViewRecord=false;pendingViewIds.clear();loaded=false;refresh()},
  render,refresh,renderTeachers,recordFirstViews:recordVisibleTaskViews,recordAssignmentView,
@@ -140,7 +140,7 @@ window.STUNER_SCHOOL_WORK={
   })),exams:assignments.filter(a=>a.kind==="exam").map(a=>({
    id:"school-"+a.id,schoolId:a.id,title:a.title,subject:a.subject,date:a.due_date,createdAt:a.created_at,
    note:a.description,fromSchool:true
-  }))};
+  })),projects:assignments.filter(a=>a.kind==="project").map(a=>({id:a.id,title:a.title,subject:a.subject,due:a.due_date,submitted:projectSubmissions.has(a.id)}))};
  },
  status(){return {loading:loading&&!loaded,error:loadError,viewError:viewRecordError,loaded:loaded,active:!!db&&!!member}}
 };
