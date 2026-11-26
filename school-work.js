@@ -144,8 +144,9 @@ async function uploadProjectFile(input){
  uploadingProject=assignmentId;uploadProgress=0;input.disabled=true;if(label?.firstChild?.nodeType===3)label.firstChild.textContent="در حال آپلود…";showProgress(0);
  try{
   const previous=projectSubmissions.get(assignmentId);
-  const safeName=file.name.normalize("NFKC").replace(/[^\p{L}\p{N}._-]+/gu,"_").slice(-120)||"project-file";
-  const path=assignmentId+"/"+user.id+"/"+Date.now()+"_"+safeName;
+  const extension=(file.name.match(/\.([a-z0-9]{1,8})$/i)?.[1]||"bin").toLowerCase();
+  const safeName=Date.now()+"_"+file.size+"_"+(file.lastModified||0)+"."+extension;
+  const path=assignmentId+"/"+user.id+"/"+safeName;
   await uploadStorageFile(path,file,showProgress);
   const saved=await db.from("project_submissions").upsert({assignment_id:assignmentId,student_id:user.id,file_name:file.name.slice(0,255),file_path:path,file_size:file.size,mime_type:file.type||"application/octet-stream",submitted_at:new Date().toISOString(),is_updated:!!previous},{onConflict:"assignment_id,student_id"}).select("id,assignment_id,student_id,file_name,file_path,file_size,mime_type,submitted_at,is_updated").single();
   if(saved.error){await db.storage.from("stuner-project-submissions").remove([path]);throw saved.error}
