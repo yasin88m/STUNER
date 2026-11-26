@@ -4,12 +4,17 @@
 -- Support assignments targeted to one student while retaining the student's class context.
 alter table public.school_assignments add column if not exists student_id uuid references auth.users(id) on delete cascade;
 
--- This legacy audience constraint conflicts with the current class/student targeting model.
+-- Replace the legacy mutually-exclusive audience constraint.
+-- Both class-wide rows (student_id NULL) and individual rows (student_id set)
+-- retain their class_id, which is required by the current teacher/student policies.
 alter table public.school_assignments drop constraint if exists school_assignments_target_check;
+alter table public.school_assignments
+  add constraint school_assignments_target_check
+  check (class_id is not null);
 
 -- Older deployments may have used a differently named CHECK constraint for kind.
 -- Remove every CHECK constraint that references kind before allowing the project value.
-do $
+do $$
 declare
   item record;
 begin
@@ -22,7 +27,7 @@ begin
   loop
     execute format('alter table public.school_assignments drop constraint %I',item.conname);
   end loop;
-end $;
+end $$;
 
 alter table public.school_assignments
   add constraint school_assignments_kind_check
