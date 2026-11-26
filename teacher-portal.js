@@ -364,7 +364,7 @@ window.STUNER_TEACHER_UI={
    window.addEventListener("focus",()=>{if(state.root&&state.page==="work")refresh().catch(()=>{})});
   }
   if(!root.dataset.teacherEvents){root.dataset.teacherEvents="1";root.addEventListener("click",onClick);root.addEventListener("change",onChange);root.addEventListener("submit",onSubmit)}
-  try{await load();render();state.pollTimer=setInterval(async()=>{if(document.visibilityState==="hidden"||!state.root)return;try{const before=state.inboxNotifications.length;await load();if(state.inboxNotifications.length!==before)render()}catch(err){console.warn("دریافت اعلان تحویل پروژه ناموفق بود:",err)}},25000)}catch(err){root.innerHTML='<section class="portal-card"><h2>اشکال در دریافت اطلاعات مدارس</h2><p>'+esc(err.message)+'</p><button class="portal-secondary" data-action="picker">بازگشت</button></section>'}
+  try{await load();render();state.pollTimer=setInterval(async()=>{if(document.visibilityState==="hidden"||!state.root)return;try{const before=state.inboxNotifications.length;await load();if(state.inboxNotifications.length!==before&&(state.page==="home"||state.page==="work"))render()}catch(err){console.warn("دریافت اعلان تحویل پروژه ناموفق بود:",err)}},25000)}catch(err){root.innerHTML='<section class="portal-card"><h2>اشکال در دریافت اطلاعات مدارس</h2><p>'+esc(err.message)+'</p><button class="portal-secondary" data-action="picker">بازگشت</button></section>'}
  },
  refresh
 };
