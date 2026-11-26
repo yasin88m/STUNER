@@ -125,7 +125,7 @@ function workRows(rows){
  return rows.length?rows.map(a=>{
   const target=a.student_id?("دانش‌آموز: "+(state.students.find(s=>s.user_id===a.student_id)?.display_name||"دانش‌آموز انتخابی")):(state.classes.find(c=>c.id===a.class_id)?.name||"کلاس");
   const kindLabel=a.kind==="task"?"تکلیف":a.kind==="project"?"پروژه":"امتحان";
-  const kindIcon=a.kind==="task"?"clipboard-check":a.kind==="project"?"folder-kanban":"graduation-cap";
+  const kindIcon=a.kind==="task"?"clipboard-check":a.kind==="project"?"file-text":"graduation-cap";
   return '<div class="teacher-work-row"><span class="teacher-work-icon">'+icon(kindIcon)+'</span><div><strong>'+esc(a.title)+'</strong><small>'+kindLabel+' · '+esc(a.subject)+' · '+displaySchool(a.school_id)+' · '+esc(target)+'</small></div><span class="teacher-work-date">'+esc(window.STUNER_JALALI.formatted(a.due_date))+'</span><button type="button" class="portal-secondary teacher-delete-work" data-teacher-delete-work="'+esc(a.id)+'">حذف</button></div>'+(a.kind==="project"?projectSubmissionRows(a):assignmentViewReport(a));
  }).join(""):'<p class="teacher-empty">هنوز تکلیف، امتحان یا پروژه‌ای ثبت نشده است.</p>';
 }
