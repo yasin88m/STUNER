@@ -322,7 +322,7 @@ const importBtn=e.target.closest("[data-teacher-import-grades]");
   state.flashType="success";
   state.flashMessage=kind==="project"?"پروژه ثبت شده":"فعالیت با موفقیت ثبت شده";
   state.schoolId=schoolId;state.page="work";
-  await refresh();
+  try{await refresh()}catch(refreshError){state.flashMessage+=(kind==="project"?"؛ پروژه ذخیره شده، اما به‌روزرسانی فهرست با خطا مواجه شد: ":"؛ فعالیت ذخیره شده، اما به‌روزرسانی فهرست با خطا مواجه شد: ")+(refreshError?.message||"خطای نامشخص");render()}
  }catch(err){
   const kind=String(data.get("kind")||"task");
   state.flashType="error";
