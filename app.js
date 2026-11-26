@@ -364,23 +364,35 @@ function officialBookUrl(value){
   return url.href;
  }catch{return official}
 }
-function bookQuestionsUrl(title){
- const name=String(title||"").replace(/[\u200c\u200f]/g,"").replace(/\s+/g,"");
- const links=[
-  ["هویتاجتماعی","230"],
-  ["مدیریتخانواده","303"],["سلامتبهداشت","302"],
-  ["اخلاقحرفه","300"],["عربی","297"],["ریاضی","299"],
-  ["دانشفنیتخصصی","236"],["تجهیزاتشبکه","237"],["تجارتالکترونیک","238"],
-  ["فارسی","203"],["آمادگیدفاعی","304"],["دینوزندگی","298"]
- ];
- const key=links.find(([word])=>name.includes(word));
- return key?'https://www.kanoon.ir/Public/ExamQuestions?group=12&lesson='+key[1]:'';
-}
+function bookQuestionsUrl(book,student){
+  const normalize=value=>String(value||"").replace(/[\u200c\u200f]/g,"").replace(/ي/g,"ی").replace(/ك/g,"ک").replace(/[ \t\r\nـ،؛()（）-]/g,"").toLowerCase();
+  const grade=normalize(student?.grade),major=normalize(student?.major),track=normalize(student?.track);
+  // شناسه‌ها از صفحات مستقیم قلم‌چی برای دوازدهم شبکه و نرم‌افزار تأیید شده‌اند.
+  // برای پایه‌ها و رشته‌های دیگر لینک حدسی ساخته نمی‌شود.
+  if(grade!=="دوازدهم"||!track.includes("فنی")||!major.includes("شبکهونرمافزاررایانه"))return "";
+  const name=normalize(book?.title||book);
+  const lessons=[
+   [/^ریاضی(?:3)?$/,299],
+   [/دانشفنیتخصصی/,233],
+   [/نصبونگهداریتجهیزاتشبکهوسختافزار|تجهیزاتشبکهوسختافزار/,237],
+   [/تجارتالکترونیک/,238],
+   [/فارسیونگارش(?:3)?/,296],
+   [/عربی(?:زبانقرآن)?(?:3)?|زبانقرآن/,297],
+   [/دینوزندگی(?:3)?/,204],
+   [/هویتاجتماعی/,230],
+   [/سلامتوبهداشت/,302],
+   [/اخلاقحرفهای/,300],
+   [/آمادگیدفاعی/,304],
+   [/مدیریتخانوادهوسبکزندگی/,320]
+  ];
+  const match=lessons.find(([pattern])=>pattern.test(name));
+  return match?'https://www.kanoon.ir/Public/ExamQuestions?group=12&lesson='+match[1]:'';
+ }
 function renderBooks(){
  const books=studentBooks(),student=state.student;
  const cards=books.length?books.map(b=>{
   const direct=!!b.pdfUrl,downloadUrl=officialBookUrl(b.pdfUrl||b.url),bookPageUrl=officialBookUrl(b.url);
-  return '<article class="card panel book-card"><span class="pill">کد کتاب: '+esc(b.code||"ثبت نشده")+'</span><strong>'+esc(b.title)+'</strong><small class="book-meta">پایه '+esc(b.grade)+' · چاپ '+esc(CURRICULUM.academicYear)+'</small><a class="primary-button small-button book-download" href="'+esc(downloadUrl)+'" '+'target="_blank" rel="noopener noreferrer"'+'>' +(direct?'↓ دانلود PDF کتاب':'دریافت PDF از پایگاه رسمی')+'</a>'+(direct?'':'<small class="book-meta">برای دریافت فایل، صفحه رسمی کتاب باز می‌شود.</small>')+'<a class="secondary-button small-button" href="'+esc(bookPageUrl)+'" target="_blank" rel="noopener noreferrer">مشاهده مشخصات کتاب ↗</a>'+(bookQuestionsUrl(b.title)?'<a class="secondary-button small-button" href="'+esc(bookQuestionsUrl(b.title))+'" target="_blank" rel="noopener noreferrer">نمونه سؤال‌های کتاب ↗</a>':'')+'</article>';
+  return '<article class="card panel book-card"><span class="pill">کد کتاب: '+esc(b.code||"ثبت نشده")+'</span><strong>'+esc(b.title)+'</strong><small class="book-meta">پایه '+esc(b.grade)+' · چاپ '+esc(CURRICULUM.academicYear)+'</small><a class="primary-button small-button book-download" href="'+esc(downloadUrl)+'" '+'target="_blank" rel="noopener noreferrer"'+'>' +(direct?'↓ دانلود PDF کتاب':'دریافت PDF از پایگاه رسمی')+'</a>'+(direct?'':'<small class="book-meta">برای دریافت فایل، صفحه رسمی کتاب باز می‌شود.</small>')+'<a class="secondary-button small-button" href="'+esc(bookPageUrl)+'" target="_blank" rel="noopener noreferrer">مشاهده مشخصات کتاب ↗</a>'+(bookQuestionsUrl(b,student)?'<a class="secondary-button small-button" href="'+esc(bookQuestionsUrl(b,student))+'" target="_blank" rel="noopener noreferrer">نمونه‌سؤال‌های قلم‌چی ↗</a>':'')+'</article>';
  }).join(""):empty("کتابی برای این انتخاب پیدا نشد","برای این پایه و رشته در فهرست چاپ سال جاری کتاب ثبت نشده است. مشخصات تحصیلی را بررسی کن یا فهرست رسمی را ببین.","▤");
  const trackLine=student.educationLevel==="secondary"?(student.track+" · "+(student.fieldGroup?student.fieldGroup+" · ":"")+student.major):student.grade;
  return heading("کتابخانه درسی","کتاب‌های رسمی متناسب با پایه و رشته خودت.")+'<section class="card panel" style="margin-bottom:15px"><strong>'+esc(trackLine)+'</strong><p class="book-meta">سال تحصیلی '+esc(CURRICULUM.academicYear)+' · منبع: پایگاه رسمی کتاب‌های درسی</p></section><div class="section-title"><div><h2>کتاب‌های رسمی در chap.oerp.ir</h2><p>نمونه سؤال‌ها برگرفته شده از <a href="https://www.kanoon.ir/" target="_blank" rel="noopener noreferrer">kanoon.ir</a></p><p>'+fa(books.length)+' کتاب رسمی برای این پایه و رشته</p></div></div><div class="dashboard-grid">'+cards+'</div>';
