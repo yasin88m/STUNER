@@ -590,20 +590,20 @@ function roshdSourceFor(student){
 }
 
 const bookSources={official:"http://chap.oerp.ir/",distribution:"https://www.irtextbook.ir/"};
-const chapCatalog=window.STUNER_CHAP_CATALOG||null;
-const chapCategories=Array.isArray(chapCatalog?.categories)?chapCatalog.categories:[];
-const chapBooks=chapCatalog?.books||{};
+const chapCatalog=()=>window.STUNER_CHAP_CATALOG||null;
+const chapCategories=()=>Array.isArray(chapCatalog()?.categories)?chapCatalog().categories:[];
+const chapBooks=()=>chapCatalog()?.books||{};
 function chapNormalize(v){return String(v||"").replace(/[\u200c\u200f]/g,"").replace(/[يى]/g,"ی").replace(/ك/g,"ک").replace(/[\s‌ـ\-–_]+/g,"").toLowerCase()}
 function chapSame(a,b){return chapNormalize(a)===chapNormalize(b)}
 function chapGetFieldGroups(track,grade){
- return [...new Set(chapCategories.filter(c=>c.track===track&&c.major!=="__common__"&&(!grade||c.grade===grade)&&c.fieldGroup).map(c=>c.fieldGroup))].sort((a,b)=>a.localeCompare(b,"fa"));
+ return [...new Set(chapCategories().filter(c=>c.track===track&&c.major!=="__common__"&&(!grade||c.grade===grade)&&c.fieldGroup).map(c=>c.fieldGroup))].sort((a,b)=>a.localeCompare(b,"fa"));
 }
 function chapGetMajors(track,group,grade){
- return [...new Set(chapCategories.filter(c=>c.track===track&&c.major!=="__common__"&&(!grade||c.grade===grade)&&(track==="نظری"||chapSame(c.fieldGroup,group))).map(c=>c.major).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"fa"));
+ return [...new Set(chapCategories().filter(c=>c.track===track&&c.major!=="__common__"&&(!grade||c.grade===grade)&&(track==="نظری"||chapSame(c.fieldGroup,group))).map(c=>c.major).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"fa"));
 }
 function chapCategoriesFor(student){
  if(!student)return[];
- const matches=chapCategories.filter(c=>c.educationLevel===student.educationLevel&&c.grade===student.grade);
+ const matches=chapCategories().filter(c=>c.educationLevel===student.educationLevel&&c.grade===student.grade);
  if(student.educationLevel!=="secondary")return matches.filter(c=>!c.track);
  if(!student.track)return[];
  if(student.track==="نظری")return matches.filter(c=>c.track==="نظری"&&chapSame(c.major,student.major));
@@ -616,7 +616,7 @@ function chapGetBooks(student){
   for(const id of category.bookIds||[])if(!ids.includes(String(id)))ids.push(String(id));
  }
  return ids.map(id=>{
-  const book=chapBooks[id];
+  const book=chapBooks()[id];
   if(!book)return null;
   const category=categories.find(c=>(c.bookIds||[]).map(String).includes(id));
   return {...book,grade:student.grade,category:category?.major==="__common__"?"دروس مشترک":(category?.major||category?.fieldGroup||"کتاب درسی"),source:book.url,verified:true};
@@ -631,10 +631,10 @@ const kardaneshChapGroups=chapGetFieldGroups("کاردانش");
 const fanniChapMajors=Object.fromEntries(fanniChapGroups.map(group=>[group,chapGetMajors("فنی‌وحرفه‌ای",group,null)]));
 const kardaneshChapMajors=Object.fromEntries(kardaneshChapGroups.map(group=>[group,chapGetMajors("کاردانش",group,null)]));
 window.STUNER_CURRICULUM={
- academicYear:chapCatalog?.academicYear||"۱۴۰۵–۱۴۰۶",
+ academicYear:chapCatalog()?.academicYear||"۱۴۰۵–۱۴۰۶",
  grades,primary,middle,academic,vocationalCommon,fanni,kardanesh,architectureBooks,specialtySubjects,specialtyFor,roshdOfficialCatalog,roshdSources,roshdSpecialtyFor,roshdSourceFor,bookSources,
- catalogReady:!!chapCatalog&&chapCategories.length>0,
- catalogSource:chapCatalog?.source||bookSources.official,
+ catalogReady:!!chapCatalog()&&chapCategories().length>0,
+ catalogSource:chapCatalog()?.source||bookSources.official,
  tracks:["نظری","فنی‌وحرفه‌ای","کاردانش"],
  theoreticalMajors:theoreticalChapMajors.length?theoreticalChapMajors:Object.keys(academic),
  fieldGroups:{
