@@ -517,13 +517,15 @@ function timerStart(){
  state.timer.running=true;deadline=Date.now()+state.timer.remaining*1000;save();render();toast(state.timer.mode==="study"?"زمان تمرکز شروع شد.":"استراحت شروع شد.");
 }
 function timerPause(){if(!state.timer.running)return;state.timer.remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));state.timer.running=false;deadline=null;if(ticker)clearInterval(ticker);ticker=null;save();render()}
-function timerReset(){state.timer.running=false;state.timer.personalTaskId="";state.timer.remaining=duration();deadline=null;if(ticker)clearInterval(ticker);ticker=null;save();render();toast("تایمر به زمان اولیه برگشت.")}
+function timerReset(){const personalTask=state.personalTasks.find(x=>x.id===state.timer.personalTaskId);state.timer.running=false;state.timer.remaining=personalTask?Math.max(1,Number(personalTask.duration||1))*60:duration();state.timer.personalTaskId="";deadline=null;if(ticker)clearInterval(ticker);ticker=null;save();render();toast("تایمر به زمان اولیه برگشت.")}
 function startTimerForExam(id){let x=allStudentExams().find(t=>t.id===id);if(!x){toast("امتحان مورد نظر پیدا نشد.");return}if(state.timer.running)timerPause();state.timer.activity="exam";state.timer.activityId=id;state.timer.subject=x.subject||state.timer.subject;state.timer.mode="study";state.timer.remaining=1500;save();go("timer");timerStart()}
 function registerStudyDuration(){
  if(state.timer.mode!=="study"){toast("ثبت مطالعه فقط در حالت تمرکز امکان‌پذیر است.");return}
  const currentRemaining=state.timer.running&&deadline?Math.max(0,Math.ceil((deadline-Date.now())/1000)):state.timer.remaining;
  if(currentRemaining<=0&&state.timer.running){timerComplete();return}
- const seconds=Math.max(0,Math.min(1500,1500-currentRemaining));
+ const personalTask=state.timer.personalTaskId?state.personalTasks.find(x=>x.id===state.timer.personalTaskId):null;
+ const plannedSeconds=personalTask?Math.max(1,Number(personalTask.duration||1))*60:1500;
+ const seconds=Math.max(0,Math.min(plannedSeconds,plannedSeconds-currentRemaining));
  if(seconds<1){toast("ابتدا تایمر را شروع کن تا مدت مطالعه ثبت شود.");return}
  const activity=state.timer.activity||"study",target=timerTarget();
  if(ticker)clearInterval(ticker);ticker=null;deadline=null;state.timer.running=false;
@@ -531,8 +533,9 @@ function registerStudyDuration(){
   id:uid(),subject:state.timer.subject,
   minutes:seconds/60,seconds,date:isoToday(),createdAt:Date.now(),manual:true,
   activity,activityId:state.timer.activityId||"",
-  activityTitle:target?.title||timerActivityTitle(activity)
+  activityTitle:personalTask?"کار شخصی: "+personalTask.title:(target?.title||timerActivityTitle(activity))
  });
+ state.timer.personalTaskId="";
  state.timer.remaining=1500;
  save();render();
  toast("مدت مطالعه "+shortStudyTime(seconds/60)+" در حال ذخیره در حساب است.");
