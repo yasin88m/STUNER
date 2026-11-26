@@ -1,7 +1,7 @@
 /* Dedicated multi-school teacher workspace for STUNER. All reads respect Supabase RLS. */
 (function(){
 "use strict";
-const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],views:[],submissions:[],grades:[],page:"home",joinNote:"",onMembershipsChanged:null,menu:false,schoolId:"",classId:"",busy:false,flashMessage:"",flashType:""};
+const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],views:[],submissions:[],grades:[],inboxNotifications:[],submissionsInitialized:false,pollTimer:null,page:"home",joinNote:"",onMembershipsChanged:null,menu:false,schoolId:"",classId:"",busy:false,flashMessage:"",flashType:""};
 const esc=x=>String(x??"").replace(/[&<>"']/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[a]));
 const icon=n=>'<i data-lucide="'+n+'"></i>';
 const schoolName=id=>state.schools.find(x=>x.school_id===id)?.schools?.name||"مدرسه";
@@ -119,7 +119,7 @@ function projectSubmissionRows(a){
  const targets=a.student_id?state.students.filter(s=>s.user_id===a.student_id&&s.school_id===a.school_id):state.students.filter(s=>s.school_id===a.school_id&&s.class_id===a.class_id);
  const submitted=state.submissions.filter(x=>x.assignment_id===a.id);
  return '<section class="teacher-project-submissions"><div class="teacher-project-submission-heading"><strong>'+icon("file-text")+' فایل‌های تحویلی</strong><span>'+submitted.length+' از '+targets.length+' نفر</span></div>'+
- (targets.map(student=>{const file=submitted.find(x=>x.student_id===student.user_id);return '<div class="teacher-project-submission"><div><strong>'+esc(student.display_name||"دانش‌آموز")+'</strong><small>'+(file?esc(file.file_name)+' · '+esc(viewTime(file.submitted_at)):'هنوز فایلی ارسال نکرده')+'</small></div>'+(file?'<button type="button" class="portal-secondary teacher-project-file-text" data-project-file-text="'+esc(file.id)+'">'+icon("file-text")+' دریافت فایل</button>':'<span class="portal-kind view-status-unseen">تحویل نشده</span>')+'</div>'}).join("")||'<p class="teacher-empty">دانش‌آموزی برای این پروژه پیدا نشد.</p>')+'</section>';
+ (targets.map(student=>{const file=submitted.find(x=>x.student_id===student.user_id);return '<div class="teacher-project-submission"><div><strong>'+esc(student.display_name||"دانش‌آموز")+'</strong><small>'+(file?esc(file.file_name)+' · '+esc(viewTime(file.submitted_at)):'هنوز فایلی ارسال نکرده')+'</small></div>'+(file?'<div class="teacher-project-file-actions">'+(file.is_updated?'<span class="portal-kind teacher-project-updated">بروزرسانی شده</span>':"")+'<button type="button" class="portal-secondary teacher-project-file-text" data-project-file-text="'+esc(file.id)+'">'+icon("file-text")+' دریافت فایل</button></div>':'<span class="portal-kind view-status-unseen">تحویل نشده</span>')+'</div>'}).join("")||'<p class="teacher-empty">دانش‌آموزی برای این پروژه پیدا نشد.</p>')+'</section>';
 }
 function workRows(rows){
  return rows.length?rows.map(a=>{
@@ -139,7 +139,7 @@ function render(){
  const label=nav.find(n=>n[0]===state.page)?.[1]||"پنل معلم";
  state.root.innerHTML='<div class="teacher-shell"><header class="teacher-appbar"><button type="button" class="portal-hamburger" data-teacher-menu="toggle" aria-label="باز کردن منوی معلم" aria-expanded="'+state.menu+'"><i data-lucide="menu"></i></button><div class="teacher-page-title"><small>STUNER · پنل معلم</small><h1>'+esc(label)+'</h1></div><span class="teacher-appbar-school">'+icon("school")+' '+displaySchool(state.schoolId)+'</span></header>'+
  (state.menu?'<div class="portal-director-nav"><button type="button" class="portal-nav-scrim" data-teacher-menu="close" aria-label="بستن منو"></button><nav class="portal-nav-menu" aria-label="منوی معلم"><div class="portal-nav-title"><strong>'+icon("graduation-cap")+' پنل معلم</strong><button data-teacher-menu="close" aria-label="بستن">×</button></div>'+nav.map(n=>'<button class="'+(n[0]===state.page?"active":"")+'" data-teacher-page="'+n[0]+'">'+icon(n[2])+' '+n[1]+'</button>').join("")+'<button data-action="picker">'+icon("repeat")+' تغییر نقش یا مدرسه</button><button data-action="logout">'+icon("log-out")+' خروج از حساب</button></nav></div>':"")+
- '<main class="teacher-page">'+pages[state.page]()+'</main></div>';
+ '<main class="teacher-page">'+(state.inboxNotifications.length?'<aside class="teacher-inbox-notices" role="status" aria-live="polite"><strong>'+icon("bell-ring")+' اعلان تحویل پروژه</strong>'+state.inboxNotifications.slice(0,5).map(n=>'<div><span><b>'+esc(n.student)+'</b> پروژه «'+esc(n.project)+'» را تحویل داده است.</span><small>'+esc(viewTime(n.submittedAt))+'</small></div>').join("")+'</aside>':"")+pages[state.page]()+'</main></div>';
  window.STUNER_ICONS?.refresh?.();
  if(state.page==="create"){
   const audience=state.root.querySelector("#teacherAudience")?.value||"grade";
@@ -147,6 +147,8 @@ function render(){
  }
 }
 async function load(){
+ const previousSubmissions=new Map(state.submissions.map(x=>[x.assignment_id+"|"+x.student_id,x]));
+ const hadSubmissionSnapshot=state.submissionsInitialized;
  const ids=state.schools.map(s=>s.school_id);
  if(!ids.length)throw Error("هیچ مدرسه‌ای به حساب شما اختصاص نیافته است.");
  const [c,l,s,a,g]=await Promise.all([
@@ -160,10 +162,22 @@ async function load(){
  state.classes=c.data||[];state.links=l.data||[];state.students=s.data||[];state.assignments=a.data||[];state.grades=g.data||[];
  const projectIds=state.assignments.filter(x=>x.kind==="project").map(x=>x.id);
  if(projectIds.length){
-  const submissions=await state.client.from("project_submissions").select("id,assignment_id,student_id,file_name,file_path,file_size,mime_type,submitted_at").in("assignment_id",projectIds);
+  const submissions=await state.client.from("project_submissions").select("id,assignment_id,student_id,file_name,file_path,file_size,mime_type,submitted_at,is_updated").in("assignment_id",projectIds);
   if(submissions.error)throw submissions.error;
   state.submissions=submissions.data||[];
  }else state.submissions=[];
+ if(hadSubmissionSnapshot){
+  for(const file of state.submissions){
+   const key=file.assignment_id+"|"+file.student_id;
+   if(!previousSubmissions.has(key)){
+    const assignment=state.assignments.find(x=>x.id===file.assignment_id);
+    const student=state.students.find(x=>x.user_id===file.student_id);
+    state.inboxNotifications.unshift({id:key+"|"+file.submitted_at,student:student?.display_name||"دانش‌آموز",project:assignment?.title||"پروژه",submittedAt:file.submitted_at});
+   }
+  }
+  state.inboxNotifications=state.inboxNotifications.slice(0,20);
+ }
+ state.submissionsInitialized=true;
  const taskIds=state.assignments.filter(x=>x.kind==="task").map(x=>x.id);
  if(taskIds.length){
   const viewed=await state.client.from("assignment_views").select("assignment_id,student_id,first_viewed_at").in("assignment_id",taskIds);
@@ -344,13 +358,13 @@ window.STUNER_TEACHER_UI={
   state.client=client;state.user=user;state.root=root;state.onMembershipsChanged=onMembershipsChanged;
   state.schools=members.filter(m=>m.role==="teacher");
   state.schoolId=state.schools.some(m=>m.school_id===active.school_id)?active.school_id:state.schools[0]?.school_id||"";
-  state.page="home";state.menu=false;state.classId="";
+  state.page="home";state.menu=false;state.classId="";state.submissions=[];state.submissionsInitialized=false;state.inboxNotifications=[];if(state.pollTimer)clearInterval(state.pollTimer);
   if(!window.__stunerTeacherFocusRefresh){
    window.__stunerTeacherFocusRefresh=true;
    window.addEventListener("focus",()=>{if(state.root&&state.page==="work")refresh().catch(()=>{})});
   }
   if(!root.dataset.teacherEvents){root.dataset.teacherEvents="1";root.addEventListener("click",onClick);root.addEventListener("change",onChange);root.addEventListener("submit",onSubmit)}
-  try{await load();render()}catch(err){root.innerHTML='<section class="portal-card"><h2>اشکال در دریافت اطلاعات مدارس</h2><p>'+esc(err.message)+'</p><button class="portal-secondary" data-action="picker">بازگشت</button></section>'}
+  try{await load();render();state.pollTimer=setInterval(async()=>{if(document.visibilityState==="hidden"||!state.root)return;try{const before=state.inboxNotifications.length;await load();if(state.inboxNotifications.length!==before)render()}catch(err){console.warn("دریافت اعلان تحویل پروژه ناموفق بود:",err)}},25000)}catch(err){root.innerHTML='<section class="portal-card"><h2>اشکال در دریافت اطلاعات مدارس</h2><p>'+esc(err.message)+'</p><button class="portal-secondary" data-action="picker">بازگشت</button></section>'}
  },
  refresh
 };
