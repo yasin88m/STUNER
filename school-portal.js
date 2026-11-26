@@ -24,7 +24,10 @@ function loadStyle(href){
  });
  assetPromises.set(href,promise);return promise;
 }
-function loadAssets(scripts,styles){return Promise.all([...scripts.map(loadScript),...styles.map(loadStyle)])}
+function loadAssets(scripts,styles){
+ const scriptChain=scripts.reduce((chain,src)=>chain.then(()=>loadScript(src)),Promise.resolve());
+ return Promise.all([scriptChain,...styles.map(loadStyle)]);
+}
 const XLSX_READER="https://cdn.jsdelivr.net/npm/read-excel-file@9.3.12/bundle/read-excel-file.min.js";
 let client=null,user=null,role=["student","teacher","principal"].includes(sessionStorage.getItem("stuner.login.role"))?sessionStorage.getItem("stuner.login.role"):"student",members=[],current=null,classes=[],people=[],teacherLinks=[],subjectLinks=[],school=null,assignments=[],accountNames=[];
 let directorSection="home",directorMenu=false,viewClassId=null,weeklyDraftRows=[],weeklyDraftName="",weeklyPublishedRows=[];
@@ -126,7 +129,7 @@ async function sync(){
   else if(availableRoles.length===1)role=availableRoles[0];
   else if(availableRoles.length&&!availableRoles.includes(role))role=availableRoles[0];
   if(!members.length&&accountRole==="principal")role="principal";
- if(role==="principal")await loadAssets(["./stuner-icons.js?v=29","./school-import.js","./school-database.js?v=35",XLSX_READER],["./school-import.css?v=29","./school-database.css?v=35","./stuner-glass.css?v=2"]);
+ if(role==="principal")await loadAssets(["./stuner-icons.js?v=29",XLSX_READER,"./school-import.js","./school-database.js?v=35"],["./school-import.css?v=29","./school-database.css?v=35","./stuner-glass.css?v=2"]);
  const old=sessionStorage.getItem("stuner.school");
  const last=members.find(m=>m.school_id===old&&m.role===role);
  if(last)await enter(last);else picker();
