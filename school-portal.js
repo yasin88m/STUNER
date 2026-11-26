@@ -217,7 +217,7 @@ async function enter(member){
  }
  if(member.role==="teacher"){
   show();
-  await loadAssets(["./stuner-icons.js?v=29","./stuner-jalali.js?v=2","./teacher-portal.js?v=41"],["./teacher-portal.css?v=39"]);
+  await loadAssets(["./stuner-icons.js?v=29","./stuner-jalali.js?v=2","./teacher-portal.js?v=42"],["./teacher-portal.css?v=39"]);
   if(!window.STUNER_TEACHER_UI)throw Error("پنل معلم بارگذاری نشده است.");
   await window.STUNER_TEACHER_UI.start({client,user,members,active:member,root:el,onMembershipsChanged:items=>{members=[...members.filter(x=>x.role!=="teacher"),...items]}});
   return;
