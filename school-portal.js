@@ -170,6 +170,7 @@ async function enter(member){
    const announcementResult=await client.from("school_announcements")
     .select("id,subject,message,created_at,class_id")
     .eq("school_id",member.school_id).eq("class_id",member.class_id)
+    .gte("created_at",new Date(Date.now()-7*24*60*60*1000).toISOString())
     .order("created_at",{ascending:false}).limit(30);
    if(announcementResult.error)throw announcementResult.error;
    window.STUNER_SCHOOL_ANNOUNCEMENTS=announcementResult.data||[];
