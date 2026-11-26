@@ -553,3 +553,10 @@ html,body{width:100%;max-width:100%;overflow-x:clip!important;}
 /* Three equal destinations in the student work switcher */
 .work-main-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:390px){.work-main-tabs{gap:4px;padding:4px}.work-main-tabs button{gap:5px;font-size:10px}}
+
+.personal-task-row.is-done{background:#f4f6f5;border-radius:12px;border-inline-start-color:#aeb9b2;opacity:.82;padding-inline:10px}
+.personal-task-row.is-done .personal-task-main>strong,.personal-task-row.is-done .personal-task-meta,.personal-task-row.is-done .priority-label,.personal-task-row.is-done .personal-duration{color:#929c96!important}
+.personal-task-row.is-done .personal-task-main>strong{text-decoration:line-through;text-decoration-thickness:1.5px}
+.task-row.school-inline-item.is-done{background:#f6f7f6;border-radius:10px;padding-inline:8px;opacity:.82}
+.task-row.school-inline-item.is-done .task-main strong{text-decoration:line-through;color:#8d9991}
+.task-row.school-inline-item.is-done .task-main small,.task-row.school-inline-item.is-done .school-source,.task-row.school-inline-item.is-done .task-due{color:#9aa49e;background:#eef1ef}

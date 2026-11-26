@@ -192,3 +192,7 @@
 .school-project-progress strong{font-size:11px;text-align:left;color:#176044;font-variant-numeric:tabular-nums}
 .school-project-upload-status{min-height:16px}
 @media(max-width:560px){.school-project-submit{grid-template-columns:minmax(0,1fr)}.school-project-file-label{width:100%;min-width:0}.school-project-progress{grid-template-columns:minmax(0,1fr) 42px}}
+
+.school-work-row.is-done{background:#f5f7f5;border-radius:12px;padding:12px;opacity:.84}
+.school-work-row.is-done .school-work-text strong{text-decoration:line-through;color:#8e9992}
+.school-work-row.is-done .school-work-text small,.school-work-row.is-done .school-work-text span,.school-work-row.is-done .school-work-text p{color:#9aa49e}

@@ -150,33 +150,42 @@ async function enter(member){
    const track=level==="secondary"?(branch||"نظری"):"";
    const grade=level==="elementary"?selectedGrade+" ابتدایی":selectedGrade;
    const compact=x=>String(x||"").replace(/[\u200c\s-]/g,"").replace(/ي/g,"ی").replace(/ك/g,"ک");
-   const matches=(window.STUNER_CHAP_CATALOG?.categories||[]).find(x=>x.educationLevel===level&&x.grade===grade&&
-      compact(x.major)===compact(major)&&compact(x.track)===compact(track));
    const display=String(member.display_name||"دانش‌آموز").trim().split(/\s+/);
    window.STUNER_ACTIVE_STUDENT_PROFILE={
     firstName:display[0],lastName:display.slice(1).join(" ")||"",
     ...(Number.isInteger(Number(user.user_metadata?.stuner_age))&&Number(user.user_metadata?.stuner_age)>=6?{age:Number(user.user_metadata.stuner_age)}:{}),
-    educationLevel:level,grade,track,major,fieldGroup:matches?.fieldGroup||""
+    educationLevel:level,grade,track,major,fieldGroup:""
    };
   }
   window.STUNER_STUDENT_DB=client;
   window.STUNER_SCHOOL_CONTEXT={schoolId:member.school_id,classId:member.class_id||null};
-   window.STUNER_SCHOOL_GRADE_ROWS=[];
-   if(member.class_id){const gr=await client.from("school_student_grades").select("id,subject,title,score,graded_on,created_at").eq("school_id",member.school_id).eq("class_id",member.class_id).eq("student_id",user.id).order("graded_on",{ascending:false});if(gr.error)throw gr.error;window.STUNER_SCHOOL_GRADE_ROWS=gr.data||[];}
-  window.STUNER_WEEKLY_SCHEDULE=[];
-  if(member.class_id){const weekly=await client.from("school_weekly_schedule").select("id,weekday,start_time,end_time,subject,teacher_name,room").eq("school_id",member.school_id).eq("class_id",member.class_id).order("weekday").order("start_time");if(weekly.error)throw weekly.error;window.STUNER_WEEKLY_SCHEDULE=weekly.data||[];}
-  window.STUNER_SCHOOL_ANNOUNCEMENTS=[];
+  window.STUNER_SCHOOL_GRADE_ROWS=[];window.STUNER_WEEKLY_SCHEDULE=[];window.STUNER_SCHOOL_ANNOUNCEMENTS=[];
   if(member.class_id){
-   const announcementResult=await client.from("school_announcements")
-    .select("id,subject,message,created_at,class_id")
-    .eq("school_id",member.school_id).eq("class_id",member.class_id)
-    .gte("created_at",new Date(Date.now()-7*24*60*60*1000).toISOString())
-    .order("created_at",{ascending:false}).limit(30);
-   if(announcementResult.error)throw announcementResult.error;
+   const [gradeResult,weeklyResult,announcementResult]=await Promise.all([
+    client.from("school_student_grades").select("id,subject,title,score,graded_on,created_at,updated_at").eq("school_id",member.school_id).eq("class_id",member.class_id).eq("student_id",user.id).order("graded_on",{ascending:false}),
+    client.from("school_weekly_schedule").select("id,weekday,start_time,end_time,subject,teacher_name,room").eq("school_id",member.school_id).eq("class_id",member.class_id).order("weekday").order("start_time"),
+    client.from("school_announcements").select("id,subject,message,created_at,class_id").eq("school_id",member.school_id).eq("class_id",member.class_id).gte("created_at",new Date(Date.now()-7*24*60*60*1000).toISOString()).order("created_at",{ascending:false}).limit(30)
+   ]);
+   for(const result of [gradeResult,weeklyResult,announcementResult])if(result.error)throw result.error;
+   window.STUNER_SCHOOL_GRADE_ROWS=gradeResult.data||[];
+   window.STUNER_WEEKLY_SCHEDULE=weeklyResult.data||[];
    window.STUNER_SCHOOL_ANNOUNCEMENTS=announcementResult.data||[];
   }
+  // Realtime updates make a newly recorded teacher grade appear in the student's notification center.
+  if(window.STUNER_STUDENT_GRADE_CHANNEL)client.removeChannel(window.STUNER_STUDENT_GRADE_CHANNEL);
+  window.STUNER_STUDENT_GRADE_CHANNEL=null;
+  if(member.class_id){
+   window.STUNER_STUDENT_GRADE_CHANNEL=client.channel("stuner-student-grades-"+user.id)
+    .on("postgres_changes",{event:"*",schema:"public",table:"school_student_grades",filter:"student_id=eq."+user.id},payload=>{
+     const row=payload.new;if(!row||row.school_id!==member.school_id||row.class_id!==member.class_id)return;
+     const rows=window.STUNER_SCHOOL_GRADE_ROWS||[],index=rows.findIndex(item=>item.id===row.id);
+     if(index>=0)rows[index]=row;else rows.unshift(row);
+     window.STUNER_SCHOOL_GRADE_ROWS=rows;
+     document.dispatchEvent(new CustomEvent("stuner-student-grade-added",{detail:{row,eventType:payload.eventType}}));
+    }).subscribe();
+  }
   window.STUNER_SCHOOL_WORK?.init(client,user,member);
-  const src=document.createElement("script");src.src="./app.js?v=68";document.body.appendChild(src);return;
+  const src=document.createElement("script");src.src="./app.js?v=69";document.body.appendChild(src);return;
  }
  if(member.role==="teacher"){
   show();

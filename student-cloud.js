@@ -27,7 +27,7 @@ function reconcile(base,local,remote){
   for(const [id,item] of next)if(!prev.has(id)||!same(item,prev.get(id)))result.set(id,item);
   merged[key]=[...result.values()];
  }
- for(const key of ["student","preferences","timer","konkuriaFocus"]){
+ for(const key of ["student","preferences","timer","konkuriaFocus","notificationReadAt"]){
   const before=base[key]||{},after=local[key]||{},target={...(remote[key]||{})};
   for(const field of new Set([...Object.keys(before),...Object.keys(after)])){
    if(same(before[field],after[field]))continue;
