@@ -60,6 +60,7 @@ function setDate(target,value){
  const input=target?.querySelector('input[type="hidden"]');
  if(!input||!/^\d{4}-\d{2}-\d{2}$/.test(value))return;
  input.value=value;
+ input.dispatchEvent(new Event("change",{bubbles:true}));
  const display=target.querySelector(".jalali-date-display");if(display)display.textContent=formatted(value);
  const picker=target.querySelector(".jalali-picker"),anchor=monthStartISO(value);
  if(picker){picker.dataset.pickerAnchor=anchor;picker.innerHTML=pickerMarkup(value,anchor)}
