@@ -458,6 +458,7 @@ function bookQuestionsUrl(book,student){
   const gradeGroups=groups[grade];
   if(!gradeGroups)return "";
   const group=gradeGroups[major]||gradeGroups.default;
+  const commonGroup={"دهم":93,"یازدهم":68,"دوازدهم":16}[grade];
 
   // درس‌هایی که در صفحه رسمی «سایر رشته‌ها» برای هر پایه فهرست شده‌اند.
   const common={
@@ -556,9 +557,10 @@ function bookQuestionsUrl(book,student){
       ]
     }
   };
-  const rows=[...(common[grade]||[]),...(specialty[grade]?.[major]||[])];
-  const match=find(rows);
-  return match?make(group,match[1]):"";
+  const commonMatch=find(common[grade]||[]);
+  if(commonMatch)return make(commonGroup,commonMatch[1]);
+  const specialtyMatch=find(specialty[grade]?.[major]||[]);
+  return specialtyMatch?make(group,specialtyMatch[1]):"";
 }
 function renderBooks(){
  const books=studentBooks(),student=state.student;
