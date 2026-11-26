@@ -4,8 +4,23 @@
 -- Support assignments targeted to one student while retaining the student's class context.
 alter table public.school_assignments add column if not exists student_id uuid references auth.users(id) on delete cascade;
 
-alter table public.school_assignments
-  drop constraint if exists school_assignments_kind_check;
+-- Older deployments may have used a differently named CHECK constraint for kind.
+-- Remove every CHECK constraint that references kind before allowing the project value.
+do $
+declare
+  item record;
+begin
+  for item in
+    select conname
+    from pg_constraint
+    where conrelid='public.school_assignments'::regclass
+      and contype='c'
+      and pg_get_constraintdef(oid) ilike '%kind%'
+  loop
+    execute format('alter table public.school_assignments drop constraint %I',item.conname);
+  end loop;
+end $;
+
 alter table public.school_assignments
   add constraint school_assignments_kind_check
   check (kind in ('task','exam','project'));

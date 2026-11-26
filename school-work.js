@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-let db=null,user=null,member=null,assignments=[],completed=new Set(),teacherSubjects=[],projectSubmissions=new Map(),loading=false,loaded=false,loadError="",pendingViewRecord=false,pendingViewIds=new Set(),viewRecordError="",uploadingProject="";
+let db=null,user=null,member=null,assignments=[],completed=new Set(),teacherSubjects=[],projectSubmissions=new Map(),loading=false,loaded=false,loadError="",pendingViewRecord=false,pendingViewIds=new Set(),viewRecordError="",uploadingProject="",viewAttempted=new Set();
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fa=v=>String(v).replace(/[0-9]/g,n=>"۰۱۲۳۴۵۶۷۸۹"[+n]);
 const when=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium",timeZone:"Asia/Tehran"}).format(new Date(v+"T12:00:00Z"))}catch{return v||"—"}};
@@ -22,38 +22,40 @@ async function refresh(){
   const merged=new Map();
   for(const row of [...(classResult.data||[]),...(personalResult.data||[])])merged.set(row.id,row);
   const a={data:[...merged.values()].sort((x,y)=>String(x.due_date||"").localeCompare(String(y.due_date||"")))};
-  const c=await db.from("assignment_completions").select("assignment_id").eq("student_id",user.id);
-  if(c.error)throw c.error;
   assignments=a.data||[];
-  completed=new Set((c.data||[]).map(x=>x.assignment_id));
   const projectIds=assignments.filter(x=>x.kind==="project").map(x=>x.id);
-  projectSubmissions=new Map();
-  if(projectIds.length){
-   const submissions=await db.from("project_submissions").select("id,assignment_id,student_id,file_name,file_path,file_size,mime_type,submitted_at").in("assignment_id",projectIds).eq("student_id",user.id);
-   if(submissions.error)throw submissions.error;
-   for(const row of submissions.data||[])projectSubmissions.set(row.assignment_id,row);
-  }
-  teacherSubjects=[];
-  if(member.class_id){
-   const teachers=await db.rpc("list_student_class_subjects",{p_school:member.school_id,p_class:member.class_id});
-   if(teachers.error)throw teachers.error;
-   teacherSubjects=(teachers.data||[]).filter(x=>x.subject&&x.teacher_name);
-  }
+  // Load independent student data in parallel to reduce the wait after opening the school-work tabs.
+  const [completionResult,submissionResult,teacherResult]=await Promise.all([
+   db.from("assignment_completions").select("assignment_id").eq("student_id",user.id),
+   projectIds.length
+    ?db.from("project_submissions").select("id,assignment_id,student_id,file_name,file_path,file_size,mime_type,submitted_at").in("assignment_id",projectIds).eq("student_id",user.id)
+    :Promise.resolve({data:[],error:null}),
+   member.class_id
+    ?db.rpc("list_student_class_subjects",{p_school:member.school_id,p_class:member.class_id})
+    :Promise.resolve({data:[],error:null})
+  ]);
+  if(completionResult.error)throw completionResult.error;
+  if(submissionResult.error)throw submissionResult.error;
+  if(teacherResult.error)throw teacherResult.error;
+  completed=new Set((completionResult.data||[]).map(x=>x.assignment_id));
+  projectSubmissions=new Map((submissionResult.data||[]).map(row=>[row.assignment_id,row]));
+  teacherSubjects=(teacherResult.data||[]).filter(x=>x.subject&&x.teacher_name);
   loaded=true;
  }catch(e){loadError=e.message||"ارتباط با مدرسه برقرار نشد."}
  finally{loading=false;update();if(loaded&&!loadError){if(pendingViewRecord){pendingViewRecord=false;recordFirstViews(assignments.filter(a=>a.kind==="task"))}else if(pendingViewIds.size){const ids=[...pendingViewIds];pendingViewIds.clear();recordFirstViews(assignments.filter(a=>a.kind==="task"&&ids.includes(a.id)))}}}
 }
 async function recordFirstViews(rows){
  if(!db||!user||!rows.length)return;
- // This table intentionally grants INSERT (not UPDATE) to students.
- // Use INSERT and treat an existing (assignment, student) pair as already viewed.
- const results=await Promise.all(rows.map(a=>db.from("assignment_views").insert({
-  assignment_id:a.id,student_id:user.id
- })));
- const failures=results.map(x=>x.error).filter(e=>e&&e.code!=="23505");
- if(failures.length){
-  viewRecordError=failures.map(e=>e.message||"خطای نامشخص").join("؛ ");
-  console.error("ثبت زمان مشاهده تکلیف انجام نشد:",failures);
+ // Prevent repeated INSERT requests every time the student changes tabs or the UI re-renders.
+ const fresh=rows.filter(a=>a?.id&&!viewAttempted.has(a.id));
+ if(!fresh.length)return true;
+ fresh.forEach(a=>viewAttempted.add(a.id));
+ // One batched INSERT replaces one network request per assignment.
+ const result=await db.from("assignment_views").insert(fresh.map(a=>({assignment_id:a.id,student_id:user.id})));
+ if(result.error&&result.error.code!=="23505"){
+  fresh.forEach(a=>viewAttempted.delete(a.id));
+  viewRecordError=result.error.message||"خطای نامشخص";
+  console.error("ثبت زمان مشاهده تکلیف انجام نشد:",result.error);
   return false;
  }
  viewRecordError="";
@@ -130,7 +132,7 @@ document.addEventListener("click",e=>{
  });
 document.addEventListener("change",e=>{const projectInput=e.target.closest("[data-project-file]");if(projectInput)uploadProjectFile(projectInput)});
 window.STUNER_SCHOOL_WORK={
- init(client,account,m){db=client;user=account;member=m;assignments=[];teacherSubjects=[];projectSubmissions=new Map();completed=new Set();pendingViewRecord=false;pendingViewIds.clear();loaded=false;refresh()},
+ init(client,account,m){db=client;user=account;member=m;assignments=[];teacherSubjects=[];projectSubmissions=new Map();completed=new Set();pendingViewRecord=false;pendingViewIds.clear();viewAttempted.clear();loaded=false;refresh()},
  render,refresh,renderTeachers,recordFirstViews:recordVisibleTaskViews,recordAssignmentView,
  teacherSubjects(){return teacherSubjects.map(x=>({subject:x.subject,teacher:x.teacher_name}))},
  snapshot(){
