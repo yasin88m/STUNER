@@ -50,18 +50,21 @@ function home(){
 
 function gradePage(){
  const classes=schoolClasses(state.schoolId);
- return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>ثبت و ویرایش نمرات</h2><p>ثبت نمرات کلاس‌های خودت؛ دستی یا با فایل اکسل.</p></div></div>'+
- '<form id="teacherGradesForm" class="portal-form"><div class="teacher-fields-grid"><label>مدرسه<select id="teacherGradeSchool">'+schoolOptions()+'</select></label><label>کلاس<select name="class_id" id="teacherGradeClass">'+classes.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+' · پایه '+esc(x.grade)+'</option>').join("")+'</select></label></div>'+
+ const initialClass=classes[0]?.id||"";
+ const studentCount=state.students.filter(s=>s.class_id===initialClass).length;
+ return '<section class="portal-card teacher-grades-card"><div class="teacher-card-heading"><div><h2>'+icon("graduation-cap")+' ثبت و ویرایش نمرات</h2><p>نمره‌های هر آزمون را برای دانش‌آموزان کلاس ثبت و مدیریت کن.</p></div><span class="portal-kind">'+classes.length+' کلاس</span></div>'+
+ '<div class="teacher-grade-intro"><span class="teacher-grade-intro-icon">'+icon("clipboard-check")+'</span><div><strong>دفتر ثبت نمرات</strong><small>نمره‌ها از صفر تا ۲۰ ثبت می‌شوند؛ می‌توانی دستی وارد کنی یا از اکسل بخوانی.</small></div></div>'+
+ '<form id="teacherGradesForm" class="portal-form teacher-grades-form"><section class="teacher-grade-section"><h3>'+icon("sliders-horizontal")+' مشخصات آزمون</h3><div class="teacher-fields-grid"><label>مدرسه<select id="teacherGradeSchool">'+schoolOptions()+'</select></label><label>کلاس<select name="class_id" id="teacherGradeClass">'+classes.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+' · پایه '+esc(x.grade)+'</option>').join("")+'</select></label></div>'+
  '<div class="teacher-fields-grid"><label>درس<input name="subject" required maxlength="100" placeholder="مثلاً ریاضی"></label><label>عنوان آزمون<input name="title" maxlength="150" placeholder="مثلاً امتحان فصل اول"></label></div>'+
- (window.STUNER_JALALI?.field("graded_on","تاریخ ثبت نمره") || '<label>تاریخ<input name="graded_on" type="date" value="'+new Date().toISOString().slice(0,10)+'" required></label>')+
- '<label>ورود از اکسل (.xlsx)<input id="teacherGradeExcel" type="file" accept=".xlsx,.xls"></label><p class="teacher-empty">قالب اکسل: ستون اول نام کامل دانش‌آموز، ستون دوم نمره از ۲۰.</p><button type="button" class="portal-secondary" data-teacher-import-grades>خواندن فایل اکسل</button>'+
- '<h3 class="teacher-subtitle">نمرات دانش‌آموزان</h3><div id="teacherGradeRows">'+gradeRows(classes[0]?.id||"")+'</div><div class="teacher-form-footer"><p>نمره بین صفر تا ۲۰ باشد؛ خانه خالی ذخیره نمی‌شود.</p><button class="portal-primary" type="submit">ذخیره نمرات</button></div><p id="teacherGradesMessage" class="portal-error" role="status"></p></form></section>';
+ (window.STUNER_JALALI?.field("graded_on","تاریخ ثبت نمره",undefined,{shortcuts:false}) || '<label>تاریخ<input name="graded_on" type="date" value="'+new Date().toISOString().slice(0,10)+'" required></label>')+
+ '</section><section class="teacher-grade-section teacher-grade-import"><div><h3>'+icon("file-spreadsheet")+' ورود گروهی از اکسل</h3><p>ستون اول: نام کامل دانش‌آموز · ستون دوم: نمره از ۲۰</p></div><label class="teacher-grade-file">انتخاب فایل اکسل<input id="teacherGradeExcel" type="file" accept=".xlsx,.xls"></label><button type="button" class="portal-secondary" data-teacher-import-grades>'+icon("upload")+' خواندن و ثبت فایل</button></section>'+
+ '<section class="teacher-grade-section"><div class="teacher-grade-list-heading"><div><h3>'+icon("users-round")+' نمرات دانش‌آموزان</h3><p>نمره هر دانش‌آموز را در کادر مقابل نامش وارد کن.</p></div><span class="portal-kind">'+studentCount+' دانش‌آموز</span></div><div id="teacherGradeRows">'+gradeRows(initialClass)+'</div></section><div class="teacher-form-footer teacher-grade-footer"><p>فقط خانه‌های دارای نمره ذخیره می‌شوند. نمره می‌تواند اعشاری و با گام ۰٫۲۵ باشد.</p><button class="portal-primary" type="submit">'+icon("save")+' ذخیره نمرات</button></div><p id="teacherGradesMessage" class="portal-error" role="status" aria-live="polite"></p></form></section>';
 }
 function gradeRows(classId){
  const subject=String(state.root.querySelector('[name="subject"]')?.value||"").trim(),title=String(state.root.querySelector('[name="title"]')?.value||"").trim(),date=state.root.querySelector('[name="graded_on"]')?.value||"";
- return state.students.filter(s=>s.class_id===classId).map(s=>{
+ return state.students.filter(s=>s.class_id===classId).map((s,index)=>{
   const old=state.grades.find(g=>g.student_id===s.user_id&&g.class_id===classId&&g.subject===subject&&g.title===title&&g.graded_on===date);
-  return '<label class="teacher-grade-row"><strong>'+esc(s.display_name||"دانش‌آموز")+'</strong><input type="number" name="grade_'+esc(s.user_id)+'" min="0" max="20" step="0.25" placeholder="از ۲۰" value="'+(old?esc(old.score):"")+'"></label>';
+  return '<label class="teacher-grade-row"><span class="teacher-grade-index">'+(index+1)+'</span><span class="teacher-grade-avatar">'+esc((s.display_name||"؟").trim().charAt(0)||"؟")+'</span><span class="teacher-grade-student"><strong>'+esc(s.display_name||"دانش‌آموز")+'</strong><small>دانش‌آموز</small></span><span class="teacher-grade-input-wrap"><input type="number" name="grade_'+esc(s.user_id)+'" min="0" max="20" step="0.25" inputmode="decimal" placeholder="—" aria-label="نمره '+esc(s.display_name||"دانش‌آموز")+' از ۲۰" value="'+(old?esc(old.score):"")+'"><small>از ۲۰</small></span></label>';
  }).join("")||'<p class="teacher-empty">دانش‌آموزی در این کلاس نیست.</p>';
 }
 function schoolCard(s){
