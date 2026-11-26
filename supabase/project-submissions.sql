@@ -191,3 +191,8 @@ create policy "student deletes own project file" on storage.objects
   bucket_id='stuner-project-submissions'
   and split_part(name,'/',2)=(select auth.uid())::text
  );
+
+
+-- Mark replacement uploads so teachers can distinguish updated project files.
+alter table public.project_submissions
+  add column if not exists is_updated boolean not null default false;
