@@ -51,14 +51,16 @@ function pickerMarkup(selected,anchor){
  while(cells.length%7)cells.push("<span></span>");
  return '<div class="jalali-picker-head"><button type="button" data-picker-move="-1" aria-label="ماه قبل">→</button><strong>'+label+'</strong><button type="button" data-picker-move="1" aria-label="ماه بعد">←</button></div><div class="calendar-grid jalali-picker-grid">'+days.map(x=>'<div class="calendar-weekday">'+x+'</div>').join("")+cells.join("")+'</div>';
 }
-function field(name,label,value=today()){
+function field(name,label,value=today(),options={}){
  const iso=/^\d{4}-\d{2}-\d{2}$/.test(value)?value:today(),anchor=monthStartISO(iso);
- return '<div class="field jalali-date-field" data-jalali-field><span>'+esc(label)+'</span><input type="hidden" name="'+esc(name)+'" value="'+iso+'" required><strong class="jalali-date-display">'+formatted(iso)+'</strong><div class="date-shortcuts"><button type="button" class="date-quick" data-date-quick="0">امروز</button><button type="button" class="date-quick" data-date-quick="1">فردا</button><button type="button" class="date-quick" data-date-quick="7">یک هفته بعد</button></div><div class="jalali-picker" data-picker-anchor="'+anchor+'">'+pickerMarkup(iso,anchor)+'</div></div>';
+ const shortcuts=options.shortcuts===false?"":'<div class="date-shortcuts"><button type="button" class="date-quick" data-date-quick="0">امروز</button><button type="button" class="date-quick" data-date-quick="1">فردا</button><button type="button" class="date-quick" data-date-quick="7">یک هفته بعد</button></div>';
+ return '<div class="field jalali-date-field" data-jalali-field><span>'+esc(label)+'</span><input type="hidden" name="'+esc(name)+'" value="'+iso+'" required><strong class="jalali-date-display">'+formatted(iso)+'</strong>'+shortcuts+'<div class="jalali-picker" data-picker-anchor="'+anchor+'">'+pickerMarkup(iso,anchor)+'</div></div>';
 }
 function setDate(target,value){
  const input=target?.querySelector('input[type="hidden"]');
  if(!input||!/^\d{4}-\d{2}-\d{2}$/.test(value))return;
  input.value=value;
+ input.dispatchEvent(new Event("change",{bubbles:true}));
  const display=target.querySelector(".jalali-date-display");if(display)display.textContent=formatted(value);
  const picker=target.querySelector(".jalali-picker"),anchor=monthStartISO(value);
  if(picker){picker.dataset.pickerAnchor=anchor;picker.innerHTML=pickerMarkup(value,anchor)}

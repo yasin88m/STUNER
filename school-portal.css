@@ -134,3 +134,39 @@
 
 /* Principal announcement composer */
 .principal-announcement-form{display:grid;gap:16px}.principal-announcement-form textarea{width:100%;min-height:120px;resize:vertical;box-sizing:border-box}.principal-announcement-modes{display:flex;flex-wrap:wrap;gap:18px;margin:4px 0 14px}.principal-announcement-modes label{display:flex;align-items:center;gap:8px;font-weight:800}.principal-announcement-class-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px}.principal-announcement-class{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--mint-200,#d7e9df);border-radius:12px;background:var(--surface,#fff)}.principal-announcement-class span{display:grid;gap:2px}.principal-announcement-class small{color:var(--text-muted,#789184);font-size:11px}.notification-message{margin:2px 0 4px;color:var(--text-main,#31483d);font-size:13px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere}
+
+
+/* Refined school announcement composer */
+.principal-announcement-card{gap:18px}
+.principal-announcement-hero{display:flex;align-items:center;gap:14px;padding:19px;border:1px solid #d9ecdf;border-radius:17px;background:linear-gradient(115deg,#edf8f0,#f8fcf9)}
+.principal-announcement-hero-icon{width:48px;height:48px;flex:none;display:grid;place-items:center;border-radius:15px;background:#d9f0e0;color:#146a48}
+.principal-announcement-hero-icon .stuner-icon{width:23px;height:23px}
+.principal-announcement-hero h2{font-size:16px;color:#174c34;margin:0 0 5px}
+.principal-announcement-hero p{font-size:11px;line-height:1.9;color:#6e8979}
+.principal-announcement-form{gap:16px}
+.principal-announcement-section{display:grid;gap:12px;padding:16px;border:1px solid #e1ece4;border-radius:16px;background:#fff}
+.principal-announcement-section h3{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;color:#23583d}
+.principal-announcement-section h3 .stuner-icon{width:18px;height:18px}
+.principal-announcement-form>section>label{display:grid;gap:7px;font-size:12px;font-weight:800;color:#426c52}
+.principal-announcement-form textarea{min-height:145px;resize:vertical;line-height:1.9;background:#f9fcfa}
+.principal-announcement-hint{font-size:10px;color:#8a9d90;text-align:left}
+.principal-announcement-audience{display:grid;gap:14px;padding:16px;background:#fbfdfb}
+.principal-announcement-audience legend{display:flex;align-items:center;gap:7px;padding:0 7px;font-size:13px;font-weight:900;color:#23583d}
+.principal-announcement-modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:0}
+.principal-announcement-modes label{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #dfebe2;border-radius:13px;background:#fff;cursor:pointer}
+.principal-announcement-modes label:has(input:checked){border-color:#6bb58a;background:#eef8f1}
+.principal-announcement-modes input{width:17px;min-height:17px;accent-color:#16734d}
+.principal-announcement-modes label span{display:grid;gap:3px}
+.principal-announcement-modes strong{font-size:11px;color:#285a40}
+.principal-announcement-modes small{font-size:9px;color:#829487}
+.principal-announcement-class-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px;margin-top:10px}
+.principal-announcement-class{min-height:54px;padding:11px 13px;transition:border-color .15s,background .15s}
+.principal-announcement-class:has(input:checked){border-color:#6bb58a;background:#eef8f1}
+.principal-announcement-class input{width:17px;min-height:17px;accent-color:#16734d}
+.principal-announcement-class strong{font-size:11px;color:#28583e}
+.principal-announcement-class small{font-size:10px;color:#809487}
+.principal-announcement-submit{display:grid;gap:12px;padding-top:3px}
+.principal-announcement-submit>span{display:flex;align-items:center;gap:7px;color:#819386;font-size:10px}
+.principal-announcement-submit>span .stuner-icon{width:15px;height:15px}
+.principal-announcement-submit .portal-primary{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;font-size:12px}
+@media(max-width:560px){.principal-announcement-hero{align-items:flex-start;padding:15px}.principal-announcement-modes{grid-template-columns:1fr}.principal-announcement-class-list{grid-template-columns:1fr}}

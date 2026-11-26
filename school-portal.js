@@ -175,7 +175,7 @@ async function enter(member){
    window.STUNER_SCHOOL_ANNOUNCEMENTS=announcementResult.data||[];
   }
   window.STUNER_SCHOOL_WORK?.init(client,user,member);
-  const src=document.createElement("script");src.src="./app.js?v=66";document.body.appendChild(src);return;
+  const src=document.createElement("script");src.src="./app.js?v=67";document.body.appendChild(src);return;
  }
  if(member.role==="teacher"){
   show();
@@ -206,7 +206,7 @@ const principalNav=[
  ["classes","کلاس‌ها","school"],
  ["work","تکالیف و امتحانات","clipboard-check"],
  ["weekly","برنامه هفتگی","calendar-days"],
- ["announcements","اعلام‌رسانی","bell"],
+ ["announcements","اطلاع‌رسانی","bell"],
  ["security","مدیریت رمز عبور","shield-check"]
 ];
 const principalIcon=n=>'<i data-lucide="'+n+'"></i>';
@@ -319,16 +319,16 @@ function principalWork(){
 function principalAnnouncements(){
  const singleOptions=classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+' · پایه '+esc(c.grade)+'</option>').join("");
  const multipleOptions=classes.map(c=>'<label class="principal-announcement-class"><input type="checkbox" name="class_ids" value="'+esc(c.id)+'"><span><strong>'+esc(c.name)+'</strong><small>پایه '+esc(c.grade)+'</small></span></label>').join("");
- return '<section class="portal-card principal-announcement-card"><div class="teacher-card-heading"><div><h2>'+principalIcon("bell")+' ارسال اعلام‌رسانی</h2><p>پیام برای دانش‌آموزان کلاس انتخاب‌شده در زنگوله اعلان‌ها نمایش داده می‌شود.</p></div></div>'+
+ return '<section class="portal-card principal-announcement-card"><div class="principal-announcement-hero"><span class="principal-announcement-hero-icon">'+principalIcon("bell-ring")+'</span><div><h2>اطلاع‌رسانی به کلاس‌ها</h2><p>پیام‌های مهم مدرسه را برای یک یا چند کلاس ارسال کن. اطلاعیه در پنل دانش‌آموزان نمایش داده می‌شود.</p></div></div>'+
  (classes.length?'<form id="announcementForm" class="portal-form principal-announcement-form">'+
- '<label>موضوع<input name="subject" minlength="2" maxlength="150" placeholder="مثلاً تغییر برنامه امتحان" required></label>'+
- '<label>پیام<textarea name="message" rows="5" maxlength="3000" placeholder="متن پیام را بنویسید..." required></textarea></label>'+
- '<fieldset class="teacher-fieldset"><legend>مخاطبان پیام</legend><div class="principal-announcement-modes">'+
- '<label><input type="radio" name="audience_mode" value="single" checked> یک کلاس</label>'+
- '<label><input type="radio" name="audience_mode" value="multiple"> چند کلاس</label></div>'+
- '<div id="announcementSingleClass"><label>انتخاب کلاس<select name="single_class_id" required><option value="">انتخاب کنید</option>'+singleOptions+'</select></label></div>'+
- '<div id="announcementMultipleClasses" hidden><p class="portal-note">کلاس‌های موردنظر را انتخاب کنید.</p><div class="principal-announcement-class-list">'+multipleOptions+'</div></div></fieldset>'+
- '<button type="submit" class="portal-primary">'+principalIcon("send")+' ارسال اعلام‌رسانی</button></form>':
+ '<section class="principal-announcement-section"><h3>'+principalIcon("message-square-text")+' محتوای اطلاعیه</h3><label>عنوان اطلاعیه<input name="subject" minlength="2" maxlength="150" placeholder="مثلاً تغییر برنامه امتحان" required></label>'+
+ '<label>متن پیام<textarea name="message" rows="5" maxlength="3000" placeholder="متن کامل اطلاعیه را اینجا بنویسید..." required></textarea></label><small class="principal-announcement-hint">حداکثر ۳۰۰۰ نویسه</small></section>'+
+ '<fieldset class="teacher-fieldset principal-announcement-audience"><legend>'+principalIcon("users-round")+' انتخاب مخاطبان</legend><div class="principal-announcement-modes">'+
+ '<label><input type="radio" name="audience_mode" value="single" checked><span><strong>یک کلاس</strong><small>ارسال به یک کلاس مشخص</small></span></label>'+
+ '<label><input type="radio" name="audience_mode" value="multiple"><span><strong>چند کلاس</strong><small>ارسال هم‌زمان به چند کلاس</small></span></label></div>'+
+ '<div id="announcementSingleClass"><label>کلاس دریافت‌کننده<select name="single_class_id" required><option value="">کلاس را انتخاب کنید</option>'+singleOptions+'</select></label></div>'+
+ '<div id="announcementMultipleClasses" hidden><p class="portal-note">تمام کلاس‌های موردنظر را انتخاب کن.</p><div class="principal-announcement-class-list">'+multipleOptions+'</div></div></fieldset>'+
+ '<div class="principal-announcement-submit"><span>'+principalIcon("shield-check")+' قبل از ارسال، عنوان و مخاطبان را بررسی کن.</span><button type="submit" class="portal-primary">'+principalIcon("send")+' ارسال اطلاع‌رسانی</button></div></form>':
  '<p class="teacher-empty">برای این مدرسه هنوز کلاسی ثبت نشده است.</p>')+'</section>';
 }
 function principalSecurity(){
