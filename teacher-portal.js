@@ -279,7 +279,7 @@ const gradeForm=e.target.closest("#teacherGradesForm");
  }
 const importBtn=e.target.closest("[data-teacher-import-grades]");
  if(importBtn){
-  const file=state.root.querySelector("#teacherGradeExcel")?.file-text?.[0],msg=state.root.querySelector("#teacherGradesMessage");
+  const file=state.root.querySelector("#teacherGradeExcel")?.files?.[0],msg=state.root.querySelector("#teacherGradesMessage");
   if(!file){msg.textContent="ابتدا فایل اکسل را انتخاب کن.";return}
   if(typeof window.readXlsxFile!=="function"){msg.textContent="ابزار اکسل بارگذاری نشده است.";return}
   importBtn.disabled=true;
