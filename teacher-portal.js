@@ -173,13 +173,13 @@ async function load(){
 const refresh=async()=>{await load();render()};
 async function onClick(e){
  if(window.STUNER_JALALI?.handleClick(e))return;
- const file-text=e.target.closest("[data-project-file-text]");
- if(file-text){
-  const file=state.submissions.find(x=>x.id===file-text.dataset.projectDownload);if(!file)return;
-  file-text.disabled=true;
+ const downloadBtn=e.target.closest("[data-project-file-text]");
+ if(downloadBtn){
+  const file=state.submissions.find(x=>x.id===downloadBtn.dataset.projectFileText);if(!file)return;
+  downloadBtn.disabled=true;
   try{const signed=await state.client.storage.from("stuner-project-submissions").createSignedUrl(file.file_path,600);if(signed.error)throw signed.error;const tab=window.open("about:blank","_blank");if(tab){tab.opener=null;tab.location.href=signed.data.signedUrl}else window.location.href=signed.data.signedUrl}
   catch(err){alert("دریافت فایل انجام نشد: "+(err.message||"خطای نامشخص"))}
-  finally{file-text.disabled=false}
+  finally{downloadBtn.disabled=false}
   return;
  }
  const deleteWork=e.target.closest("[data-teacher-delete-work]");
