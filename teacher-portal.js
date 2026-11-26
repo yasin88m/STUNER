@@ -232,13 +232,20 @@ async function onClick(e){
   const id=deleteWork.dataset.teacherDeleteWork;
   const assignment=state.assignments.find(a=>a.id===id&&a.teacher_id===state.user.id);
   if(!assignment)return;
-  if(!confirm("این تکلیف یا امتحان برای همه دانش‌آموزان دریافت‌کننده حذف شود؟ این کار قابل بازگشت نیست."))return;
+  const projectFiles=assignment.kind==="project"?state.submissions.filter(x=>x.assignment_id===id).map(x=>x.file_path).filter(Boolean):[];
+  const itemName=assignment.kind==="project"?"پروژه":assignment.kind==="exam"?"امتحان":"تکلیف";
+  if(!confirm("این "+itemName+" و فایل‌های تحویلی آن برای همه دریافت‌کنندگان حذف شود؟ این کار قابل بازگشت نیست."))return;
   deleteWork.disabled=true;deleteWork.textContent="در حال حذف…";
   try{
+   for(let i=0;i<projectFiles.length;i+=1000){
+    const removed=await state.client.storage.from("stuner-project-submissions").remove(projectFiles.slice(i,i+1000));
+    if(removed.error)throw removed.error;
+   }
    const result=await state.client.from("school_assignments").delete().eq("id",id).eq("teacher_id",state.user.id);
    if(result.error)throw result.error;
+   state.flashType="success";state.flashMessage=itemName+" و فایل‌های تحویلی آن حذف شدند.";
    await refresh();
-  }catch(err){alert("حذف فعالیت انجام نشد: "+(err.message||"خطای نامشخص"));deleteWork.disabled=false;deleteWork.textContent="حذف تکلیف"}
+  }catch(err){alert("حذف فعالیت کامل نشد: "+(err.message||"خطای نامشخص"));deleteWork.disabled=false;deleteWork.textContent="حذف"}
   return;
  }
  const refreshButton=e.target.closest("[data-teacher-refresh]");
