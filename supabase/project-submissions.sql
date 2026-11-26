@@ -10,6 +10,36 @@ alter table public.school_assignments
   add constraint school_assignments_kind_check
   check (kind in ('task','exam','project'));
 
+-- Validate individual targets against the teacher's assigned class.
+drop policy if exists "assigned teacher creates class work" on public.school_assignments;
+create policy "assigned teacher creates class work" on public.school_assignments
+ for insert to authenticated with check (
+  teacher_id=(select auth.uid())
+  and private.is_teacher_of(class_id)
+  and exists(select 1 from public.school_classes c where c.id=class_id and c.school_id=school_assignments.school_id)
+  and (
+   student_id is null or exists(
+    select 1 from public.school_memberships m
+    where m.school_id=school_assignments.school_id and m.class_id=school_assignments.class_id
+      and m.user_id=school_assignments.student_id and m.role='student'
+   )
+  )
+ );
+drop policy if exists "assigned teacher edits class work" on public.school_assignments;
+create policy "assigned teacher edits class work" on public.school_assignments
+ for update to authenticated using (teacher_id=(select auth.uid()) and private.is_teacher_of(class_id))
+ with check (
+  teacher_id=(select auth.uid()) and private.is_teacher_of(class_id)
+  and exists(select 1 from public.school_classes c where c.id=class_id and c.school_id=school_assignments.school_id)
+  and (
+   student_id is null or exists(
+    select 1 from public.school_memberships m
+    where m.school_id=school_assignments.school_id and m.class_id=school_assignments.class_id
+      and m.user_id=school_assignments.student_id and m.role='student'
+   )
+  )
+ );
+
 -- Restrict individual assignments to their selected student, not the whole class.
 drop policy if exists "assignment audience select" on public.school_assignments;
 create policy "assignment audience select" on public.school_assignments
