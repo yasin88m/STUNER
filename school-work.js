@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-let db=null,user=null,member=null,assignments=[],completed=new Set(),teacherSubjects=[],projectSubmissions=new Map(),loading=false,loaded=false,loadError="",pendingViewRecord=false,pendingViewIds=new Set(),viewRecordError="",uploadingProject="";
+let db=null,user=null,member=null,assignments=[],completed=new Set(),teacherSubjects=[],projectSubmissions=new Map(),loading=false,loaded=false,loadError="",pendingViewRecord=false,pendingViewIds=new Set(),viewRecordError="",uploadingProject="",viewAttempted=new Set();
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fa=v=>String(v).replace(/[0-9]/g,n=>"۰۱۲۳۴۵۶۷۸۹"[+n]);
 const when=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium",timeZone:"Asia/Tehran"}).format(new Date(v+"T12:00:00Z"))}catch{return v||"—"}};
@@ -45,15 +45,16 @@ async function refresh(){
 }
 async function recordFirstViews(rows){
  if(!db||!user||!rows.length)return;
- // This table intentionally grants INSERT (not UPDATE) to students.
- // Use INSERT and treat an existing (assignment, student) pair as already viewed.
- const results=await Promise.all(rows.map(a=>db.from("assignment_views").insert({
-  assignment_id:a.id,student_id:user.id
- })));
- const failures=results.map(x=>x.error).filter(e=>e&&e.code!=="23505");
- if(failures.length){
-  viewRecordError=failures.map(e=>e.message||"خطای نامشخص").join("؛ ");
-  console.error("ثبت زمان مشاهده تکلیف انجام نشد:",failures);
+ // Prevent repeated INSERT requests every time the student changes tabs or the UI re-renders.
+ const fresh=rows.filter(a=>a?.id&&!viewAttempted.has(a.id));
+ if(!fresh.length)return true;
+ fresh.forEach(a=>viewAttempted.add(a.id));
+ // One batched INSERT replaces one network request per assignment.
+ const result=await db.from("assignment_views").insert(fresh.map(a=>({assignment_id:a.id,student_id:user.id})));
+ if(result.error&&result.error.code!=="23505"){
+  fresh.forEach(a=>viewAttempted.delete(a.id));
+  viewRecordError=result.error.message||"خطای نامشخص";
+  console.error("ثبت زمان مشاهده تکلیف انجام نشد:",result.error);
   return false;
  }
  viewRecordError="";
@@ -130,7 +131,7 @@ document.addEventListener("click",e=>{
  });
 document.addEventListener("change",e=>{const projectInput=e.target.closest("[data-project-file]");if(projectInput)uploadProjectFile(projectInput)});
 window.STUNER_SCHOOL_WORK={
- init(client,account,m){db=client;user=account;member=m;assignments=[];teacherSubjects=[];projectSubmissions=new Map();completed=new Set();pendingViewRecord=false;pendingViewIds.clear();loaded=false;refresh()},
+ init(client,account,m){db=client;user=account;member=m;assignments=[];teacherSubjects=[];projectSubmissions=new Map();completed=new Set();pendingViewRecord=false;pendingViewIds.clear();viewAttempted.clear();loaded=false;refresh()},
  render,refresh,renderTeachers,recordFirstViews:recordVisibleTaskViews,recordAssignmentView,
  teacherSubjects(){return teacherSubjects.map(x=>({subject:x.subject,teacher:x.teacher_name}))},
  snapshot(){
