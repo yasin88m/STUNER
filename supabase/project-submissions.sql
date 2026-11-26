@@ -1,8 +1,8 @@
 -- STUNER project assignments and private file submissions.
 -- Run once in the Supabase SQL Editor. Existing tasks/exams remain unchanged.
 
--- Individual assignments already use student_id; ensure their class context is present.
--- (The current teacher UI now supplies the student's class_id for individual targets.)
+-- Support assignments targeted to one student while retaining the student's class context.
+alter table public.school_assignments add column if not exists student_id uuid references auth.users(id) on delete cascade;
 
 alter table public.school_assignments
   drop constraint if exists school_assignments_kind_check;
