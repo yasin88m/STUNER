@@ -140,7 +140,7 @@ async function uploadProjectFile(input){
  };
  if(!/\.(pptx?|pdf|docx?|xlsx?|zip|jpe?g|png)$/i.test(file.name)){if(status)status.textContent="فرمت فایل پشتیبانی نمی‌شود.";input.value="";return}
  if(file.size>50*1024*1024){if(status)status.textContent="حجم فایل نباید بیشتر از ۵۰ مگابایت باشد.";input.value="";return}
- uploadingProject=assignmentId;uploadProgress=0;input.disabled=true;showProgress(0);
+ uploadingProject=assignmentId;uploadProgress=0;input.disabled=true;if(label?.firstChild?.nodeType===3)label.firstChild.textContent="در حال آپلود…";showProgress(0);
  try{
   const previous=projectSubmissions.get(assignmentId);
   const safeName=file.name.normalize("NFKC").replace(/[^\p{L}\p{N}._-]+/gu,"_").slice(-120)||"project-file";
@@ -154,7 +154,7 @@ async function uploadProjectFile(input){
  }catch(err){
   uploadingProject="";uploadProgress=0;
   if(status)status.textContent="ارسال انجام نشد: "+(err.message||"خطای نامشخص");
-  input.disabled=false;if(progress)progress.hidden=true;
+  input.disabled=false;if(label?.firstChild?.nodeType===3)label.firstChild.textContent=hadPrevious?"ارسال نسخه جدید":"انتخاب فایل پروژه";if(progress)progress.hidden=true;
  }
 }
 async function toggle(id,button){
