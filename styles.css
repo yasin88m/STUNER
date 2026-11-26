@@ -549,3 +549,7 @@ html,body{width:100%;max-width:100%;overflow-x:clip!important;}
 .personal-play{background:var(--mint-100);color:var(--green-800)}
 .personal-task-row .check-control{flex:none}
 @media(max-width:420px){.personal-task-row{gap:8px;padding-inline-start:7px}.personal-task-meta{gap:4px}.personal-kind,.priority-label,.personal-duration{font-size:8px;padding:3px 5px}}
+
+/* Three equal destinations in the student work switcher */
+.work-main-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:390px){.work-main-tabs{gap:4px;padding:4px}.work-main-tabs button{gap:5px;font-size:10px}}
