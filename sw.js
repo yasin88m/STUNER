@@ -1,5 +1,5 @@
 /* STUNER PWA: fresh pages/scripts/styles online, reliable cached fallback offline. */
-const CACHE="stuner-static-v92";
+const CACHE="stuner-static-v93";
 const FILES=["./","./index.html","./school-portal.css","./supabase-config.js","./school-portal.js","./manifest.webmanifest","./icon.svg","./brand-logo.svg"];
 self.addEventListener("install",event=>{
  event.waitUntil(
