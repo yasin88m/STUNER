@@ -177,7 +177,7 @@ async function onClick(e){
  if(download){
   const file=state.submissions.find(x=>x.id===download.dataset.projectDownload);if(!file)return;
   download.disabled=true;
-  try{const signed=await state.client.storage.from("stuner-project-submissions").createSignedUrl(file.file_path,600);if(signed.error)throw signed.error;window.open(signed.data.signedUrl,"_blank","noopener,noreferrer")}
+  try{const signed=await state.client.storage.from("stuner-project-submissions").createSignedUrl(file.file_path,600);if(signed.error)throw signed.error;const tab=window.open("about:blank","_blank");if(tab){tab.opener=null;tab.location.href=signed.data.signedUrl}else window.location.href=signed.data.signedUrl}
   catch(err){alert("دریافت فایل انجام نشد: "+(err.message||"خطای نامشخص"))}
   finally{download.disabled=false}
   return;
@@ -308,7 +308,7 @@ const importBtn=e.target.closest("[data-teacher-import-grades]");
  }else if(audience==="students"){
   if(!studentIds.length){msg.textContent="حداقل یک دانش‌آموز را انتخاب کنید.";return}
   if(studentIds.some(id=>!schoolStudents(schoolId).some(s=>s.user_id===id))){msg.textContent="به یکی از دانش‌آموزان انتخاب‌شده دسترسی ندارید.";return}
-  targets=studentIds.map(id=>({class_id:null,student_id:id}));
+  targets=studentIds.map(id=>({class_id:schoolStudents(schoolId).find(student=>student.user_id===id)?.class_id||null,student_id:id}));
  }else{msg.textContent="نوع مخاطب معتبر نیست.";return}
  if(!targets.length){msg.textContent="برای این مخاطب کلاسی یا دانش‌آموزی پیدا نشد.";return}
  const rows=targets.map(target=>({school_id:schoolId,...target,teacher_id:state.user.id,kind:data.get("kind"),subject:String(data.get("subject")||"").trim(),title:String(data.get("title")||"").trim(),description:String(data.get("description")||"").trim(),due_date:data.get("due_date")}));
