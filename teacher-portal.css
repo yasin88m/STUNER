@@ -201,3 +201,10 @@
 .teacher-project-submission>div small{overflow-wrap:anywhere}
 .teacher-project-file-text{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 @media(max-width:560px){.teacher-project-submission{align-items:flex-start;flex-direction:column}.teacher-project-file-text{width:100%;justify-content:center}}
+
+/* Clear feedback for teacher activity creation */
+.teacher-work-feedback{display:flex;align-items:center;gap:9px;margin:12px 0;padding:12px 14px;border:1px solid;border-radius:12px;font-size:13px;font-weight:700}
+.teacher-work-feedback.is-success{color:#176b43;background:#eaf8ef;border-color:#a8d9b8}
+.teacher-work-feedback.is-error{color:#b42318;background:#fff0ef;border-color:#f2b8b5}
+.teacher-form-success{color:#176b43!important;font-weight:700}
+.teacher-form-error{color:#b42318!important;font-weight:700}
