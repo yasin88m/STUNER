@@ -41,11 +41,11 @@ function targetChoices(id,audience,grade){
 }
 function home(){
  const schools=state.schools.length,classes=granted().length,students=new Set(state.students.filter(s=>granted().some(c=>c.id===s.class_id)).map(s=>s.user_id)).size;
- return '<section class="teacher-welcome"><div><span>'+icon("sparkles")+' فضای معلم</span><h2>مدیریت کلاس‌ها، ساده و منظم</h2><p>تکلیف‌ها و امتحانات را برای هر کدام از مدارسی که در آن تدریس می‌کنید، ثبت کنید.</p></div><button data-teacher-page="create">'+icon("plus")+' ثبت فعالیت جدید</button></section>'+
+ return '<section class="teacher-welcome"><div><span>'+icon("sparkles")+' فضای معلم</span><h2>مدیریت کلاس‌ها، ساده و منظم</h2><p>تکلیف‌ها، امتحان‌ها و پروژه‌ها را برای کلاس‌های خود ثبت و پیگیری کنید.</p></div><button data-teacher-page="create">'+icon("plus")+' ثبت فعالیت جدید</button></section>'+
  '<div class="teacher-stats"><div>'+icon("school")+'<span>مدارس</span><strong>'+schools+'</strong></div><div>'+icon("users-round")+'<span>کلاس‌های من</span><strong>'+classes+'</strong></div><div>'+icon("graduation-cap")+'<span>دانش‌آموزان</span><strong>'+students+'</strong></div></div>'+
  '<section class="portal-card"><div class="teacher-card-heading"><div><h2>مدارس محل تدریس</h2><p>برای مشاهده همه مدارس، وارد بخش مدارس من شوید.</p></div><button class="portal-secondary" data-teacher-page="schools">مشاهده همه '+icon("arrow-left")+'</button></div>'+
  '<div class="teacher-school-grid">'+state.schools.slice(0,4).map(s=>schoolCard(s)).join("")+'</div></section>'+
- '<section class="portal-card"><div class="teacher-card-heading"><div><h2>آخرین فعالیت‌ها</h2><p>تکالیف و امتحانات ثبت‌شده توسط شما</p></div><button class="portal-secondary" data-teacher-page="work">همه فعالیت‌ها</button></div>'+workRows(state.assignments.slice(0,4))+'</section>';
+ '<section class="portal-card"><div class="teacher-card-heading"><div><h2>آخرین فعالیت‌ها</h2><p>تکالیف، امتحانات و پروژه‌های ثبت‌شده توسط شما</p></div><button class="portal-secondary" data-teacher-page="work">همه فعالیت‌ها</button></div>'+workRows(state.assignments.slice(0,4))+'</section>';
 }
 
 function gradePage(){
@@ -97,8 +97,8 @@ function createPage(){
  '<div id="teacherGradeField" class="teacher-target-mode"><label>پایه تحصیلی<select name="target_grade" id="teacherTargetGrade">'+gradeOptions(state.schoolId)+'</select></label></div>'+
  '<fieldset class="teacher-fieldset" id="teacherTargetField" hidden><legend id="teacherTargetLegend">انتخاب مخاطبان</legend><p id="teacherTargetHelp"></p><div id="teacherClassChoices" class="teacher-class-checks"></div></fieldset>'+
  '<div class="teacher-fields-grid"><label>درس<input name="subject" maxlength="100" placeholder="مثلاً ریاضی" required></label><label>عنوان<input name="title" minlength="2" maxlength="150" placeholder="مثلاً تمرین فصل سوم" required></label></div>'+
- ''+window.STUNER_JALALI.field("due_date","تاریخ امتحان یا مهلت تحویل")+'<label>توضیحات برای دانش‌آموزان<textarea name="description" rows="4" maxlength="3000" placeholder="جزئیات درس، محدوده صفحات، نکات و راهنمای انجام"></textarea></label>'+
- '<div class="teacher-form-footer"><p>پس از ثبت، این فعالیت مستقیماً در بخش تکالیف یا امتحانات دانش‌آموزان کلاس‌های انتخاب‌شده نمایش داده می‌شود.</p><button class="portal-primary" type="submit">'+icon("send")+' ثبت و ارسال</button></div></form><p class="portal-error" id="teacherFormMessage" role="status" aria-live="polite"></p></section>';
+ ''+window.STUNER_JALALI.field("due_date","مهلت انجام یا تحویل")+'<label>توضیحات برای دانش‌آموزان<textarea name="description" rows="4" maxlength="3000" placeholder="جزئیات درس، محدوده صفحات، نکات و راهنمای انجام"></textarea></label>'+
+ '<div class="teacher-form-footer"><p>پس از ثبت، فعالیت در بخش مربوط به خودِ دانش‌آموزان انتخاب‌شده نمایش داده می‌شود.</p><button class="portal-primary" type="submit">'+icon("send")+' ثبت و ارسال</button></div></form><p class="portal-error" id="teacherFormMessage" role="status" aria-live="polite"></p></section>';
 }
 function viewTime(value){
  try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Tehran"}).format(new Date(value))}
@@ -176,9 +176,9 @@ async function onClick(e){
  const downloadBtn=e.target.closest("[data-project-file-text]");
  if(downloadBtn){
   const file=state.submissions.find(x=>x.id===downloadBtn.dataset.projectFileText);if(!file)return;
-  downloadBtn.disabled=true;
-  try{const signed=await state.client.storage.from("stuner-project-submissions").createSignedUrl(file.file_path,600);if(signed.error)throw signed.error;const tab=window.open("about:blank","_blank");if(tab){tab.opener=null;tab.location.href=signed.data.signedUrl}else window.location.href=signed.data.signedUrl}
-  catch(err){alert("دریافت فایل انجام نشد: "+(err.message||"خطای نامشخص"))}
+  downloadBtn.disabled=true;const tab=window.open("about:blank","_blank");
+  try{const signed=await state.client.storage.from("stuner-project-submissions").createSignedUrl(file.file_path,600);if(signed.error)throw signed.error;if(tab){tab.opener=null;tab.location.href=signed.data.signedUrl}else window.location.href=signed.data.signedUrl}
+  catch(err){if(tab)tab.close();alert("دریافت فایل انجام نشد: "+(err.message||"خطای نامشخص"))}
   finally{downloadBtn.disabled=false}
   return;
  }
