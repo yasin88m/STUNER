@@ -150,7 +150,10 @@ async function uploadProjectFile(input){
   const saved=await db.from("project_submissions").upsert({assignment_id:assignmentId,student_id:user.id,file_name:file.name.slice(0,255),file_path:path,file_size:file.size,mime_type:file.type||"application/octet-stream",submitted_at:new Date().toISOString(),is_updated:!!previous},{onConflict:"assignment_id,student_id"}).select("id,assignment_id,student_id,file_name,file_path,file_size,mime_type,submitted_at,is_updated").single();
   if(saved.error){await db.storage.from("stuner-project-submissions").remove([path]);throw saved.error}
   projectSubmissions.set(assignmentId,saved.data);
-  if(previous?.file_path)await db.storage.from("stuner-project-submissions").remove([previous.file_path]);
+  if(previous?.file_path){
+   const removed=await db.storage.from("stuner-project-submissions").remove([previous.file_path]);
+   if(removed.error){console.warn("حذف نسخه قبلی فایل پروژه انجام نشد:",removed.error);if(status)status.textContent="نسخه جدید ثبت شد؛ حذف نسخه قبلی کامل نشد و نیاز به بررسی دارد."}
+  }
   uploadingProject="";uploadProgress=100;update();
  }catch(err){
   uploadingProject="";uploadProgress=0;
