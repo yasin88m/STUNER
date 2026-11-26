@@ -199,5 +199,5 @@
 .teacher-project-submission>div{display:grid;gap:4px;min-width:0}
 .teacher-project-submission>div strong{font-size:11px;color:#315d43}
 .teacher-project-submission>div small{overflow-wrap:anywhere}
-.teacher-project-download{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
-@media(max-width:560px){.teacher-project-submission{align-items:flex-start;flex-direction:column}.teacher-project-download{width:100%;justify-content:center}}
+.teacher-project-file-text{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+@media(max-width:560px){.teacher-project-submission{align-items:flex-start;flex-direction:column}.teacher-project-file-text{width:100%;justify-content:center}}
