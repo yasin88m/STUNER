@@ -1,7 +1,7 @@
 /* Dedicated multi-school teacher workspace for STUNER. All reads respect Supabase RLS. */
 (function(){
 "use strict";
-const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],views:[],submissions:[],grades:[],page:"home",joinNote:"",onMembershipsChanged:null,menu:false,schoolId:"",classId:"",busy:false};
+const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],views:[],submissions:[],grades:[],page:"home",joinNote:"",onMembershipsChanged:null,menu:false,schoolId:"",classId:"",busy:false,flashMessage:"",flashType:""};
 const esc=x=>String(x??"").replace(/[&<>"']/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[a]));
 const icon=n=>'<i data-lucide="'+n+'"></i>';
 const schoolName=id=>state.schools.find(x=>x.school_id===id)?.schools?.name||"مدرسه";
@@ -130,7 +130,8 @@ function workRows(rows){
  }).join(""):'<p class="teacher-empty">هنوز تکلیف، امتحان یا پروژه‌ای ثبت نشده است.</p>';
 }
 function workPage(){
- return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>فعالیت‌های ثبت‌شده</h2><p>فهرست تکالیف و امتحاناتی که ارسال کرده‌اید</p></div><div class="teacher-work-actions"><button type="button" data-teacher-refresh class="portal-secondary">به‌روزرسانی گزارش‌ها</button><button data-teacher-page="create" class="portal-secondary">'+icon("plus")+' ثبت جدید</button></div></div>'+workRows(state.assignments)+'</section>';
+ const notice=state.flashMessage?'<div class="teacher-work-feedback '+(state.flashType==="success"?"is-success":"is-error")+'" role="status" aria-live="polite">'+icon(state.flashType==="success"?"check-circle":"alert-circle")+'<span>'+esc(state.flashMessage)+'</span></div>':"";
+ return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>فعالیت‌های ثبت‌شده</h2><p>فهرست تکالیف، امتحانات و پروژه‌هایی که ارسال کرده‌اید</p></div><div class="teacher-work-actions"><button type="button" data-teacher-refresh class="portal-secondary">به‌روزرسانی گزارش‌ها</button><button data-teacher-page="create" class="portal-secondary">'+icon("plus")+' ثبت جدید</button></div></div>'+notice+workRows(state.assignments)+'</section>';
 }
 function render(){
  if(!state.root)return;
@@ -317,8 +318,18 @@ const importBtn=e.target.closest("[data-teacher-import-grades]");
  try{
   const result=await state.client.from("school_assignments").insert(rows);
   if(result.error)throw result.error;
-  state.schoolId=schoolId;state.page="work";await refresh();
- }catch(err){msg.textContent=err.message||"ارسال فعالیت انجام نشد.";btn.disabled=false}
+  const kind=String(data.get("kind")||"task");
+  state.flashType="success";
+  state.flashMessage=kind==="project"?"پروژه ثبت شده":"فعالیت با موفقیت ثبت شده";
+  state.schoolId=schoolId;state.page="work";
+  await refresh();
+ }catch(err){
+  const kind=String(data.get("kind")||"task");
+  state.flashType="error";
+  state.flashMessage=(kind==="project"?"ثبت پروژه با خطا مواجه شد: ":"ثبت فعالیت با خطا مواجه شد: ")+(err?.message||"خطای نامشخص");
+  if(msg){msg.classList.remove("teacher-form-success");msg.classList.add("teacher-form-error");msg.textContent=state.flashMessage;}
+  btn.disabled=false;
+ }
  finally{state.busy=false}
 }
 window.STUNER_TEACHER_UI={
