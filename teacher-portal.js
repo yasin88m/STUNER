@@ -118,7 +118,7 @@ function assignmentViewReport(a){
 function projectSubmissionRows(a){
  const targets=a.student_id?state.students.filter(s=>s.user_id===a.student_id&&s.school_id===a.school_id):state.students.filter(s=>s.school_id===a.school_id&&s.class_id===a.class_id);
  const submitted=state.submissions.filter(x=>x.assignment_id===a.id);
- return '<section class="teacher-project-submissions"><div class="teacher-project-submission-heading"><strong>'+icon("files")+' فایل‌های تحویلی</strong><span>'+submitted.length+' از '+targets.length+' نفر</span></div>'+
+ return '<section class="teacher-project-submissions"><div class="teacher-project-submission-heading"><strong>'+icon("file-text")+' فایل‌های تحویلی</strong><span>'+submitted.length+' از '+targets.length+' نفر</span></div>'+
  (targets.map(student=>{const file=submitted.find(x=>x.student_id===student.user_id);return '<div class="teacher-project-submission"><div><strong>'+esc(student.display_name||"دانش‌آموز")+'</strong><small>'+(file?esc(file.file_name)+' · '+esc(viewTime(file.submitted_at)):'هنوز فایلی ارسال نکرده')+'</small></div>'+(file?'<button type="button" class="portal-secondary teacher-project-download" data-project-download="'+esc(file.id)+'">'+icon("download")+' دریافت فایل</button>':'<span class="portal-kind view-status-unseen">تحویل نشده</span>')+'</div>'}).join("")||'<p class="teacher-empty">دانش‌آموزی برای این پروژه پیدا نشد.</p>')+'</section>';
 }
 function workRows(rows){
@@ -279,7 +279,7 @@ const gradeForm=e.target.closest("#teacherGradesForm");
  }
 const importBtn=e.target.closest("[data-teacher-import-grades]");
  if(importBtn){
-  const file=state.root.querySelector("#teacherGradeExcel")?.files?.[0],msg=state.root.querySelector("#teacherGradesMessage");
+  const file=state.root.querySelector("#teacherGradeExcel")?.file-text?.[0],msg=state.root.querySelector("#teacherGradesMessage");
   if(!file){msg.textContent="ابتدا فایل اکسل را انتخاب کن.";return}
   if(typeof window.readXlsxFile!=="function"){msg.textContent="ابزار اکسل بارگذاری نشده است.";return}
   importBtn.disabled=true;
