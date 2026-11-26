@@ -234,3 +234,79 @@ body{
 #onboarding .primary-button{border:1px solid rgba(12,100,66,.18);box-shadow:0 8px 18px rgba(17,105,68,.17)}
 #onboarding .brand-mark{border:1px solid rgba(35,151,106,.15);box-shadow:inset 0 1px 0 #fff,0 5px 14px rgba(21,111,72,.08)}
 #stunerSplash{background:radial-gradient(ellipse at 50% 42%,rgba(65,183,122,.10),transparent 48%),linear-gradient(145deg,#f4faf6,#f9fcfa)}
+
+
+/* Modal contrast repair — keep form controls bright and text readable. */
+#modalRoot .modal-card{
+ color:var(--ink,#173329);
+ background:rgba(255,255,255,.97);
+}
+#modalRoot .modal-form,
+#modalRoot .modal-form .field{color:var(--ink,#173329)}
+#modalRoot .modal-form .field>span,
+#modalRoot .modal-form label>span{
+ color:#174a35;
+ font-weight:800;
+}
+#modalRoot input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
+#modalRoot select,
+#modalRoot textarea{
+ width:100%;
+ min-height:48px;
+ padding:12px 14px;
+ color:#173329!important;
+ -webkit-text-fill-color:#173329;
+ caret-color:#126246;
+ border:1.5px solid rgba(25,126,78,.38)!important;
+ border-radius:13px;
+ background:#fff!important;
+ box-shadow:inset 0 1px 2px rgba(18,70,43,.035),0 2px 8px rgba(18,70,43,.045)!important;
+ opacity:1;
+}
+#modalRoot input::placeholder,
+#modalRoot textarea::placeholder{
+ color:#82948a!important;
+ -webkit-text-fill-color:#82948a;
+ opacity:1;
+}
+#modalRoot input:focus,
+#modalRoot select:focus,
+#modalRoot textarea:focus{
+ outline:none;
+ border-color:#168354!important;
+ background:#fff!important;
+ box-shadow:0 0 0 3px rgba(22,131,84,.14),0 5px 16px rgba(22,115,72,.075)!important;
+}
+#modalRoot select option{color:#173329;background:#fff}
+#modalRoot .modal-actions .primary-button,
+#modalRoot button.primary-button,
+#app button.primary-button,
+#app a.primary-button,
+#app button.timer-save-button,
+#portalRoot button.portal-primary{
+ color:#fff!important;
+ -webkit-text-fill-color:#fff;
+}
+#modalRoot .modal-actions .secondary-button,
+#modalRoot button.secondary-button,
+#app button.secondary-button,
+#portalRoot button.portal-secondary{
+ color:#174a35!important;
+ -webkit-text-fill-color:#174a35;
+ background:rgba(255,255,255,.96);
+}
+#modalRoot .modal-actions{gap:10px}
+#modalRoot .modal-actions button{min-height:48px;font-weight:800}
+@media(max-width:600px){
+ #modalRoot .modal-backdrop{align-items:center;padding:14px 12px;overflow-y:auto}
+ #modalRoot .modal-card{
+  width:min(100%,520px);
+  max-height:calc(100dvh - 28px);
+  overflow-y:auto;
+  padding:18px;
+  border-radius:22px;
+ }
+ #modalRoot .modal-form{gap:13px}
+ #modalRoot .modal-actions{display:grid;grid-template-columns:1fr 1fr}
+ #modalRoot .modal-actions button{width:100%;min-width:0}
+}
