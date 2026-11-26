@@ -631,10 +631,10 @@ const kardaneshChapGroups=chapGetFieldGroups("کاردانش");
 const fanniChapMajors=Object.fromEntries(fanniChapGroups.map(group=>[group,chapGetMajors("فنی‌وحرفه‌ای",group,null)]));
 const kardaneshChapMajors=Object.fromEntries(kardaneshChapGroups.map(group=>[group,chapGetMajors("کاردانش",group,null)]));
 window.STUNER_CURRICULUM={
- academicYear:chapCatalog()?.academicYear||"۱۴۰۵–۱۴۰۶",
+ get academicYear(){return chapCatalog()?.academicYear||"۱۴۰۵–۱۴۰۶"},
  grades,primary,middle,academic,vocationalCommon,fanni,kardanesh,architectureBooks,specialtySubjects,specialtyFor,roshdOfficialCatalog,roshdSources,roshdSpecialtyFor,roshdSourceFor,bookSources,
- catalogReady:!!chapCatalog()&&chapCategories().length>0,
- catalogSource:chapCatalog()?.source||bookSources.official,
+ get catalogReady(){return !!chapCatalog()&&chapCategories().length>0},
+ get catalogSource(){return chapCatalog()?.source||bookSources.official},
  tracks:["نظری","فنی‌وحرفه‌ای","کاردانش"],
  theoreticalMajors:theoreticalChapMajors.length?theoreticalChapMajors:Object.keys(academic),
  fieldGroups:{
