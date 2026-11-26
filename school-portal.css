@@ -181,3 +181,14 @@
 .school-project-file-label input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
 .school-project-upload-status{grid-column:1/-1}
 @media(max-width:560px){.school-project-submit{grid-template-columns:1fr}.school-project-file-label{width:100%}}
+
+.school-project-submit{grid-template-columns:minmax(0,1fr) auto;align-items:center;min-width:0}
+.school-project-file-label{flex:0 0 auto;min-width:142px;min-height:44px;box-sizing:border-box;flex-shrink:0}
+.school-project-file-label:has(input:disabled){background:#e5f1e9;color:#176044;cursor:wait;opacity:1}
+.school-project-progress{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) 42px;align-items:center;gap:10px;min-height:25px}
+.school-project-progress[hidden]{display:none}
+.school-project-progress-track{height:9px;overflow:hidden;border-radius:99px;background:#e4eee7}
+.school-project-progress-track span{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#16845b,#45b77d);transition:width .12s linear}
+.school-project-progress strong{font-size:11px;text-align:left;color:#176044;font-variant-numeric:tabular-nums}
+.school-project-upload-status{min-height:16px}
+@media(max-width:560px){.school-project-submit{grid-template-columns:minmax(0,1fr)}.school-project-file-label{width:100%;min-width:0}.school-project-progress{grid-template-columns:minmax(0,1fr) 42px}}
