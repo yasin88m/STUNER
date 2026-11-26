@@ -123,6 +123,7 @@ values(
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/zip',
+  'application/x-zip-compressed',
   'image/jpeg',
   'image/png',
   'application/octet-stream'
