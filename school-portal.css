@@ -196,3 +196,26 @@
 .school-work-row.is-done{background:#f5f7f5;border-radius:12px;padding:12px;opacity:.84}
 .school-work-row.is-done .school-work-text strong{text-decoration:line-through;color:#8e9992}
 .school-work-row.is-done .school-work-text small,.school-work-row.is-done .school-work-text span,.school-work-row.is-done .school-work-text p{color:#9aa49e}
+
+
+/* Login screen: keep mobile controls compact and aligned */
+#portalRoot #loginForm{gap:16px}
+#portalRoot #loginForm label{gap:8px}
+#portalRoot #loginForm input{
+ box-sizing:border-box;
+ width:100%;
+ height:54px;
+ min-height:54px;
+ padding:10px 14px;
+ line-height:1.45;
+ font-size:14px;
+ border-radius:14px;
+}
+#portalRoot #loginForm .portal-primary{
+ box-sizing:border-box;
+ min-height:50px;
+ height:auto;
+ padding:12px 16px;
+ border-radius:13px;
+}
+#portalRoot .portal-head>.portal-secondary{min-height:42px;padding:9px 16px}
