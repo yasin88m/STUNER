@@ -85,7 +85,7 @@ function hydrateCloud(data){
  };
  Reflect.deleteProperty(state,"konkuriaFocus");
  const before=JSON.stringify(state);
- if(managed){state.student={...state.student,...managed};syncStudentSubjects();}state.grades=(window.STUNER_SCHOOL_GRADE_ROWS||[]).map(g=>({id:g.id,subject:g.subject,title:g.title,score:Number(g.score),date:g.graded_on,createdAt:new Date(g.created_at).getTime(),fromTeacher:true}));
+ if(managed){state.student={...state.student,...managed};syncStudentSubjects();}state.grades=(window.STUNER_SCHOOL_GRADE_ROWS||[]).map(g=>({id:g.id,subject:g.subject,title:g.title,score:Number(g.score),date:g.graded_on,createdAt:new Date(g.created_at).getTime(),updatedAt:new Date(g.updated_at||g.created_at).getTime(),fromTeacher:true}));
  cloudLoaded=true;cloudFailure="";render();
  if(before!==JSON.stringify(state))save();
 }
