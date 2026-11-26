@@ -367,35 +367,63 @@ function officialBookUrl(value){
 function bookQuestionsUrl(book,student){
   const normalize=value=>String(value||"").replace(/[\u200c\u200f]/g,"").replace(/ي/g,"ی").replace(/ك/g,"ک").replace(/[ \t\r\nـ،؛()（）-]/g,"").toLowerCase();
   const grade=normalize(student?.grade),major=normalize(student?.major),track=normalize(student?.track);
-  // شناسه‌ها از صفحات مستقیم قلم‌چی برای دوازدهم شبکه و نرم‌افزار تأیید شده‌اند.
-  // برای پایه‌ها و رشته‌های دیگر لینک حدسی ساخته نمی‌شود.
-  if(grade!=="دوازدهم"||!track.includes("فنی")||!major.includes("شبکهونرمافزاررایانه"))return "";
+  if(!track.includes("فنی")||!major.includes("شبکهونرمافزاررایانه"))return "";
+  const groups={"دهم":83,"یازدهم":55,"دوازدهم":12};
+  const group=groups[grade];
+  if(!group)return "";
   const name=normalize(book?.title||book);
-  const lessons=[
-   [/^ریاضی(?:3)?$/,299],
-   [/دانشفنیتخصصی/,233],
-   [/نصبونگهداریتجهیزاتشبکهوسختافزار|تجهیزاتشبکهوسختافزار/,237],
-   [/تجارتالکترونیک/,238],
-   [/فارسیونگارش(?:3)?/,296],
-   [/عربی(?:زبانقرآن)?(?:3)?|زبانقرآن/,297],
-   [/دینوزندگی(?:3)?/,204],
-   [/هویتاجتماعی/,230],
-   [/سلامتوبهداشت/,302],
-   [/اخلاقحرفهای/,300],
-   [/آمادگیدفاعی/,304],
-   [/مدیریتخانوادهوسبکزندگی/,320]
-  ];
-  const match=lessons.find(([pattern])=>pattern.test(name));
-  return match?'https://www.kanoon.ir/Public/ExamQuestions?group=12&lesson='+match[1]:'';
- }
+  const lessons={
+   "دهم":[
+    [/^فیزیک$/,287],
+    [/دانشفنیپایه/,275],
+    [/نگهداریسیستمهای/,276],
+    [/^ریاضی1$/,286],
+    [/^انگلیسی1$/,285],
+    [/^فارسیونگارش1$/,282],
+    [/^عربیزبانقرآن1$/,283],
+    [/^دینوزندگی1$/,284]
+   ],
+   "یازدهم":[
+    [/^فیزیک$/,288],
+    [/^ریاضی2$/,295],
+    [/^انگلیسی2$/,294],
+    [/^فارسیونگارش2$/,291],
+    [/^عربیزبانقرآن2$/,292],
+    [/^دینوزندگی2$/,293],
+    [/انسانومحیطزیست/,202],
+    [/طراحسایت|پیادهسازیسیستمهایاطلاعاتیوطراحیووب/,279],
+    [/توسعهبرنامهسازیوپایگاهداده/,278]
+   ],
+   "دوازدهم":[
+    [/^ریاضی3$/,299],
+    [/دانشفنیتخصصی/,233],
+    [/نصبو.*تجهیزاتشبکه|تجهیزاتشبکهوسختافزار/,237],
+    [/تجارتالکترونیک/,238],
+    [/فارسیونگارش3/,296],
+    [/^فارسی3$/,203],
+    [/^نگارش3$/,254],
+    [/عربیزبانقرآن3/,297],
+    [/دینوزندگی3/,298],
+    [/هویتاجتماعی/,301],
+    [/سلامتوبهداشت/,302],
+    [/اخلاقحرفهای/,300],
+    [/آمادگیدفاعی/,304],
+    [/مدیریتخانوادهوسبکزندگی/,320],
+    [/^مدیریتخانواده$/,303],
+    [/^انگلیسی3$/,205]
+   ]
+  };
+  const match=(lessons[grade]||[]).find(([pattern])=>pattern.test(name));
+  return match?'https://www.kanoon.ir/Public/ExamQuestions?group='+group+'&lesson='+match[1]:'';
+}
 function renderBooks(){
  const books=studentBooks(),student=state.student;
  const cards=books.length?books.map(b=>{
-  const direct=!!b.pdfUrl,downloadUrl=officialBookUrl(b.pdfUrl||b.url),bookPageUrl=officialBookUrl(b.url);
-  return '<article class="card panel book-card"><span class="pill">کد کتاب: '+esc(b.code||"ثبت نشده")+'</span><strong>'+esc(b.title)+'</strong><small class="book-meta">پایه '+esc(b.grade)+' · چاپ '+esc(CURRICULUM.academicYear)+'</small><a class="primary-button small-button book-download" href="'+esc(downloadUrl)+'" '+'target="_blank" rel="noopener noreferrer"'+'>' +(direct?'↓ دانلود PDF کتاب':'دریافت PDF از پایگاه رسمی')+'</a>'+(direct?'':'<small class="book-meta">برای دریافت فایل، صفحه رسمی کتاب باز می‌شود.</small>')+'<a class="secondary-button small-button" href="'+esc(bookPageUrl)+'" target="_blank" rel="noopener noreferrer">مشاهده مشخصات کتاب ↗</a>'+(bookQuestionsUrl(b,student)?'<a class="secondary-button small-button" href="'+esc(bookQuestionsUrl(b,student))+'" target="_blank" rel="noopener noreferrer">نمونه‌سؤال‌های قلم‌چی ↗</a>':'')+'</article>';
+  const direct=!!b.pdfUrl,downloadUrl=officialBookUrl(b.pdfUrl||b.url),bookPageUrl=officialBookUrl(b.url),questionsUrl=bookQuestionsUrl(b,student);
+  return '<article class="card panel book-card"><span class="pill">کد کتاب: '+esc(b.code||"ثبت نشده")+'</span><strong>'+esc(b.title)+'</strong><small class="book-meta">پایه '+esc(b.grade)+' · چاپ '+esc(CURRICULUM.academicYear)+'</small><a class="primary-button small-button book-download" href="'+esc(downloadUrl)+'" '+'target="_blank" rel="noopener noreferrer"'+'>' +(direct?'↓ دانلود PDF کتاب':'دریافت PDF از پایگاه رسمی')+'</a>'+(direct?'':'<small class="book-meta">برای دریافت فایل، صفحه رسمی کتاب باز می‌شود.</small>')+'<a class="secondary-button small-button" href="'+esc(bookPageUrl)+'" target="_blank" rel="noopener noreferrer">مشاهده مشخصات کتاب ↗</a>'+(questionsUrl?'<a class="secondary-button small-button" href="'+esc(questionsUrl)+'" target="_blank" rel="noopener noreferrer">نمونه‌سؤال‌های قلم‌چی ↗</a>':'')+'</article>';
  }).join(""):empty("کتابی برای این انتخاب پیدا نشد","برای این پایه و رشته در فهرست چاپ سال جاری کتاب ثبت نشده است. مشخصات تحصیلی را بررسی کن یا فهرست رسمی را ببین.","▤");
  const trackLine=student.educationLevel==="secondary"?(student.track+" · "+(student.fieldGroup?student.fieldGroup+" · ":"")+student.major):student.grade;
- return heading("کتابخانه درسی","کتاب‌های رسمی متناسب با پایه و رشته خودت.")+'<section class="card panel" style="margin-bottom:15px"><strong>'+esc(trackLine)+'</strong><p class="book-meta">سال تحصیلی '+esc(CURRICULUM.academicYear)+' · منبع: پایگاه رسمی کتاب‌های درسی</p></section><div class="section-title"><div><h2>کتاب‌های رسمی در chap.oerp.ir</h2><p>نمونه سؤال‌ها برگرفته شده از <a href="https://www.kanoon.ir/" target="_blank" rel="noopener noreferrer">kanoon.ir</a></p><p>'+fa(books.length)+' کتاب رسمی برای این پایه و رشته</p></div></div><div class="dashboard-grid">'+cards+'</div>';
+ return heading("کتابخانه درسی","کتاب‌های رسمی متناسب با پایه و رشته خودت.")+'<section class="card panel" style="margin-bottom:15px"><strong>'+esc(trackLine)+'</strong><p class="book-meta">سال تحصیلی '+esc(CURRICULUM.academicYear)+' · منبع: پایگاه رسمی کتاب‌های درسی</p></section><div class="section-title"><div><h2>کتاب‌های رسمی در chap.oerp.ir</h2><p>لینک مستقیم نمونه‌سؤال قلم‌چی، در صورت وجود، زیر همان کتاب نمایش داده می‌شود.</p><p>'+fa(books.length)+' کتاب رسمی برای این پایه و رشته</p></div></div><div class="dashboard-grid">'+cards+'</div>';
 }
 function renderInlineProfileEditor(){
  const s=state.student||{},username=window.STUNER_STUDENT_ACCOUNT?.username||s.username||"";
