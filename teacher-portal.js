@@ -191,7 +191,7 @@ async function onClick(e){
 }
 function onChange(e){
  if(e.target.matches("#teacherGradeSchool")){const id=e.target.value;if(!state.schools.some(s=>s.school_id===id))return;state.schoolId=id;render();}
-  else if(e.target.matches("#teacherGradeClass,#teacherGradesForm [name=subject],#teacherGradesForm [name=title],#teacherGradesForm [name=graded_on]")){const box=state.root.querySelector("#teacherGradeRows");const classId=state.root.querySelector("#teacherGradeClass")?.value;if(box&&classId)box.innerHTML=gradeRows(classId);}
+  else if(e.target.matches("#teacherGradeClass,#teacherGradesForm [name=subject],#teacherGradesForm [name=title],#teacherGradesForm [name=graded_on]")){const box=state.root.querySelector("#teacherGradeRows");const classId=state.root.querySelector("#teacherGradeClass")?.value;if(box&&classId){box.innerHTML=gradeRows(classId);const count=state.students.filter(s=>s.class_id===classId).length;const badge=state.root.querySelector(".teacher-grade-list-heading .portal-kind");if(badge)badge.textContent=count+" دانش‌آموز";}}
   else if(e.target.matches("#teacherAssignmentSchool")){
   const id=e.target.value;if(!state.schools.some(s=>s.school_id===id))return;
   state.schoolId=id;
