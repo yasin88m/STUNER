@@ -119,7 +119,7 @@ function projectSubmissionRows(a){
  const targets=a.student_id?state.students.filter(s=>s.user_id===a.student_id&&s.school_id===a.school_id):state.students.filter(s=>s.school_id===a.school_id&&s.class_id===a.class_id);
  const submitted=state.submissions.filter(x=>x.assignment_id===a.id);
  return '<section class="teacher-project-submissions"><div class="teacher-project-submission-heading"><strong>'+icon("file-text")+' فایل‌های تحویلی</strong><span>'+submitted.length+' از '+targets.length+' نفر</span></div>'+
- (targets.map(student=>{const file=submitted.find(x=>x.student_id===student.user_id);return '<div class="teacher-project-submission"><div><strong>'+esc(student.display_name||"دانش‌آموز")+'</strong><small>'+(file?esc(file.file_name)+' · '+esc(viewTime(file.submitted_at)):'هنوز فایلی ارسال نکرده')+'</small></div>'+(file?'<button type="button" class="portal-secondary teacher-project-download" data-project-download="'+esc(file.id)+'">'+icon("download")+' دریافت فایل</button>':'<span class="portal-kind view-status-unseen">تحویل نشده</span>')+'</div>'}).join("")||'<p class="teacher-empty">دانش‌آموزی برای این پروژه پیدا نشد.</p>')+'</section>';
+ (targets.map(student=>{const file=submitted.find(x=>x.student_id===student.user_id);return '<div class="teacher-project-submission"><div><strong>'+esc(student.display_name||"دانش‌آموز")+'</strong><small>'+(file?esc(file.file_name)+' · '+esc(viewTime(file.submitted_at)):'هنوز فایلی ارسال نکرده')+'</small></div>'+(file?'<button type="button" class="portal-secondary teacher-project-file-text" data-project-file-text="'+esc(file.id)+'">'+icon("file-text")+' دریافت فایل</button>':'<span class="portal-kind view-status-unseen">تحویل نشده</span>')+'</div>'}).join("")||'<p class="teacher-empty">دانش‌آموزی برای این پروژه پیدا نشد.</p>')+'</section>';
 }
 function workRows(rows){
  return rows.length?rows.map(a=>{
@@ -173,13 +173,13 @@ async function load(){
 const refresh=async()=>{await load();render()};
 async function onClick(e){
  if(window.STUNER_JALALI?.handleClick(e))return;
- const download=e.target.closest("[data-project-download]");
- if(download){
-  const file=state.submissions.find(x=>x.id===download.dataset.projectDownload);if(!file)return;
-  download.disabled=true;
+ const file-text=e.target.closest("[data-project-file-text]");
+ if(file-text){
+  const file=state.submissions.find(x=>x.id===file-text.dataset.projectDownload);if(!file)return;
+  file-text.disabled=true;
   try{const signed=await state.client.storage.from("stuner-project-submissions").createSignedUrl(file.file_path,600);if(signed.error)throw signed.error;const tab=window.open("about:blank","_blank");if(tab){tab.opener=null;tab.location.href=signed.data.signedUrl}else window.location.href=signed.data.signedUrl}
   catch(err){alert("دریافت فایل انجام نشد: "+(err.message||"خطای نامشخص"))}
-  finally{download.disabled=false}
+  finally{file-text.disabled=false}
   return;
  }
  const deleteWork=e.target.closest("[data-teacher-delete-work]");
