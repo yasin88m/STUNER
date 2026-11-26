@@ -140,7 +140,7 @@ async function enter(member){
  if(current?.school_id!==member.school_id){directorSection="home";viewClassId=null;directorMenu=false}
  current=member;sessionStorage.setItem("stuner.school",member.school_id);
  if(member.role==="student"){
-  await loadAssets(["./curriculum.js?v=2","./stuner-icons.js?v=29","./stuner-jalali.js?v=2","./school-work.js?v=45","./student-cloud.js?v=41"],["./styles.css?v=64"]);
+  await loadAssets(["./curriculum.js?v=2","./stuner-icons.js?v=29","./stuner-jalali.js?v=2","./school-work.js?v=46","./student-cloud.js?v=41"],["./styles.css?v=64"]);
   cover.hidden=true;app.style.display="";on.hidden=true;
   window.STUNER_ACTIVE_USER={id:user.id,schoolId:member.school_id};
   const personalParts=String(member.display_name||"دانش‌آموز").trim().split(/\s+/);
@@ -217,7 +217,7 @@ async function enter(member){
  }
  if(member.role==="teacher"){
   show();
-  await loadAssets(["./stuner-icons.js?v=29","./stuner-jalali.js?v=2","./teacher-portal.js?v=42"],["./teacher-portal.css?v=39"]);
+  await loadAssets(["./stuner-icons.js?v=29","./stuner-jalali.js?v=2","./teacher-portal.js?v=43"],["./teacher-portal.css?v=39"]);
   if(!window.STUNER_TEACHER_UI)throw Error("پنل معلم بارگذاری نشده است.");
   await window.STUNER_TEACHER_UI.start({client,user,members,active:member,root:el,onMembershipsChanged:items=>{members=[...members.filter(x=>x.role!=="teacher"),...items]}});
   return;
