@@ -310,3 +310,68 @@ body{
  #modalRoot .modal-actions{display:grid;grid-template-columns:1fr 1fr}
  #modalRoot .modal-actions button{width:100%;min-width:0}
 }
+
+
+/* STUNER polish pass — preserve the existing green identity, improve clarity and touch usability. */
+:root{
+  --st-glass-focus:0 0 0 3px rgba(35,151,106,.14);
+  --st-glass-card-border:rgba(29,117,76,.12);
+}
+#app .card,#app .panel,#portalRoot .portal-card,#portalRoot .portal-panel{
+  border-color:var(--st-glass-card-border);
+  box-shadow:0 10px 28px rgba(16,75,49,.055),0 2px 7px rgba(16,75,49,.025);
+  transition:box-shadow .2s ease,border-color .2s ease,transform .2s ease;
+}
+#app .card:hover,#app .panel:hover,#portalRoot .portal-card:hover{
+  border-color:rgba(35,151,106,.2);
+  box-shadow:0 14px 34px rgba(16,75,49,.075),0 3px 10px rgba(16,75,49,.035);
+}
+#app button:not(:disabled),#portalRoot button:not(:disabled),#modalRoot button:not(:disabled){
+  -webkit-tap-highlight-color:transparent;
+}
+#app button:focus-visible,#portalRoot button:focus-visible,#modalRoot button:focus-visible,
+#app input:focus-visible,#app select:focus-visible,#app textarea:focus-visible,
+#portalRoot input:focus-visible,#portalRoot select:focus-visible,#portalRoot textarea:focus-visible{
+  outline:0;
+  box-shadow:var(--st-glass-focus);
+}
+#app input:not([type=checkbox]):not([type=radio]):not([type=hidden]),#app select,#app textarea,
+#portalRoot input:not([type=checkbox]):not([type=radio]):not([type=hidden]),#portalRoot select,#portalRoot textarea{
+  transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease;
+}
+#app .primary-button,#app .secondary-button,#portalRoot .portal-primary,#portalRoot .portal-secondary{
+  min-height:42px;border-radius:12px;font-weight:800;letter-spacing:-.1px;
+  transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease,border-color .16s ease;
+}
+#app .primary-button:not(:disabled):active,#app .secondary-button:not(:disabled):active,
+#portalRoot .portal-primary:not(:disabled):active,#portalRoot .portal-secondary:not(:disabled):active{
+  transform:translateY(1px);
+}
+#app .topbar-actions .icon-button{border:1px solid rgba(35,151,106,.14);background:rgba(255,255,255,.8)}
+#portalRoot .portal-card h1,#portalRoot .portal-card h2,#portalRoot .portal-card h3{letter-spacing:-.25px}
+#portalRoot .portal-card p{line-height:1.9}
+#toastRoot{z-index:1200}
+@media(hover:hover) and (pointer:fine){
+  #app .primary-button:not(:disabled):hover,#portalRoot .portal-primary:not(:disabled):hover{
+    box-shadow:0 8px 20px rgba(18,112,70,.16);
+    transform:translateY(-1px);
+  }
+}
+@media(max-width:760px){
+  #app .app-shell{padding-inline:12px}
+  #app .main-content{min-width:0}
+  #portalRoot{min-width:0}
+  #portalRoot .portal-card{border-radius:17px}
+  #app .bottom-nav{padding-bottom:env(safe-area-inset-bottom,0px)}
+}
+@media(max-width:380px){
+  #app .bottom-nav{gap:2px}
+  #app .bottom-item{min-width:0;padding-inline:3px}
+  #app .bottom-item small{font-size:9px}
+  #portalRoot .portal-card{padding:13px}
+}
+@media(prefers-reduced-motion:reduce){
+  #app .card,#app .panel,#portalRoot .portal-card,#app button,#portalRoot button,#modalRoot button{
+    transition:none!important;scroll-behavior:auto!important;
+  }
+}
