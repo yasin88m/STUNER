@@ -582,7 +582,7 @@ document.addEventListener("click",e=>{
  if(e.target.closest("[data-close-modal]")||e.target.matches("[data-modal-backdrop]")){closeModal();return}
  let t=e.target.closest("[data-toggle-task]");if(t){let x=state.tasks.find(z=>z.id===t.dataset.toggleTask);if(x){x.done=!x.done;save();render();toast(x.done?"آفرین! تکلیف انجام‌شده ثبت شد.":"وضعیت تکلیف تغییر کرد.")}return}
  for(let [attr,key] of [["data-delete-task","tasks"],["data-delete-exam","exams"],["data-delete-plan","plans"]]){let x=e.target.closest("["+attr+"]");if(x){remove(key,x.getAttribute(attr));return}}
- let workTab=e.target.closest("[data-work-tab]");if(workTab){taskFilter="all";taskView=workTab.dataset.workTab==="projects"?"projects":workTab.dataset.workTab==="exams"?"exams":"tasks";go("tasks");return}
+ let workTab=e.target.closest("[data-work-tab]");if(workTab){taskFilter="all";taskView=workTab.dataset.workTab==="projects"?"projects":workTab.dataset.workTab==="exams"?"exams":"tasks";if(page!=="tasks")page="tasks";try{history.pushState({stunerApp:true,page,taskView},"",location.href)}catch{}render();return}
  let personalFilter=e.target.closest("[data-personal-filter]");if(personalFilter){personalTaskFilter=personalFilter.dataset.personalFilter;render();return}
  let filter=e.target.closest("[data-task-filter]");if(filter){taskFilter=filter.dataset.taskFilter;render();return}
  let day=e.target.closest("[data-plan-day]");if(day){planDay=+day.dataset.planDay;render();return}
