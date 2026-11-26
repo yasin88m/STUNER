@@ -94,6 +94,7 @@ function login(){
 function signup(){
  show();role="principal";
  el.innerHTML=head("ثبت‌نام مدیر مدرسه")+'<section class="portal-card"><form id="signupForm" class="portal-form"><label>نام و نام خانوادگی<input name="display_name" type="text" required maxlength="120" minlength="2" autocomplete="name"></label><label>نام کاربری<input name="username" type="text" required maxlength="32" minlength="4" pattern="(?:[a-z][a-z0-9_]{3,31}|[0-9]{10})" dir="ltr" autocomplete="username" placeholder="school_manager"></label><label>رمز عبور (حداقل ۶ کاراکتر)<input name="password" type="password" required minlength="6" maxlength="128" dir="ltr" autocomplete="new-password"></label><button class="portal-primary">ایجاد حساب مدیر</button></form><button data-action="back" class="portal-secondary">بازگشت به ورود</button><p class="portal-note">برای ثبت‌نام ایمیل یا شماره تلفن لازم نیست. رمز را در جایی امن نگه دار؛ بازیابی خودکار رمز بدون روش ارتباطی فعال نیست.</p><p id="portalMessage" class="portal-error" aria-live="polite"></p></section>';
+ const submit=el.querySelector("#signupForm button");if(submit)submit.disabled=!client;
 }
 function initialPasswordPage(){
  show();current=null;
@@ -129,7 +130,7 @@ async function sync(){
   else if(availableRoles.length===1)role=availableRoles[0];
   else if(availableRoles.length&&!availableRoles.includes(role))role=availableRoles[0];
   if(!members.length&&accountRole==="principal")role="principal";
- if(role==="principal")await loadAssets(["./stuner-icons.js?v=29",XLSX_READER,"./school-import.js","./school-database.js?v=35"],["./school-import.css?v=29","./school-database.css?v=35","./stuner-glass.css?v=2"]);
+ if(role==="principal")await loadAssets(["./stuner-icons.js?v=29",XLSX_READER,"./school-import.js","./school-database.js?v=35"],["./school-import.css?v=29","./school-database.css?v=35"]);
  const old=sessionStorage.getItem("stuner.school");
  const last=members.find(m=>m.school_id===old&&m.role===role);
  if(last)await enter(last);else picker();
@@ -139,7 +140,7 @@ async function enter(member){
  if(current?.school_id!==member.school_id){directorSection="home";viewClassId=null;directorMenu=false}
  current=member;sessionStorage.setItem("stuner.school",member.school_id);
  if(member.role==="student"){
-  await loadAssets(["./stuner-icons.js?v=29","./curriculum.js?v=2","./stuner-jalali.js?v=2","./school-work.js?v=45","./student-cloud.js?v=41"],["./styles.css?v=64","./stuner-glass.css?v=2"]);
+  await loadAssets(["./stuner-icons.js?v=29","./curriculum.js?v=2","./stuner-jalali.js?v=2","./school-work.js?v=45","./student-cloud.js?v=41"],["./styles.css?v=64"]);
   cover.hidden=true;app.style.display="";on.hidden=true;
   window.STUNER_ACTIVE_USER={id:user.id,schoolId:member.school_id};
   const personalParts=String(member.display_name||"دانش‌آموز").trim().split(/\s+/);
@@ -216,7 +217,7 @@ async function enter(member){
  }
  if(member.role==="teacher"){
   show();
-  await loadAssets(["./stuner-icons.js?v=29","./stuner-jalali.js?v=2","./teacher-portal.js?v=41"],["./teacher-portal.css?v=39","./stuner-glass.css?v=2"]);
+  await loadAssets(["./stuner-icons.js?v=29","./stuner-jalali.js?v=2","./teacher-portal.js?v=41"],["./teacher-portal.css?v=39"]);
   if(!window.STUNER_TEACHER_UI)throw Error("پنل معلم بارگذاری نشده است.");
   await window.STUNER_TEACHER_UI.start({client,user,members,active:member,root:el,onMembershipsChanged:items=>{members=[...members.filter(x=>x.role!=="teacher"),...items]}});
   return;
@@ -597,7 +598,7 @@ async function start(){
  await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.94.1/dist/umd/supabase.js");
  if(!window.supabase?.createClient){el.innerHTML=head("کتابخانه Supabase بارگذاری نشد")+'<p>اتصال اینترنت را بررسی کن.</p>';return}
  client=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
- const submit=el.querySelector("#loginForm button");if(submit)submit.disabled=false;
+ el.querySelectorAll("#loginForm button,#signupForm button").forEach(button=>button.disabled=false);
  await sync();client.auth.onAuthStateChange(event=>{if(event==="SIGNED_OUT"&&!el.querySelector("#loginForm")&&!el.querySelector("#initialPasswordForm"))location.reload()});
 }
 start().catch(e=>{show();el.innerHTML=head("خطای اتصال")+'<section class="portal-card">'+esc(e.message)+'</section>'});
