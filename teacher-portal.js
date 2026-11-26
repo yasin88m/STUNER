@@ -1,7 +1,7 @@
 /* Dedicated multi-school teacher workspace for STUNER. All reads respect Supabase RLS. */
 (function(){
 "use strict";
-const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],views:[],grades:[],page:"home",joinNote:"",onMembershipsChanged:null,menu:false,schoolId:"",classId:"",busy:false};
+const state={client:null,user:null,root:null,members:[],schools:[],classes:[],links:[],students:[],assignments:[],views:[],submissions:[],grades:[],page:"home",joinNote:"",onMembershipsChanged:null,menu:false,schoolId:"",classId:"",busy:false};
 const esc=x=>String(x??"").replace(/[&<>"']/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[a]));
 const icon=n=>'<i data-lucide="'+n+'"></i>';
 const schoolName=id=>state.schools.find(x=>x.school_id===id)?.schools?.name||"مدرسه";
@@ -15,7 +15,7 @@ const nav=[
  ["home","داشبورد","layout-dashboard"],
  ["schools","مدارس من","school"],
  ["classes","کلاس‌های من","users-round"],
- ["create","ثبت تکلیف یا امتحان","clipboard-plus"],
+ ["create","ثبت فعالیت جدید","clipboard-plus"],
  ["work","فعالیت‌های ثبت‌شده","notebook-tabs"],["grades","ثبت نمرات","graduation-cap"]
 ];
 function schoolOptions(){
@@ -41,11 +41,11 @@ function targetChoices(id,audience,grade){
 }
 function home(){
  const schools=state.schools.length,classes=granted().length,students=new Set(state.students.filter(s=>granted().some(c=>c.id===s.class_id)).map(s=>s.user_id)).size;
- return '<section class="teacher-welcome"><div><span>'+icon("sparkles")+' فضای معلم</span><h2>مدیریت کلاس‌ها، ساده و منظم</h2><p>تکلیف‌ها و امتحانات را برای هر کدام از مدارسی که در آن تدریس می‌کنید، ثبت کنید.</p></div><button data-teacher-page="create">'+icon("plus")+' ثبت فعالیت جدید</button></section>'+
+ return '<section class="teacher-welcome"><div><span>'+icon("sparkles")+' فضای معلم</span><h2>مدیریت کلاس‌ها، ساده و منظم</h2><p>تکلیف‌ها، امتحان‌ها و پروژه‌ها را برای کلاس‌های خود ثبت و پیگیری کنید.</p></div><button data-teacher-page="create">'+icon("plus")+' ثبت فعالیت جدید</button></section>'+
  '<div class="teacher-stats"><div>'+icon("school")+'<span>مدارس</span><strong>'+schools+'</strong></div><div>'+icon("users-round")+'<span>کلاس‌های من</span><strong>'+classes+'</strong></div><div>'+icon("graduation-cap")+'<span>دانش‌آموزان</span><strong>'+students+'</strong></div></div>'+
  '<section class="portal-card"><div class="teacher-card-heading"><div><h2>مدارس محل تدریس</h2><p>برای مشاهده همه مدارس، وارد بخش مدارس من شوید.</p></div><button class="portal-secondary" data-teacher-page="schools">مشاهده همه '+icon("arrow-left")+'</button></div>'+
  '<div class="teacher-school-grid">'+state.schools.slice(0,4).map(s=>schoolCard(s)).join("")+'</div></section>'+
- '<section class="portal-card"><div class="teacher-card-heading"><div><h2>آخرین فعالیت‌ها</h2><p>تکالیف و امتحانات ثبت‌شده توسط شما</p></div><button class="portal-secondary" data-teacher-page="work">همه فعالیت‌ها</button></div>'+workRows(state.assignments.slice(0,4))+'</section>';
+ '<section class="portal-card"><div class="teacher-card-heading"><div><h2>آخرین فعالیت‌ها</h2><p>تکالیف، امتحانات و پروژه‌های ثبت‌شده توسط شما</p></div><button class="portal-secondary" data-teacher-page="work">همه فعالیت‌ها</button></div>'+workRows(state.assignments.slice(0,4))+'</section>';
 }
 
 function gradePage(){
@@ -91,14 +91,14 @@ function classesPage(){
  (list.map(c=>'<button class="teacher-class-card" data-teacher-class="'+esc(c.id)+'"><span class="teacher-school-icon">'+icon("book-open")+'</span><strong>'+esc(c.name)+'</strong><small>'+state.students.filter(s=>s.class_id===c.id&&s.school_id===c.school_id).length+' دانش‌آموز · پایه '+esc(c.grade)+'</small><span>دانش‌آموزان کلاس '+icon("arrow-left")+'</span></button>').join("")||'<p class="teacher-empty">کلاسی برای این مدرسه ثبت نشده است.</p>')+'</div></section>';
 }
 function createPage(){
- return '<section class="portal-card teacher-create-card"><div class="teacher-card-heading"><div><h2>'+icon("clipboard-plus")+' ثبت تکلیف یا امتحان</h2><p>مدرسه را انتخاب کنید؛ تنها کلاس‌های مجاز همان مدرسه نمایش داده می‌شوند.</p></div></div><form id="teacherMultiAssignmentForm" class="portal-form">'+
- '<div class="teacher-fields-grid"><label>مدرسه<select name="school_id" id="teacherAssignmentSchool" required>'+schoolOptions()+'</select></label><label>نوع فعالیت<select name="kind" required><option value="task">تکلیف</option><option value="exam">امتحان</option></select></label></div>'+
+ return '<section class="portal-card teacher-create-card"><div class="teacher-card-heading"><div><h2>'+icon("clipboard-plus")+' ثبت تکلیف، امتحان یا پروژه</h2><p>مدرسه را انتخاب کنید؛ تنها کلاس‌های مجاز همان مدرسه نمایش داده می‌شوند.</p></div></div><form id="teacherMultiAssignmentForm" class="portal-form">'+
+ '<div class="teacher-fields-grid"><label>مدرسه<select name="school_id" id="teacherAssignmentSchool" required>'+schoolOptions()+'</select></label><label>نوع فعالیت<select name="kind" required><option value="task">تکلیف</option><option value="exam">امتحان</option><option value="project">پروژه</option></select></label></div>'+
  '<label class="teacher-target-mode">ارسال برای<select name="audience" id="teacherAudience"><option value="grade">همه دانش‌آموزان یک پایه</option><option value="classes">یک یا چند کلاس مشخص</option><option value="students">دانش‌آموزان انتخابی</option></select></label>'+
  '<div id="teacherGradeField" class="teacher-target-mode"><label>پایه تحصیلی<select name="target_grade" id="teacherTargetGrade">'+gradeOptions(state.schoolId)+'</select></label></div>'+
  '<fieldset class="teacher-fieldset" id="teacherTargetField" hidden><legend id="teacherTargetLegend">انتخاب مخاطبان</legend><p id="teacherTargetHelp"></p><div id="teacherClassChoices" class="teacher-class-checks"></div></fieldset>'+
  '<div class="teacher-fields-grid"><label>درس<input name="subject" maxlength="100" placeholder="مثلاً ریاضی" required></label><label>عنوان<input name="title" minlength="2" maxlength="150" placeholder="مثلاً تمرین فصل سوم" required></label></div>'+
- ''+window.STUNER_JALALI.field("due_date","تاریخ امتحان یا مهلت تحویل")+'<label>توضیحات برای دانش‌آموزان<textarea name="description" rows="4" maxlength="3000" placeholder="جزئیات درس، محدوده صفحات، نکات و راهنمای انجام"></textarea></label>'+
- '<div class="teacher-form-footer"><p>پس از ثبت، این فعالیت مستقیماً در بخش تکالیف یا امتحانات دانش‌آموزان کلاس‌های انتخاب‌شده نمایش داده می‌شود.</p><button class="portal-primary" type="submit">'+icon("send")+' ثبت و ارسال</button></div></form><p class="portal-error" id="teacherFormMessage" role="status" aria-live="polite"></p></section>';
+ ''+window.STUNER_JALALI.field("due_date","مهلت انجام یا تحویل")+'<label>توضیحات برای دانش‌آموزان<textarea name="description" rows="4" maxlength="3000" placeholder="جزئیات درس، محدوده صفحات، نکات و راهنمای انجام"></textarea></label>'+
+ '<div class="teacher-form-footer"><p>پس از ثبت، فعالیت در بخش مربوط به خودِ دانش‌آموزان انتخاب‌شده نمایش داده می‌شود.</p><button class="portal-primary" type="submit">'+icon("send")+' ثبت و ارسال</button></div></form><p class="portal-error" id="teacherFormMessage" role="status" aria-live="polite"></p></section>';
 }
 function viewTime(value){
  try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Tehran"}).format(new Date(value))}
@@ -115,11 +115,19 @@ function assignmentViewReport(a){
  }).join("");
  return '<details class="teacher-view-report"><summary>گزارش مشاهده · '+records.length+' از '+targets.length+' نفر</summary><div class="principal-list">'+(lines||'<p class="teacher-empty">دانش‌آموزی برای این تکلیف پیدا نشد.</p>')+'</div></details>';
 }
+function projectSubmissionRows(a){
+ const targets=a.student_id?state.students.filter(s=>s.user_id===a.student_id&&s.school_id===a.school_id):state.students.filter(s=>s.school_id===a.school_id&&s.class_id===a.class_id);
+ const submitted=state.submissions.filter(x=>x.assignment_id===a.id);
+ return '<section class="teacher-project-submissions"><div class="teacher-project-submission-heading"><strong>'+icon("file-text")+' فایل‌های تحویلی</strong><span>'+submitted.length+' از '+targets.length+' نفر</span></div>'+
+ (targets.map(student=>{const file=submitted.find(x=>x.student_id===student.user_id);return '<div class="teacher-project-submission"><div><strong>'+esc(student.display_name||"دانش‌آموز")+'</strong><small>'+(file?esc(file.file_name)+' · '+esc(viewTime(file.submitted_at)):'هنوز فایلی ارسال نکرده')+'</small></div>'+(file?'<button type="button" class="portal-secondary teacher-project-file-text" data-project-file-text="'+esc(file.id)+'">'+icon("file-text")+' دریافت فایل</button>':'<span class="portal-kind view-status-unseen">تحویل نشده</span>')+'</div>'}).join("")||'<p class="teacher-empty">دانش‌آموزی برای این پروژه پیدا نشد.</p>')+'</section>';
+}
 function workRows(rows){
  return rows.length?rows.map(a=>{
   const target=a.student_id?("دانش‌آموز: "+(state.students.find(s=>s.user_id===a.student_id)?.display_name||"دانش‌آموز انتخابی")):(state.classes.find(c=>c.id===a.class_id)?.name||"کلاس");
-  return '<div class="teacher-work-row"><span class="teacher-work-icon">'+icon(a.kind==="task"?"clipboard-check":"graduation-cap")+'</span><div><strong>'+esc(a.title)+'</strong><small>'+esc(a.subject)+' · '+displaySchool(a.school_id)+' · '+esc(target)+'</small></div><span class="teacher-work-date">'+esc(window.STUNER_JALALI.formatted(a.due_date))+'</span><button type="button" class="portal-secondary teacher-delete-work" data-teacher-delete-work="${esc(a.id)}">حذف تکلیف</button></div>'+assignmentViewReport(a);
- }).join(""):'<p class="teacher-empty">هنوز تکلیف یا امتحانی ثبت نشده است.</p>';
+  const kindLabel=a.kind==="task"?"تکلیف":a.kind==="project"?"پروژه":"امتحان";
+  const kindIcon=a.kind==="task"?"clipboard-check":a.kind==="project"?"file-text":"graduation-cap";
+  return '<div class="teacher-work-row"><span class="teacher-work-icon">'+icon(kindIcon)+'</span><div><strong>'+esc(a.title)+'</strong><small>'+kindLabel+' · '+esc(a.subject)+' · '+displaySchool(a.school_id)+' · '+esc(target)+'</small></div><span class="teacher-work-date">'+esc(window.STUNER_JALALI.formatted(a.due_date))+'</span><button type="button" class="portal-secondary teacher-delete-work" data-teacher-delete-work="'+esc(a.id)+'">حذف</button></div>'+(a.kind==="project"?projectSubmissionRows(a):assignmentViewReport(a));
+ }).join(""):'<p class="teacher-empty">هنوز تکلیف، امتحان یا پروژه‌ای ثبت نشده است.</p>';
 }
 function workPage(){
  return '<section class="portal-card"><div class="teacher-card-heading"><div><h2>فعالیت‌های ثبت‌شده</h2><p>فهرست تکالیف و امتحاناتی که ارسال کرده‌اید</p></div><div class="teacher-work-actions"><button type="button" data-teacher-refresh class="portal-secondary">به‌روزرسانی گزارش‌ها</button><button data-teacher-page="create" class="portal-secondary">'+icon("plus")+' ثبت جدید</button></div></div>'+workRows(state.assignments)+'</section>';
@@ -149,6 +157,12 @@ async function load(){
  ]);
  for(const response of [c,l,s,a,g])if(response.error)throw response.error;
  state.classes=c.data||[];state.links=l.data||[];state.students=s.data||[];state.assignments=a.data||[];state.grades=g.data||[];
+ const projectIds=state.assignments.filter(x=>x.kind==="project").map(x=>x.id);
+ if(projectIds.length){
+  const submissions=await state.client.from("project_submissions").select("id,assignment_id,student_id,file_name,file_path,file_size,mime_type,submitted_at").in("assignment_id",projectIds);
+  if(submissions.error)throw submissions.error;
+  state.submissions=submissions.data||[];
+ }else state.submissions=[];
  const taskIds=state.assignments.filter(x=>x.kind==="task").map(x=>x.id);
  if(taskIds.length){
   const viewed=await state.client.from("assignment_views").select("assignment_id,student_id,first_viewed_at").in("assignment_id",taskIds);
@@ -159,6 +173,15 @@ async function load(){
 const refresh=async()=>{await load();render()};
 async function onClick(e){
  if(window.STUNER_JALALI?.handleClick(e))return;
+ const downloadBtn=e.target.closest("[data-project-file-text]");
+ if(downloadBtn){
+  const file=state.submissions.find(x=>x.id===downloadBtn.dataset.projectFileText);if(!file)return;
+  downloadBtn.disabled=true;const tab=window.open("about:blank","_blank");
+  try{const signed=await state.client.storage.from("stuner-project-submissions").createSignedUrl(file.file_path,600);if(signed.error)throw signed.error;if(tab){tab.opener=null;tab.location.href=signed.data.signedUrl}else window.location.href=signed.data.signedUrl}
+  catch(err){if(tab)tab.close();alert("دریافت فایل انجام نشد: "+(err.message||"خطای نامشخص"))}
+  finally{downloadBtn.disabled=false}
+  return;
+ }
  const deleteWork=e.target.closest("[data-teacher-delete-work]");
  if(deleteWork){
   const id=deleteWork.dataset.teacherDeleteWork;
@@ -285,7 +308,7 @@ const importBtn=e.target.closest("[data-teacher-import-grades]");
  }else if(audience==="students"){
   if(!studentIds.length){msg.textContent="حداقل یک دانش‌آموز را انتخاب کنید.";return}
   if(studentIds.some(id=>!schoolStudents(schoolId).some(s=>s.user_id===id))){msg.textContent="به یکی از دانش‌آموزان انتخاب‌شده دسترسی ندارید.";return}
-  targets=studentIds.map(id=>({class_id:null,student_id:id}));
+  targets=studentIds.map(id=>({class_id:schoolStudents(schoolId).find(student=>student.user_id===id)?.class_id||null,student_id:id}));
  }else{msg.textContent="نوع مخاطب معتبر نیست.";return}
  if(!targets.length){msg.textContent="برای این مخاطب کلاسی یا دانش‌آموزی پیدا نشد.";return}
  const rows=targets.map(target=>({school_id:schoolId,...target,teacher_id:state.user.id,kind:data.get("kind"),subject:String(data.get("subject")||"").trim(),title:String(data.get("title")||"").trim(),description:String(data.get("description")||"").trim(),due_date:data.get("due_date")}));

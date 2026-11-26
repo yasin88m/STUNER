@@ -190,3 +190,14 @@
 .teacher-grade-footer .portal-primary{min-height:47px}
 #teacherGradesMessage{min-height:20px;margin:0;padding-inline:3px}
 @media(max-width:680px){.teacher-grade-section{padding:13px}.teacher-grade-import{grid-template-columns:1fr}.teacher-grade-import>.portal-secondary{width:100%}.teacher-grade-row{gap:7px;padding:9px 8px}.teacher-grade-avatar{width:32px;height:32px}.teacher-grade-input-wrap input{width:65px;max-width:65px}.teacher-grade-index{width:16px}}
+
+/* Teacher project submission inbox */
+.teacher-project-submissions{display:grid;gap:8px;width:100%;padding:12px 0 4px;border-top:1px dashed #dce9df}
+.teacher-project-submission-heading,.teacher-project-submission{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.teacher-project-submission-heading strong{display:inline-flex;align-items:center;gap:7px;color:#215b3e;font-size:11px}
+.teacher-project-submission-heading span,.teacher-project-submission small{font-size:10px;color:#809386}
+.teacher-project-submission>div{display:grid;gap:4px;min-width:0}
+.teacher-project-submission>div strong{font-size:11px;color:#315d43}
+.teacher-project-submission>div small{overflow-wrap:anywhere}
+.teacher-project-file-text{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+@media(max-width:560px){.teacher-project-submission{align-items:flex-start;flex-direction:column}.teacher-project-file-text{width:100%;justify-content:center}}
