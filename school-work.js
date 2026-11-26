@@ -22,23 +22,24 @@ async function refresh(){
   const merged=new Map();
   for(const row of [...(classResult.data||[]),...(personalResult.data||[])])merged.set(row.id,row);
   const a={data:[...merged.values()].sort((x,y)=>String(x.due_date||"").localeCompare(String(y.due_date||"")))};
-  const c=await db.from("assignment_completions").select("assignment_id").eq("student_id",user.id);
-  if(c.error)throw c.error;
   assignments=a.data||[];
-  completed=new Set((c.data||[]).map(x=>x.assignment_id));
   const projectIds=assignments.filter(x=>x.kind==="project").map(x=>x.id);
-  projectSubmissions=new Map();
-  if(projectIds.length){
-   const submissions=await db.from("project_submissions").select("id,assignment_id,student_id,file_name,file_path,file_size,mime_type,submitted_at").in("assignment_id",projectIds).eq("student_id",user.id);
-   if(submissions.error)throw submissions.error;
-   for(const row of submissions.data||[])projectSubmissions.set(row.assignment_id,row);
-  }
-  teacherSubjects=[];
-  if(member.class_id){
-   const teachers=await db.rpc("list_student_class_subjects",{p_school:member.school_id,p_class:member.class_id});
-   if(teachers.error)throw teachers.error;
-   teacherSubjects=(teachers.data||[]).filter(x=>x.subject&&x.teacher_name);
-  }
+  // Load independent student data in parallel to reduce the wait after opening the school-work tabs.
+  const [completionResult,submissionResult,teacherResult]=await Promise.all([
+   db.from("assignment_completions").select("assignment_id").eq("student_id",user.id),
+   projectIds.length
+    ?db.from("project_submissions").select("id,assignment_id,student_id,file_name,file_path,file_size,mime_type,submitted_at").in("assignment_id",projectIds).eq("student_id",user.id)
+    :Promise.resolve({data:[],error:null}),
+   member.class_id
+    ?db.rpc("list_student_class_subjects",{p_school:member.school_id,p_class:member.class_id})
+    :Promise.resolve({data:[],error:null})
+  ]);
+  if(completionResult.error)throw completionResult.error;
+  if(submissionResult.error)throw submissionResult.error;
+  if(teacherResult.error)throw teacherResult.error;
+  completed=new Set((completionResult.data||[]).map(x=>x.assignment_id));
+  projectSubmissions=new Map((submissionResult.data||[]).map(row=>[row.assignment_id,row]));
+  teacherSubjects=(teacherResult.data||[]).filter(x=>x.subject&&x.teacher_name);
   loaded=true;
  }catch(e){loadError=e.message||"ارتباط با مدرسه برقرار نشد."}
  finally{loading=false;update();if(loaded&&!loadError){if(pendingViewRecord){pendingViewRecord=false;recordFirstViews(assignments.filter(a=>a.kind==="task"))}else if(pendingViewIds.size){const ids=[...pendingViewIds];pendingViewIds.clear();recordFirstViews(assignments.filter(a=>a.kind==="task"&&ids.includes(a.id)))}}}
