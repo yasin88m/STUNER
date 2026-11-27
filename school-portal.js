@@ -213,7 +213,7 @@ async function enter(member){
     }).subscribe();
   }
   window.STUNER_SCHOOL_WORK?.init(client,user,member);
-  const src=document.createElement("script");src.src="./app.js?v=76";document.body.appendChild(src);return;
+  const src=document.createElement("script");src.src="./app.js?v=77";document.body.appendChild(src);return;
  }
  if(member.role==="teacher"){
   show();
